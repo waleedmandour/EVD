@@ -1,26 +1,26 @@
 // ─── TypeScript Types ───────────────────────────────────────────────
 
 export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
-export type ConnectionMode = 'bluetooth' | 'demo' | null;
+export type ConnectionMode = 'bluetooth' | 'wifi' | 'demo' | null;
 
 export interface VehicleData {
-  speed: number;           // km/h
-  rpm: number;             // motor RPM
-  batterySOC: number;      // percentage 0-100
-  batteryVoltage: number;  // V (pack voltage ~350-400V for BYD Blade)
-  batteryCurrent: number;  // A (positive = discharge, negative = charge)
-  batteryPower: number;    // kW (positive = discharge, negative = regen/charge)
-  batteryTemp: number;     // °C
-  motorTemp: number;       // °C
-  cabinTemp: number;       // °C
-  ambientTemp: number;     // °C
-  estimatedRange: number;  // km
-  odometer: number;        // km
+  speed: number;
+  rpm: number;
+  batterySOC: number;
+  batteryVoltage: number;
+  batteryCurrent: number;
+  batteryPower: number;
+  batteryTemp: number;
+  motorTemp: number;
+  cabinTemp: number;
+  ambientTemp: number;
+  estimatedRange: number;
+  odometer: number;
   isCharging: boolean;
-  chargingPower: number;   // kW
+  chargingPower: number;
   hvacActive: boolean;
   regenBraking: boolean;
-  driveMode: string;       // ECO, NORMAL, SPORT
+  driveMode: string;
 }
 
 export interface DiagnosticTroubleCode {
@@ -31,21 +31,74 @@ export interface DiagnosticTroubleCode {
 }
 
 export interface TripData {
-  distance: number;        // km
-  avgSpeed: number;        // km/h
-  maxSpeed: number;        // km/h
-  avgConsumption: number;  // Wh/km
-  totalConsumption: number; // kWh
-  regenEnergy: number;     // kWh recovered
-  duration: number;        // seconds
+  distance: number;
+  avgSpeed: number;
+  maxSpeed: number;
+  avgConsumption: number;
+  totalConsumption: number;
+  regenEnergy: number;
+  duration: number;
   startedAt: Date | null;
 }
 
 export interface BatteryHistoryEntry {
-  time: number;  // timestamp
+  time: number;
   soc: number;
   voltage: number;
   temp: number;
+}
+
+// ─── OBD-II Device Info ────────────────────────────────────────────
+
+export interface DeviceInfo {
+  adapterType: string;        // e.g., "ELM327", "vLinker", "Carista"
+  firmwareVersion: string;    // e.g., "v2.1", "v4.5.4"
+  protocol: string;           // e.g., "ISO 15765-4 CAN (11 bit, 500 kbaud)"
+  voltage: string;            // e.g., "12.8V"
+  adapterVoltage: number;     // numeric
+  supportedPIDs: number[];     // list of PIDs the adapter confirmed
+  vin: string;                // Vehicle Identification Number
+  connectionType: 'bluetooth' | 'wifi';
+  wifiIp: string;             // IP address for WiFi adapters
+  wifiPort: number;           // Port for WiFi adapters
+  lastPing: number;           // timestamp of last successful comm
+  signalStrength: number;     // 0-100 signal quality estimate
+  responseTime: number;       // ms average response time
+}
+
+// ─── Session Data Logger ──────────────────────────────────────────
+
+export interface SessionLogEntry {
+  time: number;
+  speed: number;
+  rpm: number;
+  soc: number;
+  voltage: number;
+  current: number;
+  power: number;
+  batteryTemp: number;
+  motorTemp: number;
+  ambientTemp: number;
+  regenBraking: boolean;
+}
+
+// ─── Eco Driving Score ────────────────────────────────────────────
+
+export interface EcoScore {
+  overall: number;       // 0-100
+  acceleration: number;  // 0-100
+  braking: number;       // 0-100
+  speed: number;         // 0-100
+  efficiency: number;    // 0-100
+  history: number[];     // last 60 readings
+}
+
+// ─── Freeze Frame ─────────────────────────────────────────────────
+
+export interface FreezeFrame {
+  dtcCode: string;
+  timestamp: number;
+  data: Partial<VehicleData>;
 }
 
 // ─── OBD-II Command Definitions ─────────────────────────────────────
@@ -60,12 +113,6 @@ export interface OBDCommand {
   bytes: number;
   decode: (buffer: DataView) => number;
 }
-
-const formulaA256 = (buffer: DataView, factor: number, offset: number) =>
-  ((buffer.getUint8(0) * 256 + buffer.getUint8(1)) * factor + offset);
-
-const formulaA = (buffer: DataView, factor: number, offset: number) =>
-  (buffer.getUint8(0) * factor + offset);
 
 export const OBD_COMMANDS: Record<string, OBDCommand> = {
   rpm: {
@@ -88,11 +135,6 @@ export const OBD_COMMANDS: Record<string, OBDCommand> = {
     unit: '°C', min: -40, max: 215, bytes: 1,
     decode: (b) => b.getUint8(0) - 40,
   },
-  mafRate: {
-    mode: '01', pid: '10', description: 'MAF Air Flow Rate',
-    unit: 'g/s', min: 0, max: 655.35, bytes: 2,
-    decode: (b) => ((b.getUint8(0) * 256 + b.getUint8(1)) / 100),
-  },
   controlVoltage: {
     mode: '01', pid: '42', description: 'Control Module Voltage',
     unit: 'V', min: 0, max: 65.535, bytes: 2,
@@ -113,16 +155,6 @@ export const OBD_COMMANDS: Record<string, OBDCommand> = {
     unit: '°C', min: -40, max: 215, bytes: 1,
     decode: (b) => b.getUint8(0) - 40,
   },
-  fuelPressure: {
-    mode: '01', pid: '0A', description: 'Fuel Pressure',
-    unit: 'kPa', min: 0, max: 765, bytes: 1,
-    decode: (b) => (b.getUint8(0) * 3),
-  },
-  timingAdvance: {
-    mode: '01', pid: '0E', description: 'Timing Advance',
-    unit: '°', min: -64, max: 63.5, bytes: 1,
-    decode: (b) => (b.getUint8(0) / 2 - 64),
-  },
   driverTorque: {
     mode: '01', pid: '61', description: 'Driver Demand Torque',
     unit: '%', min: -125, max: 125, bytes: 1,
@@ -133,15 +165,10 @@ export const OBD_COMMANDS: Record<string, OBDCommand> = {
     unit: '%', min: -125, max: 125, bytes: 1,
     decode: (b) => (b.getUint8(0) - 125),
   },
-  engineRefTorque: {
-    mode: '01', pid: '4C', description: 'Engine Reference Torque',
-    unit: 'Nm', min: 0, max: 65535, bytes: 2,
-    decode: (b) => (b.getUint8(0) * 256 + b.getUint8(1)),
-  },
 };
 
 export const ELM_INIT_COMMANDS = [
-  'ATZ',       // Reset
+  'ATZ',       // Reset — returns version string
   'ATE0',      // Echo off
   'ATL0',      // Linefeeds off
   'ATH1',      // Headers on
@@ -149,6 +176,7 @@ export const ELM_INIT_COMMANDS = [
   'ATSP6',     // Protocol: ISO 15765-4 CAN (11 bit, 500 kbaud)
   'ATDP',      // Describe protocol
   'ATRV',      // Read voltage
+  'AT@1',      // Device name / description
 ];
 
 export const DTC_CODES: Record<string, string> = {

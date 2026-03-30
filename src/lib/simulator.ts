@@ -224,6 +224,34 @@ function tickSimulation() {
     };
     store.addBatteryHistory(historyEntry);
 
+    // Session logging
+    if (store.isLogging) {
+      store.addSessionLog({
+        time: now, speed: newSpeed, rpm: Math.round(motorRPM),
+        soc: Math.round(state.baseSOC * 10) / 10, voltage: Math.round(voltage * 10) / 10,
+        current: Math.round(current * 10) / 10, power: Math.round(power * 10) / 10,
+        batteryTemp: Math.round(state.baseBatteryTemp * 10) / 10,
+        motorTemp: Math.round(state.baseMotorTemp * 10) / 10,
+        ambientTemp: Math.round(store.vehicleData.ambientTemp * 10) / 10,
+        regenBraking: regen,
+      });
+    }
+
+    // Eco score calculation (every 500ms)
+    const ecoAccel = newSpeed > 0 ? Math.max(0, 100 - Math.abs(store.vehicleData.speed - newSpeed) * 5) : 100;
+    const ecoBrake = regen ? 95 : (state.phase === 'decelerating' ? 60 : 80);
+    const ecoSpd = newSpeed > 0 && newSpeed < 100 ? 90 : newSpeed >= 100 ? 50 : 100;
+    const ecoEff = state.baseSOC > 20 ? 85 : 30;
+    const ecoOverall = Math.round(ecoAccel * 0.3 + ecoBrake * 0.25 + ecoSpd * 0.25 + ecoEff * 0.2);
+    store.updateEcoScore({
+      acceleration: Math.round(ecoAccel),
+      braking: Math.round(ecoBrake),
+      speed: Math.round(ecoSpd),
+      efficiency: Math.round(ecoEff),
+      overall: ecoOverall,
+      history: [ecoOverall],
+    });
+
     // Update trip data
     store.tripData = {
       ...store.tripData,
@@ -239,6 +267,13 @@ function tickSimulation() {
       regenEnergy: Math.round(state.tripRegenEnergy * 1000) / 1000,
       duration: state.tick / 10,
     };
+
+    // Update device info ping
+    store.setDeviceInfo({
+      lastPing: now,
+      responseTime: Math.round(Math.random() * 15 + 8),
+      signalStrength: clamp(store.deviceInfo.signalStrength + (Math.random() - 0.5) * 3, 60, 100),
+    });
   }
 }
 

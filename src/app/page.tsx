@@ -6,8 +6,9 @@ import { ConnectOverlay } from '@/components/byd/ConnectOverlay';
 import { Header, BottomNav } from '@/components/byd/Navigation';
 import { DashboardView } from '@/components/byd/DashboardView';
 import { BatteryView } from '@/components/byd/BatteryView';
+import { DeviceView } from '@/components/byd/DeviceView';
 import { DiagnosticsView } from '@/components/byd/DiagnosticsView';
-import { TripView } from '@/components/byd/TripView';
+import { SessionView } from '@/components/byd/SessionView';
 import { ControlsView } from '@/components/byd/ControlsView';
 import { stopSimulator } from '@/lib/simulator';
 
@@ -42,8 +43,9 @@ function AppContent() {
     switch (activeTab) {
       case 'dashboard': return <DashboardView />;
       case 'battery': return <BatteryView />;
+      case 'device': return <DeviceView />;
       case 'diagnostics': return <DiagnosticsView />;
-      case 'trip': return <TripView />;
+      case 'session': return <SessionView />;
       case 'controls': return <ControlsView />;
       default: return <DashboardView />;
     }
