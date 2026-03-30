@@ -47,5 +47,19 @@ test
 prompt
 
 server.log
-# Skills directory
+
+# Skills / internal tooling
 /skills/
+.zscripts/
+/worklog.md
+
+# Search artifacts
+search*.json
+generate_byd_guide.py
+
+# Database
+/db/*.db
+/db/*.db-journal
+
+# Download directory (generated files)
+/download/
