@@ -1,10 +1,12 @@
 # EV Connect — BYD OBD-II Monitor
 
-Real-time OBD-II diagnostics and monitoring for BYD electric vehicles. Connect via Bluetooth BLE adapter or try the interactive demo.
+Real-time OBD-II diagnostics and monitoring for BYD electric vehicles. Connect via Bluetooth BLE, WiFi, or try the interactive demo.
 
 <p align="center">
   <img src="public/icons/icon-512.png" width="120" alt="EV Connect Icon" />
 </p>
+
+**Author:** Dr. Waleed Mandour · [waleedmandour.github.io](https://github.com/waleedmandour)
 
 ## Features
 
@@ -24,6 +26,16 @@ Real-time OBD-II diagnostics and monitoring for BYD electric vehicles. Connect v
 - Battery health diagnostics (SOH, cell balancing, insulation resistance, cycle count, cell voltage delta)
 - BYD Blade Battery specifications (60.48 kWh LFP, 120S1P, liquid cooled)
 
+### Device Info (OBD-II Adapter)
+- **Adapter identification:** model, firmware version, protocol description
+- **Connection type indicator:** Bluetooth BLE or WiFi with live status
+- **Signal strength** monitoring with visual bar
+- **Response time** tracking with history chart
+- **Vehicle Identification:** VIN, motor specs, battery specs
+- **Firmware version check** with update status
+- **WiFi setup guide** for ELM327 WiFi adapters
+- **Compatibility notes** for BLE vs WiFi adapters
+
 ### Diagnostics
 - MIL (Check Engine Light) status indicator
 - Scan ECU for Diagnostic Trouble Codes
@@ -31,12 +43,14 @@ Real-time OBD-II diagnostics and monitoring for BYD electric vehicles. Connect v
 - 30+ EV-specific code definitions (P0A00–P1A0C, P0D00–P0D02, C0300, U0100–U0151)
 - Emission monitor readiness status (8 monitored systems)
 
-### Trip Computer
-- Energy efficiency rating (Wh/km) with Excellent / Good / Average / High scale
-- Distance, duration, average / max speed
-- Total energy consumed (kWh)
-- Regenerative braking energy recovered with recovery ratio
-- Trip cost estimates in OMR and USD
+### Session Logger & Eco Driving
+- **Eco Driving Score** (0–100) with animated circular gauge
+- Score breakdown: acceleration, braking, speed, efficiency
+- **Live score history** chart
+- **Data Logger:** start/stop session recording at ~2 Hz
+- **CSV Export:** download full session data for analysis
+- Real-time stats grid (speed, power, SOC, regen, mode, temp)
+- BYD-specific eco driving tips
 
 ### Vehicle Controls
 - Detailed explanation of OBD-II protocol limitations
@@ -45,7 +59,21 @@ Real-time OBD-II diagnostics and monitoring for BYD electric vehicles. Connect v
 
 ### Connectivity
 - **Bluetooth BLE** — Web Bluetooth API for ELM327 adapters (Chrome on Android)
+- **WiFi** — Connect to OBD-II adapter's WiFi hotspot (works on Android + iOS)
 - **Demo Mode** — Realistic driving simulator, no hardware needed
+
+## Supported OBD-II Adapters
+
+| Adapter | Type | Notes |
+|---------|------|-------|
+| ELM327 v1.5+ | BLE / WiFi | Most popular. Requires Nordic UART Service for BLE. |
+| ELM327 v2.1 | BLE / WiFi | Genuine chip, more reliable CAN communication. |
+| vLinker FS | BLE | Excellent build quality, fast response times. |
+| Carista | BLE | Good build but limited custom PID support. |
+| ScanTool | WiFi | Reliable WiFi, standard port 35000. |
+| Konnwei | WiFi | Budget option, adequate for basic PIDs. |
+
+> **WiFi Setup:** The phone connects to the adapter's WiFi network (SSID: ELM327, WiFi_OBDII, etc.), not the other way around. Port 35000 is standard for most WiFi adapters.
 
 ## Tech Stack
 
@@ -59,12 +87,15 @@ Real-time OBD-II diagnostics and monitoring for BYD electric vehicles. Connect v
 | Charts | Custom SVG sparklines |
 | PWA | Web App Manifest + Service Worker |
 | Bluetooth | Web Bluetooth API (BLE GATT) |
+| WiFi | WebSocket / TCP bridge |
 
 ## Getting Started
 
 ### Prerequisites
 - Node.js 18+ or Bun
-- A BLE-compatible ELM327 OBD-II adapter (v1.5+) for live data
+- A compatible OBD-II adapter (see table above)
+- For BLE: Chrome on Android
+- For WiFi: Any modern browser (Android or iOS)
 
 ### Install & Run
 
@@ -82,22 +113,54 @@ bun run dev
 
 Open [http://localhost:3000](http://localhost:3000) and tap **Launch Interactive Demo** to explore.
 
+### WiFi Connection Steps
+
+1. Plug the WiFi OBD-II adapter into the OBD-II port
+2. On your phone, go to Settings → WiFi
+3. Find and connect to the adapter's network (e.g., "ELM327", "WiFi_OBDII")
+4. Return to EV Connect → tap **Connect WiFi Adapter**
+5. Enter the adapter's IP (default: `192.168.0.10`) and port (default: `35000`)
+6. Tap Connect
+
 ### PWA Install
 
-The app is a Progressive Web App. In Chrome on Android:
-1. Open the app URL
+1. Open the app URL in Chrome on Android
 2. Tap the three-dot menu → **Install app**
 3. The app installs to your home screen with its own icon
 
-### Connect to Your BYD
+## Live Deployment
 
-1. Plug a BLE ELM327 adapter into the OBD-II port (under the steering wheel)
-2. Open EV Connect
-3. Tap **Connect BLE OBD-II Adapter**
-4. Select your adapter from the pairing dialog
-5. Live data streams to the dashboard
+**[https://evd-ochre.vercel.app](https://evd-ochre.vercel.app)**
 
-> **Note:** Works with Chrome on Android. iOS does not support Web Bluetooth for OBD-II adapters.
+## Project Structure
+
+```
+src/
+├── app/
+│   ├── layout.tsx          # Root layout with PWA meta tags
+│   └── page.tsx            # Main app with 7-tab routing
+├── components/
+│   └── byd/
+│       ├── gauges.tsx          # SVG gauge + chart components
+│       ├── DashboardView.tsx    # Speed, power, temps, charts
+│       ├── BatteryView.tsx     # SOC, voltage, health diagnostics
+│       ├── DeviceView.tsx      # Adapter info, signal, firmware check
+│       ├── DiagnosticsView.tsx # DTC scan, monitor readiness
+│       ├── SessionView.tsx     # Eco score, data logger, CSV export
+│       ├── ControlsView.tsx    # OBD-II limitation explanation
+│       ├── ConnectOverlay.tsx  # BLE / WiFi / Demo connection
+│       └── Navigation.tsx      # 7-tab bottom nav + header
+├── lib/
+│   ├── store.ts             # Zustand state management
+│   ├── simulator.ts         # Realistic EV driving simulator
+│   └── types.ts             # Types, OBD-II PIDs, DTC codes
+public/
+├── manifest.json           # PWA manifest
+├── sw.js                   # Service worker (cache-first)
+└── icons/
+    ├── icon-192.png
+    └── icon-512.png
+```
 
 ## OBD-II Support
 
@@ -110,9 +173,9 @@ Standard SAE J1979 PIDs are defined for:
 | 0C | Engine/Motor RPM |
 | 0D | Vehicle Speed |
 | 0F | Intake Air Temperature |
+| 11 | Throttle Position |
 | 42 | Control Module Voltage |
 | 46 | Ambient Air Temperature |
-| 4C | Engine Reference Torque |
 | 61 | Driver Demand Torque |
 | 62 | Actual Engine Torque |
 
@@ -125,39 +188,10 @@ Designed and tested for:
 
 The standard OBD-II layer works with any OBD-II compliant vehicle. BYD-specific features (battery specs, DTC definitions) are tuned for BYD EVs.
 
-## Project Structure
-
-```
-src/
-├── app/
-│   ├── layout.tsx          # Root layout with PWA meta tags
-│   └── page.tsx            # Main app with tab routing
-├── components/
-│   └── byd/
-│       ├── gauges.tsx      # SVG gauge + chart components
-│       ├── DashboardView.tsx
-│       ├── BatteryView.tsx
-│       ├── DiagnosticsView.tsx
-│       ├── TripView.tsx
-│       ├── ControlsView.tsx
-│       ├── ConnectOverlay.tsx
-│       └── Navigation.tsx
-├── lib/
-│   ├── store.ts            # Zustand state management
-│   ├── simulator.ts        # Realistic EV driving simulator
-│   └── types.ts            # TypeScript types, OBD-II PID definitions, DTC codes
-public/
-├── manifest.json           # PWA manifest
-├── sw.js                   # Service worker (cache-first static, network-first navigation)
-└── icons/
-    ├── icon-192.png
-    └── icon-512.png
-```
-
 ## License
 
 MIT
 
 ---
 
-**Built with Next.js, Tailwind CSS, and Zustand.**
+**Built by Dr. Waleed Mandour with Next.js, Tailwind CSS, and Zustand.**
