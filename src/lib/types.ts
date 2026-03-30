@@ -2,6 +2,7 @@
 
 export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
 export type ConnectionMode = 'bluetooth' | 'wifi' | 'demo' | null;
+export type ChargingType = 'off' | 'ac_l1' | 'ac_l2' | 'dc_fast';
 
 export interface VehicleData {
   speed: number;
@@ -48,22 +49,58 @@ export interface BatteryHistoryEntry {
   temp: number;
 }
 
+// ─── Charging Data ──────────────────────────────────────────────────
+
+export interface ChargingData {
+  isActive: boolean;
+  type: ChargingType;
+  power: number;              // kW currently being delivered
+  voltage: number;            // V from charger
+  current: number;            // A from charger
+  startedSOC: number;         // SOC when charging began
+  energyAdded: number;        // kWh added so far
+  elapsedSeconds: number;     // seconds since charge start
+  estimatedMinutesLeft: number;
+  chargeEfficiency: number;   // 0-100%
+  batteryTemp: number;        // °C during charge
+  cabinPreconditioning: boolean;
+  cellMaxVoltage: number;     // V (highest cell)
+  cellMinVoltage: number;     // V (lowest cell)
+  cellDelta: number;          // mV difference
+  chargerName: string;
+  connectorType: string;      // CCS2 / Type 2 / GB/T
+  history: ChargingHistoryPoint[];
+}
+
+export interface ChargingHistoryPoint {
+  time: number;
+  soc: number;
+  power: number;
+  voltage: number;
+  current: number;
+  temp: number;
+}
+
 // ─── OBD-II Device Info ────────────────────────────────────────────
 
 export interface DeviceInfo {
-  adapterType: string;        // e.g., "ELM327", "vLinker", "Carista"
-  firmwareVersion: string;    // e.g., "v2.1", "v4.5.4"
-  protocol: string;           // e.g., "ISO 15765-4 CAN (11 bit, 500 kbaud)"
-  voltage: string;            // e.g., "12.8V"
-  adapterVoltage: number;     // numeric
-  supportedPIDs: number[];     // list of PIDs the adapter confirmed
-  vin: string;                // Vehicle Identification Number
+  adapterType: string;
+  firmwareVersion: string;
+  protocol: string;
+  voltage: string;
+  adapterVoltage: number;
+  supportedPIDs: number[];
+  vin: string;
   connectionType: 'bluetooth' | 'wifi';
-  wifiIp: string;             // IP address for WiFi adapters
-  wifiPort: number;           // Port for WiFi adapters
-  lastPing: number;           // timestamp of last successful comm
-  signalStrength: number;     // 0-100 signal quality estimate
-  responseTime: number;       // ms average response time
+  wifiIp: string;
+  wifiPort: number;
+  lastPing: number;
+  signalStrength: number;
+  responseTime: number;
+  // vGate iCar Pro specific
+  chipset: string;
+  bleVersion: string;
+  deviceId: string;
 }
 
 // ─── Session Data Logger ──────────────────────────────────────────
@@ -85,12 +122,12 @@ export interface SessionLogEntry {
 // ─── Eco Driving Score ────────────────────────────────────────────
 
 export interface EcoScore {
-  overall: number;       // 0-100
-  acceleration: number;  // 0-100
-  braking: number;       // 0-100
-  speed: number;         // 0-100
-  efficiency: number;    // 0-100
-  history: number[];     // last 60 readings
+  overall: number;
+  acceleration: number;
+  braking: number;
+  speed: number;
+  efficiency: number;
+  history: number[];
 }
 
 // ─── Freeze Frame ─────────────────────────────────────────────────
@@ -167,16 +204,59 @@ export const OBD_COMMANDS: Record<string, OBDCommand> = {
   },
 };
 
-export const ELM_INIT_COMMANDS = [
-  'ATZ',       // Reset — returns version string
+// ─── vGate iCar Pro BLE 4.0 Constants ─────────────────────────────
+
+export const VGATE_ICAR_SERVICE_UUID = '0000ffe0-0000-1000-8000-00805f9b34fb';
+export const VGATE_ICAR_WRITE_UUID = '0000ffe1-0000-1000-8000-00805f9b34fb';
+export const VGATE_ICAR_NOTIFY_UUID = '0000ffe2-0000-1000-8000-00805f9b34fb';
+export const NORDIC_UART_SERVICE_UUID = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
+export const NORDIC_UART_RX_UUID = '6e400003-b5a3-f393-e0a9-e50e24dcca9e';
+export const NORDIC_UART_TX_UUID = '6e400002-b5a3-f393-e0a9-e50e24dcca9e';
+
+export const VGATE_INIT_COMMANDS = [
+  'ATZ',       // Reset
   'ATE0',      // Echo off
   'ATL0',      // Linefeeds off
   'ATH1',      // Headers on
   'ATS0',      // Spaces off
+  'ATSTFF',    // Adaptive timing to fast
   'ATSP6',     // Protocol: ISO 15765-4 CAN (11 bit, 500 kbaud)
   'ATDP',      // Describe protocol
-  'ATRV',      // Read voltage
-  'AT@1',      // Device name / description
+  'ATRV',      // Read vehicle voltage
+  'AT@1',      // Device description
+  'ATI',       // Identify (vGate returns chip info)
+  'AT@2',      // Device hardware version
+  'ATPPSV',    // Set voltage to V (power save)
+];
+
+export const VGATE_ADAPTER_INFO = {
+  name: 'vGate iCar Pro BLE 4.0',
+  manufacturer: 'vGate Technology',
+  chipset: 'CC2541 / nRF51822',
+  bleVersion: 'Bluetooth 4.0 Low Energy',
+  maxBaudRate: '500 kbaud',
+  supportedProtocols: ['ISO 15765-4 CAN (11/29 bit)', 'ISO 9141-2', 'KWP2000', 'SAE J1850 PWM/VPW'],
+  features: [
+    'Ultra-low power BLE 4.0',
+    'iOS & Android compatible',
+    'ELM327 v2.1 command set',
+    'Auto sleep / wake on ignition',
+    'Adaptive timing control',
+    'CCS2 / Type 2 charge monitoring',
+    'Multi-protocol auto-detect',
+  ],
+};
+
+export const ELM_INIT_COMMANDS = [
+  'ATZ',
+  'ATE0',
+  'ATL0',
+  'ATH1',
+  'ATS0',
+  'ATSP6',
+  'ATDP',
+  'ATRV',
+  'AT@1',
 ];
 
 export const DTC_CODES: Record<string, string> = {

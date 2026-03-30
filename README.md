@@ -1,6 +1,6 @@
 # EV Connect — BYD OBD-II Monitor
 
-Real-time OBD-II diagnostics and monitoring for BYD electric vehicles. Connect via Bluetooth BLE, WiFi, or try the interactive demo.
+Real-time OBD-II diagnostics and monitoring for BYD electric vehicles. Optimized for **vGate iCar Pro BLE 4.0**. Connect via Bluetooth BLE, WiFi, or try the interactive demo.
 
 <p align="center">
   <img src="public/icons/icon-512.png" width="120" alt="EV Connect Icon" />
@@ -18,18 +18,21 @@ Real-time OBD-II diagnostics and monitoring for BYD electric vehicles. Connect v
 
 ## Features
 
+### ⭐ vGate iCar Pro BLE 4.0 — Optimized Support
+- **Dedicated BLE connection profile** with vGate-specific service UUID (`FFE0`)
+- **Fast auto-detection** — scans for vGate service first, then falls back to Nordic UART
+- **Optimized AT commands** (`ATSTFF` adaptive timing, `ATPPSV` power save, `ATI` chip identify)
+- **Device identification** — chipset (CC2541/nRF51822), BLE version, firmware, device ID
+- **Enhanced Device Info page** with manufacturer details, feature list, and supported protocols
+- **Featured connect button** on the connection screen with "RECOMMENDED" badge
+- **Multi-protocol support**: ISO 15765-4 CAN, ISO 9141-2, KWP2000, SAE J1850
+
 ### Dashboard
 - Real-time speed semicircle gauge (0–180 km/h)
 - Battery SOC arc gauge with color-coded thresholds
 - Motor power draw / regen power gauge
 - Estimated range, drive mode (ECO / NORMAL / SPORT)
-- **Smart Alerts** — automatic notifications for critical conditions:
-  - 🔋 Low/critical battery warnings
-  - 🌡️ Motor and battery overheating alerts
-  - ⚡ High power draw warnings
-  - 📊 Low range alerts
-  - ⚠️ Fault code (DTC) detection alerts
-  - ♻️ Regen braking energy recovery info
+- **Smart Alerts** — automatic notifications for: low/critical battery, motor/battery overheating, high power draw, DTC detection, low range, regen activity
 - Live speed profile sparkline chart
 - Power flow chart (draw vs. regen, with zero reference line)
 - Temperature monitoring bars (motor, battery pack, cabin, ambient)
@@ -41,8 +44,26 @@ Real-time OBD-II diagnostics and monitoring for BYD electric vehicles. Connect v
 - Battery health diagnostics (SOH, cell balancing, insulation resistance, cycle count, cell voltage delta)
 - BYD Blade Battery specifications (60.48 kWh LFP, 120S1P, liquid cooled)
 
+### 🔌 Charging Monitor (New)
+- **Start charging simulation** for 3 charge types:
+  - ⚡ **DC Fast Charge** — 60 kW via CCS2, ~45 min to 80%
+  - 🔌 **AC Level 2** — 7.2 kW via Type 2, ~9 hrs full charge
+  - 🔌 **AC Level 1** — 1.8 kW household, ~36 hrs full charge
+- **Real-time charging metrics**: Power (kW), Voltage (V), Current (A)
+- **Time remaining** estimate with elapsed time counter
+- **Energy added** (kWh) with charge efficiency percentage
+- **Charge session cost** in Omani Rial (OMR) and USD
+- **Charging power curve chart** — visualizes CC-CV taper behavior
+- **SOC during charge** chart
+- **Battery temperature** chart during charging
+- **Cell voltage balance** — max/min cell voltage, delta in mV
+- **Last charge session summary** after charging stops
+- **BYD Yuan Plus charging specifications** reference
+
 ### Device Info (OBD-II Adapter)
-- **Adapter identification:** model, firmware version, protocol description
+- **Adapter identification:** model, firmware, protocol, chipset, BLE version, device ID
+- **vGate iCar Pro dedicated section** when detected: manufacturer, chipset, features list, protocol support
+- **"OPTIMIZED" badge** for vGate adapters
 - **Connection type indicator:** Bluetooth BLE or WiFi with live status
 - **Signal strength** monitoring with visual bar
 - **Response time** tracking with history chart
@@ -72,37 +93,31 @@ Real-time OBD-II diagnostics and monitoring for BYD electric vehicles. Connect v
 - 7 control items with availability status and reasons
 - Alternative approaches (BYD official app, aftermarket, XDA community)
 
-### Voice Guide (New)
-- **Professional voice narration** for every app page
-- Uses the Web Speech API (SpeechSynthesis) with natural/enhanced voices
+### Voice Guide
+- **Professional voice narration** for all 7 tabs (including Charging)
+- Uses the Web Speech API with natural/enhanced voices
 - Toggle on/off via the speaker icon in the header
-- Automatically reads page instructions and feedback when you navigate to any tab
-- Each page has a comprehensive audio guide explaining all features, metrics, and how to use them
-- Prefers Google/Microsoft/Apple natural voices when available
+- Automatic page narration on tab navigation
 
-### Smart Alerts (New)
-- Real-time monitoring of vehicle conditions
-- Automatic alerts for: critical battery, low battery, motor overheating, battery overheating, high power draw, DTC detection, low range, and regen activity
-- Color-coded severity: red (danger), amber (warning), cyan (info), green (success)
-- Collapsible alert panel with unread count badge
+### Smart Alerts
+- Real-time monitoring of vehicle conditions with collapsible panel
+- Color-coded severity levels
 
 ### Connectivity
-- **Bluetooth BLE** — Web Bluetooth API for ELM327 adapters (Chrome on Android)
-- **WiFi** — Connect to OBD-II adapter's WiFi hotspot (works on Android + iOS)
-- **Demo Mode** — Realistic driving simulator, no hardware needed
+- **⭐ vGate iCar Pro BLE 4.0** — Dedicated connect button (recommended)
+- **Bluetooth BLE** — Web Bluetooth API for generic ELM327 adapters
+- **WiFi** — Connect to OBD-II adapter's WiFi hotspot
+- **Demo Mode** — Realistic driving + charging simulator, no hardware needed
 
-## Supported OBD-II Adapters
+## vGate iCar Pro BLE 4.0 Setup
 
-| Adapter | Type | Notes |
-|---------|------|-------|
-| ELM327 v1.5+ | BLE / WiFi | Most popular. Requires Nordic UART Service for BLE. |
-| ELM327 v2.1 | BLE / WiFi | Genuine chip, more reliable CAN communication. |
-| vLinker FS | BLE | Excellent build quality, fast response times. |
-| Carista | BLE | Good build but limited custom PID support. |
-| ScanTool | WiFi | Reliable WiFi, standard port 35000. |
-| Konnwei | WiFi | Budget option, adequate for basic PIDs. |
+1. Plug the vGate iCar Pro into your BYD's OBD-II port
+2. On your phone, enable Bluetooth
+3. Open EV Connect → tap **"vGate iCar Pro BLE 4.0"** (green recommended button)
+4. When prompted, select your vGate adapter from the Bluetooth device list
+5. The app will automatically detect the adapter, identify the chipset, and connect
 
-> **WiFi Setup:** The phone connects to the adapter's WiFi network (SSID: ELM327, WiFi_OBDII, etc.), not the other way around. Port 35000 is standard for most WiFi adapters.
+> The vGate iCar Pro uses BLE 4.0 Low Energy with service UUID `0000ffe0-0000-1000-8000-00805f9b34fb`. It's compatible with both iOS and Android.
 
 ## Tech Stack
 
@@ -115,7 +130,7 @@ Real-time OBD-II diagnostics and monitoring for BYD electric vehicles. Connect v
 | State | Zustand |
 | Charts | Custom SVG sparklines |
 | PWA | Web App Manifest + Service Worker |
-| Bluetooth | Web Bluetooth API (BLE GATT) |
+| Bluetooth | Web Bluetooth API (vGate FFE0 + NUS) |
 | WiFi | WebSocket / TCP bridge |
 | Voice | Web Speech API (SpeechSynthesis) |
 
@@ -123,7 +138,7 @@ Real-time OBD-II diagnostics and monitoring for BYD electric vehicles. Connect v
 
 ### Prerequisites
 - Node.js 18+ or Bun
-- A compatible OBD-II adapter (see table above)
+- A compatible OBD-II adapter (vGate iCar Pro recommended)
 - For BLE: Chrome on Android
 - For WiFi: Any modern browser (Android or iOS)
 
@@ -143,22 +158,6 @@ bun run dev
 
 Open [http://localhost:3000](http://localhost:3000) and tap **Launch Interactive Demo** to explore.
 
-### WiFi Connection Steps
-
-1. Plug the WiFi OBD-II adapter into the OBD-II port
-2. On your phone, go to Settings → WiFi
-3. Find and connect to the adapter's network (e.g., "ELM327", "WiFi_OBDII")
-4. Return to EV Connect → tap **Connect WiFi Adapter**
-5. Enter the adapter's IP (default: `192.168.0.10`) and port (default: `35000`)
-6. Tap Connect
-
-### Voice Guide
-
-1. Tap the **speaker icon** in the top-right corner of the header
-2. The icon turns green with a dot when enabled
-3. Navigate to any tab — the app will automatically read a professional guide for that page
-4. Tap the speaker icon again to mute
-
 ### PWA Install
 
 1. Open the app URL in Chrome on Android
@@ -175,25 +174,26 @@ Open [http://localhost:3000](http://localhost:3000) and tap **Launch Interactive
 src/
 ├── app/
 │   ├── layout.tsx          # Root layout with PWA meta tags
-│   └── page.tsx            # Main app with 6-tab routing + voice + footer
+│   └── page.tsx            # Main app with 7-tab routing + voice + footer
 ├── components/
 │   └── byd/
 │       ├── gauges.tsx          # SVG gauge + chart components
 │       ├── DashboardView.tsx    # Speed, power, temps, charts, alerts
 │       ├── BatteryView.tsx     # SOC, voltage, health diagnostics
-│       ├── DeviceView.tsx      # Adapter info, signal, firmware check
+│       ├── ChargingView.tsx    # Charging dashboard (DC/AC L1/L2 sim)
+│       ├── DeviceView.tsx      # Adapter info, vGate specifics, signal
 │       ├── DiagnosticsView.tsx # DTC scan, monitor readiness
 │       ├── SessionView.tsx     # Eco score, data logger, CSV export
 │       ├── ControlsView.tsx    # OBD-II limitation explanation
 │       ├── SmartAlerts.tsx     # Real-time vehicle condition alerts
-│       ├── ConnectOverlay.tsx  # BLE / WiFi / Demo connection
-│       └── Navigation.tsx      # 6-tab bottom nav + header + voice toggle
+│       ├── ConnectOverlay.tsx  # vGate / BLE / WiFi / Demo connection
+│       └── Navigation.tsx      # 7-tab bottom nav + header + voice toggle
 ├── hooks/
 │   └── use-voice.ts           # Web Speech API voice narration hook
 ├── lib/
 │   ├── store.ts             # Zustand state management
-│   ├── simulator.ts         # Realistic EV driving simulator
-│   └── types.ts             # Types, OBD-II PIDs, DTC codes
+│   ├── simulator.ts         # Driving + charging simulator
+│   └── types.ts             # Types, OBD-II PIDs, vGate constants, DTC codes
 public/
 ├── manifest.json           # PWA manifest
 ├── sw.js                   # Service worker (cache-first)
@@ -219,14 +219,26 @@ Standard SAE J1979 PIDs are defined for:
 | 61 | Driver Demand Torque |
 | 62 | Actual Engine Torque |
 
-Plus additional EV-specific DTC codes for BYD powertrain systems.
+Plus vGate-optimized AT commands and EV-specific DTC codes.
+
+## Supported Adapters
+
+| Adapter | Type | Support Level |
+|---------|------|---------------|
+| **vGate iCar Pro** | **BLE 4.0** | **⭐ Optimized** — dedicated profile, fast detection |
+| ELM327 v2.1 | BLE / WiFi | Good — standard ELM327 commands |
+| ELM327 v1.5 | BLE / WiFi | Basic — clone quality varies |
+| vLinker FS | BLE | Good — fast response times |
+| Carista | BLE | Good — limited custom PIDs |
+| ScanTool | WiFi | Standard — port 35000 |
+| Konnwei | WiFi | Basic — adequate for standard PIDs |
 
 ## Supported Vehicles
 
-Designed and tested for:
-- **BYD Yuan Plus / Atto 3** (60.48 kWh Blade Battery)
+Designed and optimized for:
+- **BYD Yuan Plus / Atto 3** (60.48 kWh Blade Battery, CCS2 DC charging)
 
-The standard OBD-II layer works with any OBD-II compliant vehicle. BYD-specific features (battery specs, DTC definitions) are tuned for BYD EVs.
+The standard OBD-II layer works with any OBD-II compliant vehicle. BYD-specific features are tuned for BYD EVs.
 
 ## License
 

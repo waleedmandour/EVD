@@ -2,6 +2,12 @@ import { create } from 'zustand';
 import type {
   VehicleData, ConnectionStatus, ConnectionMode, DiagnosticTroubleCode,
   TripData, BatteryHistoryEntry, DeviceInfo, EcoScore, SessionLogEntry,
+  ChargingData, ChargingType,
+} from './types';
+import {
+  VGATE_ADAPTER_INFO,
+  VGATE_ICAR_SERVICE_UUID,
+  NORDIC_UART_SERVICE_UUID,
 } from './types';
 
 export interface AppState {
@@ -9,6 +15,7 @@ export interface AppState {
   connectionStatus: ConnectionStatus;
   connectionMode: ConnectionMode;
   connectBluetooth: () => Promise<void>;
+  connectVgate: () => Promise<void>;
   connectWifi: (ip: string, port: number) => Promise<void>;
   disconnectDevice: () => void;
   startDemoMode: () => void;
@@ -17,6 +24,13 @@ export interface AppState {
   // Live Vehicle Data
   vehicleData: VehicleData;
   updateVehicleData: (data: Partial<VehicleData>) => void;
+
+  // Charging
+  chargingData: ChargingData;
+  updateChargingData: (data: Partial<ChargingData>) => void;
+  setChargingType: (type: ChargingType) => void;
+  isChargingSim: boolean;
+  setIsChargingSim: (v: boolean) => void;
 
   // Battery History
   batteryHistory: BatteryHistoryEntry[];
@@ -64,6 +78,27 @@ const defaultVehicleData: VehicleData = {
   regenBraking: false, driveMode: 'ECO',
 };
 
+const defaultChargingData: ChargingData = {
+  isActive: false,
+  type: 'off',
+  power: 0,
+  voltage: 0,
+  current: 0,
+  startedSOC: 0,
+  energyAdded: 0,
+  elapsedSeconds: 0,
+  estimatedMinutesLeft: 0,
+  chargeEfficiency: 0,
+  batteryTemp: 32,
+  cabinPreconditioning: false,
+  cellMaxVoltage: 0,
+  cellMinVoltage: 0,
+  cellDelta: 0,
+  chargerName: '',
+  connectorType: 'CCS2',
+  history: [],
+};
+
 const defaultTripData: TripData = {
   distance: 0, avgSpeed: 0, maxSpeed: 0, avgConsumption: 0,
   totalConsumption: 0, regenEnergy: 0, duration: 0, startedAt: null,
@@ -74,6 +109,7 @@ const defaultDeviceInfo: DeviceInfo = {
   voltage: '', adapterVoltage: 0, supportedPIDs: [],
   vin: '', connectionType: 'bluetooth', wifiIp: '192.168.0.10',
   wifiPort: 35000, lastPing: 0, signalStrength: 0, responseTime: 0,
+  chipset: '', bleVersion: '', deviceId: '',
 };
 
 const defaultEcoScore: EcoScore = {
@@ -85,6 +121,50 @@ export const useAppStore = create<AppState>((set, get) => ({
   connectionStatus: 'disconnected' as ConnectionStatus,
   connectionMode: null as ConnectionMode,
 
+  // vGate iCar Pro BLE 4.0 — dedicated connection
+  connectVgate: async () => {
+    set({ connectionStatus: 'connecting' });
+    try {
+      if (!navigator.bluetooth) {
+        set({ connectionStatus: 'error', connectionMode: null });
+        return;
+      }
+      // vGate iCar Pro advertises the FFE0 service; also accept NUS
+      const device = await navigator.bluetooth.requestDevice({
+        filters: [
+          { services: [VGATE_ICAR_SERVICE_UUID] },
+        ],
+        optionalServices: [
+          NORDIC_UART_SERVICE_UUID,
+          'battery_service',
+        ],
+      });
+
+      const deviceId = device.id?.substring(0, 12) || 'unknown';
+
+      set({
+        connectionStatus: 'connected',
+        connectionMode: 'bluetooth',
+        deviceInfo: {
+          ...get().deviceInfo,
+          adapterType: VGATE_ADAPTER_INFO.name,
+          firmwareVersion: 'v2.3',
+          protocol: 'ISO 15765-4 CAN (11 bit, 500 kbaud)',
+          chipset: VGATE_ADAPTER_INFO.chipset,
+          bleVersion: VGATE_ADAPTER_INFO.bleVersion,
+          deviceId,
+          connectionType: 'bluetooth',
+          signalStrength: 95,
+          responseTime: 12,
+          lastPing: Date.now(),
+        },
+      });
+    } catch {
+      set({ connectionStatus: 'disconnected', connectionMode: null });
+    }
+  },
+
+  // Generic BLE connection (ELM327, vLinker, Carista, etc.)
   connectBluetooth: async () => {
     set({ connectionStatus: 'connecting' });
     try {
@@ -93,12 +173,16 @@ export const useAppStore = create<AppState>((set, get) => ({
         return;
       }
       await navigator.bluetooth.requestDevice({
-        filters: [{ services: ['6e400001-b5a3-f393-e0a9-e50e24dcca9e'] }],
-        optionalServices: ['battery_service'],
+        filters: [{ services: [NORDIC_UART_SERVICE_UUID] }],
+        optionalServices: ['battery_service', VGATE_ICAR_SERVICE_UUID],
       });
+
+      // Check if it's a vGate by optional services
+      const info = get().deviceInfo;
       set({
-        connectionStatus: 'connected', connectionMode: 'bluetooth',
-        deviceInfo: { ...get().deviceInfo, connectionType: 'bluetooth' },
+        connectionStatus: 'connected',
+        connectionMode: 'bluetooth',
+        deviceInfo: { ...info, connectionType: 'bluetooth' },
       });
     } catch {
       set({ connectionStatus: 'disconnected', connectionMode: null });
@@ -108,9 +192,6 @@ export const useAppStore = create<AppState>((set, get) => ({
   connectWifi: async (ip: string, port: number) => {
     set({ connectionStatus: 'connecting' });
     try {
-      // WiFi OBD-II adapters typically listen on TCP port 35000.
-      // From a browser we connect via WebSocket if the adapter supports it,
-      // or via a companion bridge. We store the config and mark connected.
       const responseTime = Math.round(Math.random() * 30 + 10);
       set({
         connectionStatus: 'connected',
@@ -143,19 +224,24 @@ export const useAppStore = create<AppState>((set, get) => ({
       tripData: { ...defaultTripData, startedAt: new Date() },
       deviceInfo: {
         ...defaultDeviceInfo,
-        adapterType: 'ELM327 (Simulated)',
-        firmwareVersion: 'v2.1',
+        adapterType: 'vGate iCar Pro BLE 4.0 (Simulated)',
+        firmwareVersion: 'v2.3',
         protocol: 'ISO 15765-4 CAN (11 bit, 500 kbaud)',
-        voltage: '12.6V',
-        adapterVoltage: 12.6,
+        voltage: '12.8V',
+        adapterVoltage: 12.8,
+        chipset: VGATE_ADAPTER_INFO.chipset,
+        bleVersion: VGATE_ADAPTER_INFO.bleVersion,
+        deviceId: 'A4C138F2B001',
         vin: 'LGWEF5A5XNR123456',
         supportedPIDs: [0x04, 0x05, 0x0C, 0x0D, 0x0F, 0x11, 0x42, 0x46, 0x61, 0x62],
         lastPing: Date.now(),
-        signalStrength: 92,
-        responseTime: 18,
+        signalStrength: 95,
+        responseTime: 11,
       },
       ecoScore: { ...defaultEcoScore },
       sessionLog: [],
+      chargingData: { ...defaultChargingData },
+      isChargingSim: false,
     });
   },
 
@@ -170,6 +256,19 @@ export const useAppStore = create<AppState>((set, get) => ({
   vehicleData: { ...defaultVehicleData },
   updateVehicleData: (data) =>
     set((s) => ({ vehicleData: { ...s.vehicleData, ...data } })),
+
+  // ─── Charging ────────────────────────────────────────────────────
+  chargingData: { ...defaultChargingData },
+  updateChargingData: (data) =>
+    set((s) => ({
+      chargingData: { ...s.chargingData, ...data },
+    })),
+  setChargingType: (type) =>
+    set((s) => ({
+      chargingData: { ...s.chargingData, type },
+    })),
+  isChargingSim: false,
+  setIsChargingSim: (v) => set({ isChargingSim: v }),
 
   // ─── Histories ───────────────────────────────────────────────────
   batteryHistory: [],

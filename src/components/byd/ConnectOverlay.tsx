@@ -3,10 +3,10 @@
 import React, { useState, useCallback } from 'react';
 import { useAppStore } from '@/lib/store';
 import { startSimulator, stopSimulator } from '@/lib/simulator';
-import { Zap, Bluetooth, Wifi, Play, Smartphone, Signal, Info, Cpu } from 'lucide-react';
+import { Zap, Bluetooth, Wifi, Play, Signal, Info, Cpu, Star } from 'lucide-react';
 
 export function ConnectOverlay() {
-  const { connectionStatus, connectionMode, startDemoMode, stopDemoMode, connectBluetooth, connectWifi } = useAppStore();
+  const { connectionStatus, connectionMode, startDemoMode, stopDemoMode, connectBluetooth, connectVgate, connectWifi } = useAppStore();
   const [wifiIp, setWifiIp] = useState('192.168.0.10');
   const [wifiPort, setWifiPort] = useState('35000');
   const [showWifi, setShowWifi] = useState(false);
@@ -25,7 +25,6 @@ export function ConnectOverlay() {
     const port = parseInt(wifiPort) || 35000;
     await connectWifi(wifiIp, port);
     if (connectionMode !== 'wifi') {
-      // Fallback to demo if WiFi fails in this environment
       handleDemoMode();
     }
   }, [wifiIp, wifiPort, connectWifi, connectionMode, handleDemoMode]);
@@ -51,17 +50,31 @@ export function ConnectOverlay() {
           <h1 className="text-3xl font-bold text-white mb-2">EV Connect</h1>
           <p className="text-slate-400 text-sm leading-relaxed">
             Real-time OBD-II diagnostics for BYD EVs.<br />
-            Connect via Bluetooth, WiFi, or try the demo.
+            Optimized for vGate iCar Pro BLE 4.0.
           </p>
         </div>
 
         <div className="w-full flex flex-col gap-2.5">
-          {/* Bluetooth */}
-          <button onClick={connectBluetooth} disabled={connectionStatus === 'connecting'}
-            className="w-full flex items-center gap-3 px-5 py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-medium transition-all disabled:opacity-50">
+          {/* vGate iCar Pro — Featured */}
+          <button onClick={connectVgate} disabled={connectionStatus === 'connecting'}
+            className="w-full flex items-center gap-3 px-5 py-4 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white font-medium transition-all disabled:opacity-50 relative overflow-hidden">
+            <div className="absolute top-2 right-3 flex items-center gap-1">
+              <Star className="w-3 h-3 text-emerald-200" />
+              <span className="text-[9px] text-emerald-200 font-semibold">RECOMMENDED</span>
+            </div>
             <Bluetooth className="w-5 h-5" />
-            <span>Connect BLE Adapter</span>
-            <span className="ml-auto text-[10px] text-emerald-200">ELM327 v1.5+</span>
+            <div className="text-left">
+              <span className="block text-sm">vGate iCar Pro BLE 4.0</span>
+              <span className="text-[10px] text-emerald-200">Ultra-low power · iOS & Android</span>
+            </div>
+          </button>
+
+          {/* Generic BLE */}
+          <button onClick={connectBluetooth} disabled={connectionStatus === 'connecting'}
+            className="w-full flex items-center gap-3 px-5 py-3.5 rounded-xl bg-emerald-600/60 hover:bg-emerald-500/60 text-white font-medium transition-all disabled:opacity-50">
+            <Bluetooth className="w-5 h-5 text-emerald-200" />
+            <span>Other BLE Adapter</span>
+            <span className="ml-auto text-[10px] text-emerald-200/70">ELM327 / vLinker</span>
           </button>
 
           {/* WiFi */}
@@ -89,7 +102,7 @@ export function ConnectOverlay() {
                 Connect
               </button>
               <p className="text-[10px] text-slate-600">
-                Common IPs: 192.168.0.10, 192.168.1.10 &middot; Port: 35000
+                Common IPs: 192.168.0.10, 192.168.1.10 · Port: 35000
               </p>
             </div>
           )}
@@ -110,14 +123,21 @@ export function ConnectOverlay() {
         </div>
 
         {/* Supported adapters */}
-        <div className="flex flex-col gap-1.5 text-[11px] text-slate-500">
+        <div className="flex flex-col gap-2 text-[11px] text-slate-500">
           <p className="text-slate-400 font-medium text-xs">Supported Adapters:</p>
+          <div className="bg-emerald-500/10 rounded-lg px-3 py-2 border border-emerald-500/20">
+            <div className="flex items-center gap-2 mb-1">
+              <Star className="w-3 h-3 text-emerald-400" />
+              <span className="text-emerald-300 font-semibold">vGate iCar Pro BLE 4.0</span>
+              <span className="text-emerald-400/50 text-[9px]">BEST SUPPORT</span>
+            </div>
+            <span className="text-emerald-400/60">BLE 4.0 · CC2541 · Ultra-low power · iOS + Android · ELM327 v2.1</span>
+          </div>
           <div className="flex flex-wrap justify-center gap-x-4 gap-y-1">
             <span>ELM327 v1.5+ (BLE/WiFi)</span>
             <span>vLinker FS (BLE)</span>
             <span>Carista (BLE)</span>
             <span>ScanTool (WiFi)</span>
-            <span>Konnwei (WiFi)</span>
           </div>
         </div>
 

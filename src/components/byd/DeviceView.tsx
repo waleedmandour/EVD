@@ -5,8 +5,9 @@ import { useAppStore } from '@/lib/store';
 import { MiniChart } from './gauges';
 import {
   Cpu, Wifi, Bluetooth, Signal, Activity, Clock, Radio,
-  Fingerprint, Battery, Thermometer, CircleDot,
+  Fingerprint, Battery, Thermometer, CircleDot, Star, Shield,
 } from 'lucide-react';
+import { VGATE_ADAPTER_INFO } from '@/lib/types';
 
 export function DeviceView() {
   const { deviceInfo, connectionMode, ecoScore } = useAppStore();
@@ -47,6 +48,12 @@ export function DeviceView() {
         <div className="flex items-center gap-2 mb-3">
           <Cpu className="w-4 h-4 text-slate-400" />
           <span className="text-xs text-slate-400 font-medium">OBD-II Adapter</span>
+          {d.adapterType.includes('vGate') && (
+            <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20">
+              <Star className="w-2.5 h-2.5 text-emerald-400" />
+              <span className="text-[9px] text-emerald-400 font-semibold">OPTIMIZED</span>
+            </div>
+          )}
         </div>
         <div className="flex flex-col gap-2">
           <DetailRow icon={<Fingerprint className="w-3.5 h-3.5 text-slate-500" />}
@@ -57,8 +64,50 @@ export function DeviceView() {
             label="Protocol" value={d.protocol || '—'} />
           <DetailRow icon={<Battery className="w-3.5 h-3.5 text-slate-500" />}
             label="Adapter Voltage" value={d.voltage || '—'} />
+          {d.chipset && (
+            <DetailRow icon={<Cpu className="w-3.5 h-3.5 text-slate-500" />}
+              label="Chipset" value={d.chipset} />
+          )}
+          {d.bleVersion && (
+            <DetailRow icon={<Bluetooth className="w-3.5 h-3.5 text-slate-500" />}
+              label="BLE Version" value={d.bleVersion} />
+          )}
+          {d.deviceId && (
+            <DetailRow icon={<Shield className="w-3.5 h-3.5 text-slate-500" />}
+              label="Device ID" value={d.deviceId} mono />
+          )}
         </div>
       </div>
+
+      {/* vGate iCar Pro specifics */}
+      {d.adapterType.includes('vGate') && (
+        <div className="bg-emerald-500/10 rounded-xl p-4 border border-emerald-500/20">
+          <div className="flex items-center gap-2 mb-3">
+            <Star className="w-4 h-4 text-emerald-400" />
+            <span className="text-xs text-emerald-300 font-medium">vGate iCar Pro — Detailed Info</span>
+          </div>
+          <div className="flex flex-col gap-2 mb-3">
+            <DetailRow label="Manufacturer" value={VGATE_ADAPTER_INFO.manufacturer} />
+            <DetailRow label="BLE Chipset" value={VGATE_ADAPTER_INFO.chipset} />
+            <DetailRow label="Max Baud Rate" value={VGATE_ADAPTER_INFO.maxBaudRate} />
+          </div>
+          <span className="text-[10px] text-slate-400 font-medium mb-2 block">Features:</span>
+          <div className="flex flex-col gap-1">
+            {VGATE_ADAPTER_INFO.features.map((f, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <div className="w-1 h-1 rounded-full bg-emerald-400 shrink-0" />
+                <span className="text-[11px] text-slate-400">{f}</span>
+              </div>
+            ))}
+          </div>
+          <span className="text-[10px] text-slate-400 font-medium mt-3 mb-1.5 block">Supported Protocols:</span>
+          <div className="flex flex-wrap gap-1">
+            {VGATE_ADAPTER_INFO.supportedProtocols.map((p, i) => (
+              <span key={i} className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400/70 border border-emerald-500/15">{p}</span>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Connection Metrics */}
       <div className="grid grid-cols-2 gap-3">

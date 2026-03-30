@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAppStore } from '@/lib/store';
 import { ConnectOverlay } from '@/components/byd/ConnectOverlay';
 import { Header, BottomNav } from '@/components/byd/Navigation';
 import { DashboardView } from '@/components/byd/DashboardView';
 import { BatteryView } from '@/components/byd/BatteryView';
+import { ChargingView } from '@/components/byd/ChargingView';
 import { DeviceView } from '@/components/byd/DeviceView';
 import { DiagnosticsView } from '@/components/byd/DiagnosticsView';
 import { SessionView } from '@/components/byd/SessionView';
@@ -20,7 +21,7 @@ function getInitialTab(): string {
 }
 
 function AppContent() {
-  const { connectionStatus, connectionMode } = useAppStore();
+  const { connectionStatus } = useAppStore();
   const [activeTab, setActiveTab] = useState(getInitialTab);
   const { enabled: voiceEnabled, speaking: voiceSpeaking, toggle: toggleVoice, narratePage } = useVoice();
 
@@ -30,8 +31,6 @@ function AppContent() {
       setActiveTab(customEvent.detail);
     };
     window.addEventListener('tabchange', handler);
-
-    // Cleanup simulator on unmount
     return () => {
       window.removeEventListener('tabchange', handler);
       stopSimulator();
@@ -53,6 +52,7 @@ function AppContent() {
     switch (activeTab) {
       case 'dashboard': return <DashboardView />;
       case 'battery': return <BatteryView />;
+      case 'charging': return <ChargingView />;
       case 'device': return <DeviceView />;
       case 'diagnostics': return <DiagnosticsView />;
       case 'session': return <SessionView />;
@@ -80,13 +80,9 @@ function AppContent() {
             <div className="w-4 h-4 rounded bg-gradient-to-br from-emerald-500/30 to-emerald-600/10 flex items-center justify-center">
               <Zap className="w-2.5 h-2.5 text-emerald-500/60" />
             </div>
-            <span>
-              Dr. Waleed Mandour
-            </span>
+            <span>Dr. Waleed Mandour</span>
             <span className="text-slate-700">·</span>
-            <span className="text-emerald-600/60">
-              created via GLM-5-Turbo
-            </span>
+            <span className="text-emerald-600/60">created via GLM-5-Turbo</span>
           </div>
         </div>
       </footer>
@@ -100,13 +96,9 @@ export default function Home() {
 
 function AppContentWithSW() {
   useEffect(() => {
-    // Register service worker for PWA
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').catch(() => {
-        // SW registration failed - app still works without it
-      });
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
     }
   }, []);
-
   return <AppContent />;
 }

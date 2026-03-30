@@ -51,6 +51,18 @@ const PAGE_SCRIPTS: Record<string, string> = {
     Most controls are marked as Unavailable because they require BYD's proprietary CAN bus protocol, which uses encrypted UDS authentication. 
     The four-step explanation below details why OBD-II cannot control your car and what would be needed. 
     Alternative approaches include using BYD's official DiLink app, aftermarket integration platforms like Carlinkit, or following the XDA Forums BYD development community.`,
+
+  charging: `Charging Monitor. This page tracks your BYD Yuan Plus charging session in real time. 
+    The large State of Charge display shows your current battery percentage. When actively charging, a green animation indicates power is flowing into the battery. 
+    Three metrics show charging Power in kilowatts, Voltage in volts, and Current in amps. 
+    The Time Remaining card shows the estimated minutes until your battery reaches 100 percent. Elapsed time tracks how long the session has been running. 
+    Energy Added shows the total kilowatt-hours delivered so far, with charge efficiency percentage. 
+    The Charge Session Cost section calculates the cost in Omani Rial and US dollars based on electricity rates. 
+    Below, the Charging Power Curve chart shows how power delivery changes over time. LFP batteries maintain constant current until about 78 percent, then taper. 
+    The SOC During Charge chart tracks battery percentage. The Battery Temperature chart monitors thermal conditions during charging. 
+    Cell Voltage Balance shows the highest and lowest cell voltages and their delta in millivolts. 
+    When not charging, you can start a simulation for DC Fast Charge at 60 kilowatts, AC Level 2 at 7.2 kilowatts, or AC Level 1 at 1.8 kilowatts. 
+    At the bottom, you'll find the BYD Yuan Plus charging specifications including DC CCS2 and AC Type 2 capabilities.`,
 };
 
 export function useVoice() {
