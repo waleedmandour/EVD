@@ -3,7 +3,7 @@
 import React from 'react';
 import { useAppStore } from '@/lib/store';
 import { DisconnectButton } from './ConnectOverlay';
-import { StopCircle, Battery, Wifi } from 'lucide-react';
+import { StopCircle, Battery, Volume2, VolumeX } from 'lucide-react';
 
 export function BottomNav() {
   return (
@@ -61,8 +61,14 @@ function NavItem({ tab, icon, label }: { tab: string; icon: React.ReactNode; lab
   );
 }
 
-export function Header() {
-  const { connectionMode, connectionStatus, vehicleData, vin } = useAppStore();
+interface HeaderProps {
+  voiceEnabled: boolean;
+  voiceSpeaking: boolean;
+  onToggleVoice: () => void;
+}
+
+export function Header({ voiceEnabled, voiceSpeaking, onToggleVoice }: HeaderProps) {
+  const { connectionMode, connectionStatus, vehicleData, deviceInfo } = useAppStore();
 
   return (
     <header className="sticky top-0 z-30 bg-[#0a0f1a]/90 backdrop-blur-lg border-b border-slate-800/50">
@@ -79,7 +85,29 @@ export function Header() {
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
+          {/* Voice toggle */}
+          <button
+            onClick={onToggleVoice}
+            className={`relative p-1.5 rounded-lg transition-all duration-200 ${
+              voiceEnabled
+                ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                : 'bg-slate-800/60 text-slate-500 border border-slate-700/30 hover:text-slate-400'
+            }`}
+            title={voiceEnabled ? 'Voice guide ON — tap to mute' : 'Voice guide OFF — tap to enable'}
+          >
+            {voiceEnabled && voiceSpeaking ? (
+              <Volume2 className="w-4 h-4 animate-pulse" />
+            ) : voiceEnabled ? (
+              <Volume2 className="w-4 h-4" />
+            ) : (
+              <VolumeX className="w-4 h-4" />
+            )}
+            {voiceEnabled && (
+              <div className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-400" />
+            )}
+          </button>
+
           {/* Connection indicator */}
           <div className="flex items-center gap-1.5">
             <div className={`w-2 h-2 rounded-full ${

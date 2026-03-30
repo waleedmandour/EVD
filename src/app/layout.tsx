@@ -17,7 +17,8 @@ export const metadata: Metadata = {
   title: "EV Connect - BYD OBD-II Monitor",
   description: "Real-time OBD-II diagnostics and monitoring for BYD electric vehicles. Connect via Bluetooth BLE or try the interactive demo.",
   keywords: ["BYD", "OBD-II", "EV", "Electric Vehicle", "Diagnostics", "Monitor", "Yuan Plus", "Atto 3"],
-  authors: [{ name: "Z.ai Team" }],
+  authors: [{ name: "Dr. Waleed Mandour", url: "https://github.com/waleedmandour" }],
+  creator: "Dr. Waleed Mandour",
   manifest: "/manifest.json",
   icons: {
     icon: "/icons/icon-192.png",

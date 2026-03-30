@@ -3,6 +3,7 @@
 import React from 'react';
 import { useAppStore } from '@/lib/store';
 import { SpeedGauge, GaugeCircle, StatusBadge, MiniChart } from './gauges';
+import { SmartAlerts } from './SmartAlerts';
 import {
   Battery, Zap, Thermometer, Gauge, Activity,
   MapPin, RotateCcw, Wind, Snowflake, ChevronRight,
@@ -20,6 +21,9 @@ export function DashboardView() {
 
   return (
     <div className="flex flex-col gap-5 pb-4">
+      {/* Smart Alerts */}
+      <SmartAlerts />
+
       {/* Speed Gauge - Hero */}
       <div className="flex justify-center pt-2">
         <SpeedGauge speed={v.speed} />

@@ -6,7 +6,15 @@ Real-time OBD-II diagnostics and monitoring for BYD electric vehicles. Connect v
   <img src="public/icons/icon-512.png" width="120" alt="EV Connect Icon" />
 </p>
 
-**Author:** Dr. Waleed Mandour · [waleedmandour.github.io](https://github.com/waleedmandour)
+<p align="center">
+  <strong>Dr. Waleed Mandour</strong> · <a href="mailto:waleedmandour@gmail.com">waleedmandour@gmail.com</a> · <a href="https://github.com/waleedmandour">waleedmandour.github.io</a>
+</p>
+
+<p align="center">
+  <em>Created via GLM-5-Turbo</em>
+</p>
+
+---
 
 ## Features
 
@@ -15,6 +23,13 @@ Real-time OBD-II diagnostics and monitoring for BYD electric vehicles. Connect v
 - Battery SOC arc gauge with color-coded thresholds
 - Motor power draw / regen power gauge
 - Estimated range, drive mode (ECO / NORMAL / SPORT)
+- **Smart Alerts** — automatic notifications for critical conditions:
+  - 🔋 Low/critical battery warnings
+  - 🌡️ Motor and battery overheating alerts
+  - ⚡ High power draw warnings
+  - 📊 Low range alerts
+  - ⚠️ Fault code (DTC) detection alerts
+  - ♻️ Regen braking energy recovery info
 - Live speed profile sparkline chart
 - Power flow chart (draw vs. regen, with zero reference line)
 - Temperature monitoring bars (motor, battery pack, cabin, ambient)
@@ -57,6 +72,20 @@ Real-time OBD-II diagnostics and monitoring for BYD electric vehicles. Connect v
 - 7 control items with availability status and reasons
 - Alternative approaches (BYD official app, aftermarket, XDA community)
 
+### Voice Guide (New)
+- **Professional voice narration** for every app page
+- Uses the Web Speech API (SpeechSynthesis) with natural/enhanced voices
+- Toggle on/off via the speaker icon in the header
+- Automatically reads page instructions and feedback when you navigate to any tab
+- Each page has a comprehensive audio guide explaining all features, metrics, and how to use them
+- Prefers Google/Microsoft/Apple natural voices when available
+
+### Smart Alerts (New)
+- Real-time monitoring of vehicle conditions
+- Automatic alerts for: critical battery, low battery, motor overheating, battery overheating, high power draw, DTC detection, low range, and regen activity
+- Color-coded severity: red (danger), amber (warning), cyan (info), green (success)
+- Collapsible alert panel with unread count badge
+
 ### Connectivity
 - **Bluetooth BLE** — Web Bluetooth API for ELM327 adapters (Chrome on Android)
 - **WiFi** — Connect to OBD-II adapter's WiFi hotspot (works on Android + iOS)
@@ -88,6 +117,7 @@ Real-time OBD-II diagnostics and monitoring for BYD electric vehicles. Connect v
 | PWA | Web App Manifest + Service Worker |
 | Bluetooth | Web Bluetooth API (BLE GATT) |
 | WiFi | WebSocket / TCP bridge |
+| Voice | Web Speech API (SpeechSynthesis) |
 
 ## Getting Started
 
@@ -122,6 +152,13 @@ Open [http://localhost:3000](http://localhost:3000) and tap **Launch Interactive
 5. Enter the adapter's IP (default: `192.168.0.10`) and port (default: `35000`)
 6. Tap Connect
 
+### Voice Guide
+
+1. Tap the **speaker icon** in the top-right corner of the header
+2. The icon turns green with a dot when enabled
+3. Navigate to any tab — the app will automatically read a professional guide for that page
+4. Tap the speaker icon again to mute
+
 ### PWA Install
 
 1. Open the app URL in Chrome on Android
@@ -138,18 +175,21 @@ Open [http://localhost:3000](http://localhost:3000) and tap **Launch Interactive
 src/
 ├── app/
 │   ├── layout.tsx          # Root layout with PWA meta tags
-│   └── page.tsx            # Main app with 7-tab routing
+│   └── page.tsx            # Main app with 6-tab routing + voice + footer
 ├── components/
 │   └── byd/
 │       ├── gauges.tsx          # SVG gauge + chart components
-│       ├── DashboardView.tsx    # Speed, power, temps, charts
+│       ├── DashboardView.tsx    # Speed, power, temps, charts, alerts
 │       ├── BatteryView.tsx     # SOC, voltage, health diagnostics
 │       ├── DeviceView.tsx      # Adapter info, signal, firmware check
 │       ├── DiagnosticsView.tsx # DTC scan, monitor readiness
 │       ├── SessionView.tsx     # Eco score, data logger, CSV export
 │       ├── ControlsView.tsx    # OBD-II limitation explanation
+│       ├── SmartAlerts.tsx     # Real-time vehicle condition alerts
 │       ├── ConnectOverlay.tsx  # BLE / WiFi / Demo connection
-│       └── Navigation.tsx      # 7-tab bottom nav + header
+│       └── Navigation.tsx      # 6-tab bottom nav + header + voice toggle
+├── hooks/
+│   └── use-voice.ts           # Web Speech API voice narration hook
 ├── lib/
 │   ├── store.ts             # Zustand state management
 │   ├── simulator.ts         # Realistic EV driving simulator
@@ -194,4 +234,4 @@ MIT
 
 ---
 
-**Built by Dr. Waleed Mandour with Next.js, Tailwind CSS, and Zustand.**
+**Built by Dr. Waleed Mandour · waleedmandour@gmail.com · Created via GLM-5-Turbo**
