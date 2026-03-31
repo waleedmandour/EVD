@@ -8,7 +8,23 @@ import {
   VGATE_ADAPTER_INFO,
   VGATE_ICAR_SERVICE_UUID,
   NORDIC_UART_SERVICE_UUID,
+  VGATE_INIT_COMMANDS,
 } from './types';
+import {
+  checkBluetoothAvailability,
+  requestVGateDevice,
+  requestGenericBLEDevice,
+  connectGATT,
+  disconnect as bleDisconnect,
+  isBLEConnected,
+  initializeAdapter as bleInitialize,
+} from './ble-connection';
+import {
+  connectWiFi as wifiConnect,
+  disconnect as wifiDisconnect,
+  isWiFiConnected,
+  sendCommand as wifiSendCommand,
+} from './wifi-connection';
 
 export interface AppState {
   // Connection
@@ -20,6 +36,9 @@ export interface AppState {
   disconnectDevice: () => void;
   startDemoMode: () => void;
   stopDemoMode: () => void;
+  bluetoothAvailable: boolean;
+  bluetoothUnavailableReason: string;
+  checkBluetooth: () => void;
 
   // Live Vehicle Data
   vehicleData: VehicleData;
@@ -53,6 +72,7 @@ export interface AppState {
   // Trip
   tripData: TripData;
   resetTrip: () => void;
+  setTripData: (data: Partial<TripData>) => void;
 
   // Device Info
   deviceInfo: DeviceInfo;
@@ -120,27 +140,60 @@ export const useAppStore = create<AppState>((set, get) => ({
   // ─── Connection ──────────────────────────────────────────────────
   connectionStatus: 'disconnected' as ConnectionStatus,
   connectionMode: null as ConnectionMode,
+  bluetoothAvailable: true,
+  bluetoothUnavailableReason: '',
+
+  checkBluetooth: () => {
+    const result = checkBluetoothAvailability();
+    set({
+      bluetoothAvailable: result.available,
+      bluetoothUnavailableReason: result.reason || '',
+    });
+  },
 
   // vGate iCar Pro BLE 4.0 — dedicated connection
   connectVgate: async () => {
     set({ connectionStatus: 'connecting' });
+
     try {
-      if (!navigator.bluetooth) {
-        set({ connectionStatus: 'error', connectionMode: null });
+      // Check Web Bluetooth availability first
+      const avail = checkBluetoothAvailability();
+      if (!avail.available) {
+        set({
+          connectionStatus: 'error',
+          connectionMode: null,
+          bluetoothAvailable: false,
+          bluetoothUnavailableReason: avail.reason || 'Web Bluetooth not available',
+        });
         return;
       }
-      // vGate iCar Pro advertises the FFE0 service; also accept NUS
-      const device = await navigator.bluetooth.requestDevice({
-        filters: [
-          { services: [VGATE_ICAR_SERVICE_UUID] },
-        ],
-        optionalServices: [
-          NORDIC_UART_SERVICE_UUID,
-          'battery_service',
-        ],
-      });
+
+      // Request the BLE device from user
+      const device = await requestVGateDevice();
+      if (!device) {
+        set({ connectionStatus: 'disconnected', connectionMode: null });
+        return;
+      }
 
       const deviceId = device.id?.substring(0, 12) || 'unknown';
+
+      // Connect to GATT server and set up characteristics
+      const bleInfo = await connectGATT(device, {
+        onData: (data) => {
+          // Process real OBD-II data from the adapter
+          processOBDResponse(data, get, set);
+        },
+        onDisconnected: () => {
+          set({ connectionStatus: 'disconnected', connectionMode: null });
+        },
+        onError: (error) => {
+          console.error('[BLE Error]', error);
+          set({ connectionStatus: 'error' });
+        },
+        onStatusChange: (status) => {
+          console.log('[BLE]', status);
+        },
+      });
 
       set({
         connectionStatus: 'connected',
@@ -159,40 +212,119 @@ export const useAppStore = create<AppState>((set, get) => ({
           lastPing: Date.now(),
         },
       });
-    } catch {
-      set({ connectionStatus: 'disconnected', connectionMode: null });
+
+      // Initialize the adapter with BYD-specific commands
+      await bleInitialize(VGATE_INIT_COMMANDS, (cmd, resp) => {
+        console.log(`[OBD Init] ${cmd} → ${resp}`);
+      });
+
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Unknown error';
+      console.error('[connectVgate]', msg);
+      set({
+        connectionStatus: 'error',
+        connectionMode: null,
+      });
     }
   },
 
   // Generic BLE connection (ELM327, vLinker, Carista, etc.)
   connectBluetooth: async () => {
     set({ connectionStatus: 'connecting' });
+
     try {
-      if (!navigator.bluetooth) {
-        set({ connectionStatus: 'error', connectionMode: null });
+      const avail = checkBluetoothAvailability();
+      if (!avail.available) {
+        set({
+          connectionStatus: 'error',
+          connectionMode: null,
+          bluetoothAvailable: false,
+          bluetoothUnavailableReason: avail.reason || 'Web Bluetooth not available',
+        });
         return;
       }
-      await navigator.bluetooth.requestDevice({
-        filters: [{ services: [NORDIC_UART_SERVICE_UUID] }],
-        optionalServices: ['battery_service', VGATE_ICAR_SERVICE_UUID],
+
+      const device = await requestGenericBLEDevice();
+      if (!device) {
+        set({ connectionStatus: 'disconnected', connectionMode: null });
+        return;
+      }
+
+      const deviceId = device.id?.substring(0, 12) || 'unknown';
+
+      const bleInfo = await connectGATT(device, {
+        onData: (data) => {
+          processOBDResponse(data, get, set);
+        },
+        onDisconnected: () => {
+          set({ connectionStatus: 'disconnected', connectionMode: null });
+        },
+        onError: (error) => {
+          console.error('[BLE Error]', error);
+          set({ connectionStatus: 'error' });
+        },
+        onStatusChange: (status) => {
+          console.log('[BLE]', status);
+        },
       });
 
-      // Check if it's a vGate by optional services
-      const info = get().deviceInfo;
+      const isNUS = bleInfo.serviceType === 'nus';
+      const adapterName = isNUS
+        ? (device.name || 'Generic BLE OBD-II')
+        : 'Unknown BLE Adapter';
+
       set({
         connectionStatus: 'connected',
         connectionMode: 'bluetooth',
-        deviceInfo: { ...info, connectionType: 'bluetooth' },
+        deviceInfo: {
+          ...get().deviceInfo,
+          adapterType: adapterName,
+          protocol: 'ISO 15765-4 CAN',
+          deviceId,
+          connectionType: 'bluetooth',
+          signalStrength: 85,
+          responseTime: 15,
+          lastPing: Date.now(),
+        },
       });
-    } catch {
-      set({ connectionStatus: 'disconnected', connectionMode: null });
+
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Unknown error';
+      console.error('[connectBluetooth]', msg);
+      set({
+        connectionStatus: 'error',
+        connectionMode: null,
+      });
     }
   },
 
+  // WiFi connection via WebSocket to OBD-II adapter
   connectWifi: async (ip: string, port: number) => {
     set({ connectionStatus: 'connecting' });
+
     try {
-      const responseTime = Math.round(Math.random() * 30 + 10);
+      const info = await wifiConnect(ip, port, {
+        onData: (data) => {
+          processOBDResponse(data, get, set);
+        },
+        onDisconnected: () => {
+          set({ connectionStatus: 'disconnected', connectionMode: null });
+        },
+        onError: (error) => {
+          console.error('[WiFi Error]', error);
+          set({ connectionStatus: 'error', connectionMode: null });
+        },
+        onStatusChange: (status) => {
+          console.log('[WiFi]', status);
+        },
+        onConnected: () => {
+          set({
+            connectionStatus: 'connected',
+            connectionMode: 'wifi',
+          });
+        },
+      });
+
       set({
         connectionStatus: 'connected',
         connectionMode: 'wifi',
@@ -201,17 +333,25 @@ export const useAppStore = create<AppState>((set, get) => ({
           connectionType: 'wifi',
           wifiIp: ip,
           wifiPort: port,
-          signalStrength: Math.round(Math.random() * 20 + 75),
-          responseTime,
+          signalStrength: 90,
+          responseTime: 20,
           lastPing: Date.now(),
         },
       });
-    } catch {
-      set({ connectionStatus: 'error', connectionMode: null });
+
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Unknown error';
+      console.error('[connectWifi]', msg);
+      set({
+        connectionStatus: 'error',
+        connectionMode: null,
+      });
     }
   },
 
   disconnectDevice: () => {
+    bleDisconnect();
+    wifiDisconnect();
     set({ connectionStatus: 'disconnected', connectionMode: null });
   },
 
@@ -246,6 +386,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   stopDemoMode: () => {
+    bleDisconnect();
+    wifiDisconnect();
     set({
       connectionStatus: 'disconnected', connectionMode: null,
       vehicleData: { ...defaultVehicleData },
@@ -293,6 +435,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   // ─── Trip ────────────────────────────────────────────────────────
   tripData: { ...defaultTripData },
   resetTrip: () => set({ tripData: { ...defaultTripData, startedAt: new Date() } }),
+  setTripData: (data) => set((s) => ({ tripData: { ...s.tripData, ...data } })),
 
   // ─── Device Info ─────────────────────────────────────────────────
   deviceInfo: { ...defaultDeviceInfo },
@@ -318,3 +461,158 @@ export const useAppStore = create<AppState>((set, get) => ({
   isLogging: false,
   setIsLogging: (v) => set({ isLogging: v }),
 }));
+
+// ─── OBD-II Response Parser ──────────────────────────────────────
+// Processes raw OBD-II responses from BLE/WiFi adapter and updates vehicle state.
+// Supports standard SAE J1979 PID responses.
+
+import { OBD_COMMANDS } from './types';
+
+/**
+ * Process a raw OBD-II response string from the adapter.
+ * Parses the hex data and updates the vehicle data in the store.
+ */
+function processOBDResponse(
+  raw: string,
+  get: () => AppState,
+  set: (partial: Partial<AppState> | ((state: AppState) => Partial<AppState>)) => void
+) {
+  const trimmed = raw.trim();
+  if (!trimmed || trimmed === '>' || trimmed.length < 4) return;
+
+  console.log('[OBD Response]', trimmed);
+
+  try {
+    // Try to parse as standard OBD-II response: "41 XX YY [YY...]"
+    // 41 = response to mode 01, XX = PID, YY... = data bytes
+    const match = trimmed.match(/^41\s+([0-9A-Fa-f]{2})\s+([0-9A-Fa-f\s]+)$/);
+    if (match) {
+      const pid = match[1].toUpperCase();
+      const hexData = match[2].replace(/\s+/g, '');
+      const bytes = new Uint8Array(hexData.match(/.{2}/g)?.map((b) => parseInt(b, 16)) || []);
+
+      if (bytes.length >= 1) {
+        const buffer = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+        parsePIDData(pid, buffer, get, set);
+      }
+    }
+
+    // Parse voltage response from ATRV command: "12.8V"
+    if (trimmed.match(/^\d+\.\d+V$/)) {
+      const voltage = parseFloat(trimmed);
+      set((s) => ({
+        deviceInfo: {
+          ...s.deviceInfo,
+          voltage: trimmed,
+          adapterVoltage: voltage,
+        },
+      }));
+    }
+
+    // Parse protocol description from ATDP
+    if (trimmed.includes('ISO 15765') || trimmed.includes('CAN')) {
+      set((s) => ({
+        deviceInfo: {
+          ...s.deviceInfo,
+          protocol: trimmed,
+        },
+      }));
+    }
+
+    // Update last ping time on any successful data
+    set((s) => ({
+      deviceInfo: {
+        ...s.deviceInfo,
+        lastPing: Date.now(),
+      },
+    }));
+  } catch (error) {
+    console.warn('[OBD Parse Error]', error, trimmed);
+  }
+}
+
+/**
+ * Parse data for a specific PID and update vehicle data.
+ */
+function parsePIDData(
+  pid: string,
+  buffer: DataView,
+  get: () => AppState,
+  set: (partial: Partial<AppState> | ((state: AppState) => Partial<AppState>)) => void
+) {
+  const store = get();
+
+  switch (pid) {
+    case '0D': // Vehicle Speed
+      if (buffer.byteLength >= 1) {
+        const speed = buffer.getUint8(0);
+        store.updateVehicleData({ speed });
+
+        // Update trip data
+        const trip = { ...store.tripData };
+        if (speed > trip.maxSpeed) trip.maxSpeed = speed;
+        set((s) => ({ tripData: { ...s.tripData, maxSpeed: trip.maxSpeed } }));
+      }
+      break;
+
+    case '0C': // Engine/Motor RPM
+      if (buffer.byteLength >= 2) {
+        const rpm = ((buffer.getUint8(0) * 256 + buffer.getUint8(1)) / 4);
+        store.updateVehicleData({ rpm: Math.round(rpm) });
+      }
+      break;
+
+    case '05': // Engine Coolant Temp (Motor Temp for EV)
+      if (buffer.byteLength >= 1) {
+        store.updateVehicleData({ motorTemp: buffer.getUint8(0) - 40 });
+      }
+      break;
+
+    case '0F': // Intake Air Temp (Ambient)
+      if (buffer.byteLength >= 1) {
+        store.updateVehicleData({ ambientTemp: buffer.getUint8(0) - 40 });
+      }
+      break;
+
+    case '42': // Control Module Voltage (Battery Voltage)
+      if (buffer.byteLength >= 2) {
+        const voltage = ((buffer.getUint8(0) * 256 + buffer.getUint8(1)) / 1000);
+        store.updateVehicleData({ batteryVoltage: Math.round(voltage * 10) / 10 });
+      }
+      break;
+
+    case '04': // Calculated Engine Load
+      if (buffer.byteLength >= 1) {
+        const load = (buffer.getUint8(0) * 100 / 255);
+        // Use load to estimate power
+        const power = load * 150 * 0.7; // 150kW motor * efficiency
+        store.updateVehicleData({ batteryPower: Math.round(power * 10) / 10 });
+      }
+      break;
+
+    case '11': // Throttle Position
+      // Not directly used for EV dashboard but logged
+      break;
+
+    case '46': // Ambient Air Temperature (alternative)
+      if (buffer.byteLength >= 1) {
+        store.updateVehicleData({ ambientTemp: buffer.getUint8(0) - 40 });
+      }
+      break;
+
+    case '61': // Driver Demand Torque
+      if (buffer.byteLength >= 1) {
+        const torque = buffer.getUint8(0) - 125;
+        store.updateVehicleData({ regenBraking: torque < -5 });
+      }
+      break;
+
+    case '62': // Actual Engine Torque
+      // Logged for diagnostics
+      break;
+
+    default:
+      console.log(`[OBD] Unhandled PID: ${pid}`);
+      break;
+  }
+}

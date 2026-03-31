@@ -1,15 +1,33 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useAppStore } from '@/lib/store';
 import { startSimulator, stopSimulator } from '@/lib/simulator';
-import { Zap, Bluetooth, Wifi, Play, Signal, Info, Cpu, Star } from 'lucide-react';
+import { checkBluetoothAvailability } from '@/lib/ble-connection';
+import { Zap, Bluetooth, Wifi, Play, Signal, Info, Cpu, Star, AlertTriangle, Smartphone, ExternalLink } from 'lucide-react';
 
 export function ConnectOverlay() {
-  const { connectionStatus, connectionMode, startDemoMode, stopDemoMode, connectBluetooth, connectVgate, connectWifi } = useAppStore();
+  const {
+    connectionStatus, connectionMode, startDemoMode, stopDemoMode,
+    connectBluetooth, connectVgate, connectWifi,
+    bluetoothAvailable, bluetoothUnavailableReason, checkBluetooth,
+  } = useAppStore();
   const [wifiIp, setWifiIp] = useState('192.168.0.10');
   const [wifiPort, setWifiPort] = useState('35000');
   const [showWifi, setShowWifi] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+
+  // Check Bluetooth availability on mount
+  useEffect(() => {
+    checkBluetooth();
+  }, [checkBluetooth]);
+
+  // Clear error when connection status changes
+  useEffect(() => {
+    if (connectionStatus !== 'error') {
+      setErrorMessage('');
+    }
+  }, [connectionStatus]);
 
   const handleDemoMode = useCallback(() => {
     startDemoMode();
@@ -21,13 +39,45 @@ export function ConnectOverlay() {
     stopDemoMode();
   }, [stopDemoMode]);
 
-  const handleWifiConnect = useCallback(async () => {
-    const port = parseInt(wifiPort) || 35000;
-    await connectWifi(wifiIp, port);
-    if (connectionMode !== 'wifi') {
-      handleDemoMode();
+  const handleVgateConnect = useCallback(async () => {
+    setErrorMessage('');
+    try {
+      await connectVgate();
+    } catch {
+      setErrorMessage('Failed to connect to vGate adapter. Ensure Bluetooth is on and the adapter is powered.');
     }
-  }, [wifiIp, wifiPort, connectWifi, connectionMode, handleDemoMode]);
+  }, [connectVgate]);
+
+  const handleBLEConnect = useCallback(async () => {
+    setErrorMessage('');
+    if (!bluetoothAvailable) {
+      setErrorMessage(bluetoothUnavailableReason);
+      return;
+    }
+    try {
+      await connectBluetooth();
+    } catch {
+      setErrorMessage('Failed to connect. Ensure your BLE adapter is powered on and in range.');
+    }
+  }, [connectBluetooth, bluetoothAvailable, bluetoothUnavailableReason]);
+
+  const handleWifiConnect = useCallback(async () => {
+    setErrorMessage('');
+    const port = parseInt(wifiPort) || 35000;
+
+    // Check if we're in PWA standalone mode
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+    if (isStandalone) {
+      // In PWA mode, WiFi should work since the browser has full network access
+    }
+
+    await connectWifi(wifiIp, port);
+    // If WiFi connection didn't succeed (still not in wifi mode), show error
+    const state = useAppStore.getState();
+    if (state.connectionMode !== 'wifi') {
+      setErrorMessage(`Could not connect to WiFi adapter at ${wifiIp}:${port}. Ensure your phone is connected to the adapter's WiFi network first (check WiFi settings for ELM327/WiFi_OBDII network).`);
+    }
+  }, [wifiIp, wifiPort, connectWifi]);
 
   if (connectionStatus === 'connected') return null;
 
@@ -41,7 +91,7 @@ export function ConnectOverlay() {
       />
       <div className="absolute w-96 h-96 rounded-full bg-emerald-500/5 blur-3xl" />
 
-      <div className="relative z-10 flex flex-col items-center gap-6 px-6 max-w-md text-center">
+      <div className="relative z-10 flex flex-col items-center gap-6 px-6 max-w-md text-center overflow-y-auto max-h-screen py-8">
         <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 border border-emerald-500/20 flex items-center justify-center">
           <Zap className="w-10 h-10 text-emerald-400" />
         </div>
@@ -54,9 +104,24 @@ export function ConnectOverlay() {
           </p>
         </div>
 
+        {/* Bluetooth availability warning */}
+        {!bluetoothAvailable && (
+          <div className="w-full px-4 py-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-left">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="w-4 h-4 text-amber-400 mt-0.5 shrink-0" />
+              <div>
+                <span className="text-xs font-medium text-amber-300 block mb-1">Bluetooth Not Available</span>
+                <p className="text-[11px] text-amber-400/70 leading-relaxed">
+                  {bluetoothUnavailableReason}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="w-full flex flex-col gap-2.5">
           {/* vGate iCar Pro — Featured */}
-          <button onClick={connectVgate} disabled={connectionStatus === 'connecting'}
+          <button onClick={handleVgateConnect} disabled={connectionStatus === 'connecting' || !bluetoothAvailable}
             className="w-full flex items-center gap-3 px-5 py-4 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white font-medium transition-all disabled:opacity-50 relative overflow-hidden">
             <div className="absolute top-2 right-3 flex items-center gap-1">
               <Star className="w-3 h-3 text-emerald-200" />
@@ -70,7 +135,7 @@ export function ConnectOverlay() {
           </button>
 
           {/* Generic BLE */}
-          <button onClick={connectBluetooth} disabled={connectionStatus === 'connecting'}
+          <button onClick={handleBLEConnect} disabled={connectionStatus === 'connecting' || !bluetoothAvailable}
             className="w-full flex items-center gap-3 px-5 py-3.5 rounded-xl bg-emerald-600/60 hover:bg-emerald-500/60 text-white font-medium transition-all disabled:opacity-50">
             <Bluetooth className="w-5 h-5 text-emerald-200" />
             <span>Other BLE Adapter</span>
@@ -90,6 +155,17 @@ export function ConnectOverlay() {
               <div className="flex items-center gap-2 text-xs text-slate-400">
                 <Info className="w-3.5 h-3.5" />
                 <span>Connect your phone to the adapter&apos;s WiFi network first, then enter its IP below.</span>
+              </div>
+              <div className="bg-cyan-500/10 rounded-lg p-3 border border-cyan-500/20">
+                <div className="flex items-start gap-2">
+                  <Smartphone className="w-3.5 h-3.5 text-cyan-400 mt-0.5 shrink-0" />
+                  <p className="text-[11px] text-cyan-300 leading-relaxed">
+                    <strong className="text-cyan-200">PWA WiFi Setup:</strong> When using this app as a PWA,
+                    WiFi connectivity works normally. Go to your phone&apos;s WiFi settings, connect to the
+                    adapter&apos;s network (e.g., &quot;ELM327&quot;, &quot;WiFi_OBDII&quot;), then return to this app
+                    and enter the adapter&apos;s IP address below.
+                  </p>
+                </div>
               </div>
               <div className="flex gap-2">
                 <input value={wifiIp} onChange={(e) => setWifiIp(e.target.value)}
@@ -122,6 +198,13 @@ export function ConnectOverlay() {
           </button>
         </div>
 
+        {/* Error message */}
+        {connectionStatus === 'error' && (
+          <div className="w-full px-4 py-2.5 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+            {errorMessage || 'Connection failed. Ensure Bluetooth/WiFi is enabled and adapter is powered on.'}
+          </div>
+        )}
+
         {/* Supported adapters */}
         <div className="flex flex-col gap-2 text-[11px] text-slate-500">
           <p className="text-slate-400 font-medium text-xs">Supported Adapters:</p>
@@ -131,7 +214,7 @@ export function ConnectOverlay() {
               <span className="text-emerald-300 font-semibold">vGate iCar Pro BLE 4.0</span>
               <span className="text-emerald-400/50 text-[9px]">BEST SUPPORT</span>
             </div>
-            <span className="text-emerald-400/60">BLE 4.0 · CC2541 · Ultra-low power · iOS + Android · ELM327 v2.1</span>
+            <span className="text-emerald-400/60">BLE 4.0 · CC2541 · Ultra-low power · Android · ELM327 v2.1</span>
           </div>
           <div className="flex flex-wrap justify-center gap-x-4 gap-y-1">
             <span>ELM327 v1.5+ (BLE/WiFi)</span>
@@ -141,11 +224,17 @@ export function ConnectOverlay() {
           </div>
         </div>
 
-        {connectionStatus === 'error' && (
-          <div className="w-full px-4 py-2.5 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
-            Connection failed. Ensure Bluetooth/WiFi is enabled and adapter is powered on.
+        {/* PWA compatibility note */}
+        <div className="bg-slate-800/30 rounded-xl p-3 border border-slate-700/20">
+          <div className="flex items-start gap-2">
+            <ExternalLink className="w-3.5 h-3.5 text-slate-500 mt-0.5 shrink-0" />
+            <div className="text-[11px] text-slate-500 leading-relaxed text-left">
+              <p className="text-slate-400 font-medium mb-1">PWA Compatibility Note</p>
+              <p><strong className="text-slate-400">Bluetooth BLE:</strong> Requires Chrome/Edge on Android or Chrome on Windows/macOS. iOS Safari does NOT support Web Bluetooth. The app must be served over HTTPS.</p>
+              <p className="mt-1"><strong className="text-slate-400">WiFi:</strong> Works on all platforms. Connect your phone to the adapter&apos;s WiFi hotspot, then open the app. Note: you will lose internet access while connected to the adapter&apos;s WiFi.</p>
+            </div>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );

@@ -201,8 +201,7 @@ function tickSimulation() {
       overall: ecoOverall, history: [ecoOverall],
     });
 
-    store.tripData = {
-      ...store.tripData,
+    store.setTripData({
       distance: Math.round(state.tripDistance * 100) / 100,
       maxSpeed: Math.round(state.tripMaxSpeed),
       avgSpeed: state.tripSpeedCount > 0 ? Math.round(state.tripSpeedSum / state.tripSpeedCount) : 0,
@@ -210,7 +209,7 @@ function tickSimulation() {
       totalConsumption: Math.round(state.tripConsumption * 1000) / 1000,
       regenEnergy: Math.round(state.tripRegenEnergy * 1000) / 1000,
       duration: state.tick / 10,
-    };
+    });
 
     store.setDeviceInfo({
       lastPing: now,

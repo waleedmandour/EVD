@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ev-connect-v1';
+const CACHE_NAME = 'ev-connect-v2';
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',
@@ -31,14 +31,23 @@ self.addEventListener('activate', (event) => {
 });
 
 // Fetch: network-first with cache fallback
+// CRITICAL: Do NOT intercept WebSocket upgrade requests, Bluetooth, or non-HTTP requests.
+// These must pass through to the browser's native handlers for PWA device connectivity.
 self.addEventListener('fetch', (event) => {
   const { request } = event;
 
   // Skip non-GET requests
   if (request.method !== 'GET') return;
 
-  // Skip chrome-extension and non-http
+  // Skip chrome-extension and non-http(s)
   if (!request.url.startsWith('http')) return;
+
+  // Skip WebSocket upgrade requests — these must be handled natively by the browser
+  // for WiFi OBD-II adapter connectivity to work in PWA mode
+  if (request.headers.get('Upgrade') === 'websocket') return;
+
+  // Skip Next.js internal routes (_next/*) to avoid caching SSR pages
+  if (request.url.includes('/_next/') && request.url.includes('data')) return;
 
   // For navigation requests: network first, cache fallback
   if (request.mode === 'navigate') {

@@ -34,7 +34,7 @@ export function GaugeCircle({
   const dashOffset = circumference * (1 - progress);
 
   return (
-    <div className="flex flex-col items-center gap-1">
+    <div className="flex flex-col items-center gap-1 relative">
       <svg width={size} height={size} className="transform -rotate-90">
         {/* Background circle */}
         <circle

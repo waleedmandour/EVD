@@ -25,5 +25,7 @@
     }
   ],
   "screenshots": [],
-  "prefer_related_applications": false
+  "prefer_related_applications": false,
+  "protocol_handlers": [],
+  "display_override": ["standalone", "fullscreen", "minimal-ui"]
 }

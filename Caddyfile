@@ -1,23 +1,60 @@
-:81 {
-	@transform_port_query {
-		query XTransformPort=*
-	}
+# EV Connect - BYD OBD-II Monitor
+# Caddy Configuration
+#
+# IMPORTANT: Web Bluetooth API requires HTTPS.
+# Caddy automatically provisions Let's Encrypt certificates.
+# Replace "evd.example.com" with your actual domain.
 
-	handle @transform_port_query {
-		reverse_proxy localhost:{query.XTransformPort} {
-			header_up Host {host}
-			header_up X-Forwarded-For {remote_host}
-			header_up X-Forwarded-Proto {scheme}
-			header_up X-Real-IP {remote_host}
-		}
-	}
+:80 {
+        @transform_port_query {
+                query XTransformPort=*
+        }
 
-	handle {
-		reverse_proxy localhost:3000 {
-			header_up Host {host}
-			header_up X-Forwarded-For {remote_host}
-			header_up X-Forwarded-Proto {scheme}
-			header_up X-Real-IP {remote_host}
-		}
-	}
+        handle @transform_port_query {
+                reverse_proxy localhost:{query.XTransformPort} {
+                        header_up Host {host}
+                        header_up X-Forwarded-For {remote_host}
+                        header_up X-Forwarded-Proto {scheme}
+                        header_up X-Real-IP {remote_host}
+                }
+        }
+
+        handle {
+                # Redirect HTTP to HTTPS for Web Bluetooth API support
+                # (Web Bluetooth requires a secure context)
+                redir https://{host}{uri} permanent
+        }
 }
+
+# HTTPS configuration — required for Web Bluetooth API
+# Replace "evd.example.com" with your domain, or use Caddy's
+# automatic HTTPS with a real domain name.
+:443 {
+        @transform_port_query {
+                query XTransformPort=*
+        }
+
+        handle @transform_port_query {
+                reverse_proxy localhost:{query.XTransformPort} {
+                        header_up Host {host}
+                        header_up X-Forwarded-For {remote_host}
+                        header_up X-Forwarded-Proto {scheme}
+                        header_up X-Real-IP {remote_host}
+                }
+        }
+
+        handle {
+                reverse_proxy localhost:3000 {
+                        header_up Host {host}
+                        header_up X-Forwarded-For {remote_host}
+                        header_up X-Forwarded-Proto {scheme}
+                        header_up X-Real-IP {remote_host}
+                }
+        }
+}
+
+# Alternative: If using a domain name, use this block instead:
+# evd.example.com {
+#     reverse_proxy localhost:3000
+#     # Caddy auto-provisions HTTPS via Let's Encrypt
+# }

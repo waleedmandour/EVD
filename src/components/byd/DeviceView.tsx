@@ -209,8 +209,9 @@ export function DeviceView() {
       <div className="bg-slate-800/30 rounded-xl p-3 border border-slate-700/20">
         <span className="text-xs text-slate-400 font-medium mb-2 block">Adapter Compatibility Notes</span>
         <div className="flex flex-col gap-1.5 text-[11px] text-slate-500 leading-relaxed">
-          <p><strong className="text-slate-400">BLE adapters:</strong> Require Android with Chrome. iOS does not support Web Bluetooth for OBD-II. ELM327 v1.5+ with Nordic UART Service (NUS) is recommended.</p>
-          <p><strong className="text-slate-400">WiFi adapters:</strong> The phone connects to the adapter&apos;s WiFi hotspot. Works on both Android and iOS. Port 35000 is standard for most ELM327 WiFi devices.</p>
+          <p><strong className="text-slate-400">BLE adapters:</strong> Require Android with Chrome or desktop Chrome/Edge. iOS does NOT support Web Bluetooth in any context (browser or PWA). The app must be served over HTTPS for Bluetooth to work. ELM327 v1.5+ with Nordic UART Service (NUS) is recommended.</p>
+          <p><strong className="text-slate-400">WiFi adapters:</strong> The phone connects to the adapter&apos;s WiFi hotspot. Works on all platforms including iOS. When in PWA mode, WiFi works normally — connect to the adapter&apos;s network in WiFi settings first, then return to the app. Port 35000 is standard for most ELM327 WiFi devices.</p>
+          <p><strong className="text-slate-400">PWA Installation:</strong> Install this app as a PWA for the best experience. On Android Chrome, tap &quot;Add to Home Screen&quot;. PWAs have full access to Web Bluetooth and WebSocket APIs just like the regular browser.</p>
           <p><strong className="text-slate-400">KNOW YOUR ADAPTER:</strong> ELM327 clones vary in quality. Genuine adapters (v2.1+) are recommended for reliable CAN bus communication with BYD vehicles.</p>
         </div>
       </div>
