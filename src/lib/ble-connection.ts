@@ -37,6 +37,11 @@ let isConnected = false;
 let callbacks: BLEConnectionCallbacks | null = null;
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
+// ─── BLE Response Buffer ──────────────────────────────────────────
+// ELM327 responses arrive in fragmented BLE notifications.
+// We must buffer them until we see a complete line (delimited by \r or >).
+let bleMessageBuffer = '';
+
 /**
  * Check if Web Bluetooth API is available in the current browser/context.
  * Returns an object with availability status and a human-readable reason if unavailable.
@@ -62,6 +67,33 @@ export function checkBluetoothAvailability(): { available: boolean; reason?: str
       available: false,
       reason: 'Web Bluetooth API is not supported by this browser. Please use Chrome, Edge, or Opera on Android, or Chrome on desktop. iOS is not supported.',
     };
+  }
+
+  return { available: true };
+}
+
+/**
+ * Async Bluetooth availability check using the official getAvailability() API.
+ * This is more reliable than just checking navigator.bluetooth existence.
+ * Falls back to sync check if getAvailability() is not supported.
+ */
+export async function checkBluetoothAvailabilityAsync(): Promise<{ available: boolean; reason?: string }> {
+  const syncCheck = checkBluetoothAvailability();
+  if (!syncCheck.available) return syncCheck;
+
+  // Try the async availability check (Chrome 87+)
+  if (typeof navigator.bluetooth?.getAvailability === 'function') {
+    try {
+      const available = await navigator.bluetooth.getAvailability();
+      if (!available) {
+        return {
+          available: false,
+          reason: 'Bluetooth adapter is not available on this device. Ensure Bluetooth is turned on in your device settings.',
+        };
+      }
+    } catch {
+      // getAvailability() not supported in this context, fall through
+    }
   }
 
   return { available: true };
@@ -136,8 +168,7 @@ export async function requestGenericBLEDevice(): Promise<BluetoothDevice | null>
 
 /**
  * Connect to a BLE device's GATT server and discover services/characteristics.
- * This is the CRITICAL step that was missing — the original code only called
- * requestDevice() without actually establishing a GATT connection.
+ * This establishes the full connection pipeline: GATT → Service → Characteristics → Notifications.
  */
 export async function connectGATT(
   device: BluetoothDevice,
@@ -152,13 +183,21 @@ export async function connectGATT(
   }
 
   bleDevice = device;
+  bleMessageBuffer = '';
+
+  // Null check for GATT server
+  if (!device.gatt) {
+    const errMsg = 'GATT server not available on this device. The adapter may not support BLE GATT. Try a different adapter or ensure Bluetooth is enabled.';
+    cb.onError(errMsg);
+    throw new Error(errMsg);
+  }
 
   // Listen for disconnection events
-  bleDevice.addEventListener('gattserverdisconnected', handleDisconnection);
+  device.addEventListener('gattserverdisconnected', handleDisconnection);
 
   try {
-    // Connect to the GATT server — this is the missing step!
-    bleServer = await device.gatt!.connect();
+    // Connect to the GATT server
+    bleServer = await device.gatt.connect();
     isConnected = true;
     cb.onStatusChange('GATT connected, discovering services...');
 
@@ -166,18 +205,23 @@ export async function connectGATT(
     let serviceType: 'vgate' | 'nus' | 'unknown' = 'unknown';
 
     try {
-      // Try vGate service first
+      // Try vGate service first (FFE0)
       const vgateService = await bleServer.getPrimaryService(VGATE_ICAR_SERVICE_UUID);
       writeCharacteristic = await vgateService.getCharacteristic(VGATE_ICAR_WRITE_UUID);
       notifyCharacteristic = await vgateService.getCharacteristic(VGATE_ICAR_NOTIFY_UUID);
       serviceType = 'vgate';
     } catch {
-      // Fall back to Nordic UART Service
+      // Fall back to Nordic UART Service (NUS)
       try {
         const nusService = await bleServer.getPrimaryService(NORDIC_UART_SERVICE_UUID);
-        // NUS TX is for writing (device receives), NUS RX is for notifications (device sends)
-        writeCharacteristic = await nusService.getCharacteristic(NORDIC_UART_TX_UUID);
-        notifyCharacteristic = await nusService.getCharacteristic(NORDIC_UART_RX_UUID);
+
+        // ─── FIX: NUS characteristic mapping ───────────────────────
+        // Per the Nordic UART Service specification:
+        //   - RX Characteristic (6e400003): Client WRITES to this to send data TO the device
+        //   - TX Characteristic (6e400002): Client SUBSCRIBES to notifications to receive data FROM device
+        // Previously these were swapped, causing all NUS-based adapters to fail.
+        writeCharacteristic = await nusService.getCharacteristic(NORDIC_UART_RX_UUID);  // 6e400003 — client writes here
+        notifyCharacteristic = await nusService.getCharacteristic(NORDIC_UART_TX_UUID); // 6e400002 — client subscribes here
         serviceType = 'nus';
       } catch {
         throw new Error('Could not find vGate or Nordic UART Service on this device. The adapter may not be compatible.');
@@ -245,19 +289,29 @@ export async function sendCommand(command: string): Promise<void> {
 }
 
 /**
- * Send ELM327 initialization commands to set up the adapter for BYD.
+ * Send ELM327 initialization commands to set up the adapter.
+ * Uses adaptive delays: ATZ (reset) gets a longer delay, other commands get shorter.
+ * Waits for the response buffer to accumulate data between commands.
  */
 export async function initializeAdapter(
   commands: string[],
   onInitResponse: (cmd: string, response: string) => void,
-  delayMs: number = 200
+  delayMs: number = 300
 ): Promise<boolean> {
   for (const cmd of commands) {
     try {
       await sendCommand(cmd);
-      // Wait for the adapter to process the command
-      await sleep(delayMs);
-      onInitResponse(cmd, 'sent');
+
+      // ATZ (reset) needs significantly more time — up to 3 seconds
+      // Other AT commands need 300-500ms
+      const waitTime = cmd.toUpperCase().startsWith('ATZ') ? 3000 : delayMs;
+      await sleep(waitTime);
+
+      // Read whatever the adapter sent back (from the buffer)
+      const response = bleMessageBuffer.trim();
+      bleMessageBuffer = '';
+
+      onInitResponse(cmd, response || 'sent');
     } catch (error) {
       onInitResponse(cmd, `error: ${error instanceof Error ? error.message : 'failed'}`);
       return false;
@@ -268,7 +322,11 @@ export async function initializeAdapter(
 
 /**
  * Handle incoming notifications from the BLE device.
- * Decodes the received ArrayBuffer into a string and forwards to callbacks.
+ * Buffers fragmented responses and forwards complete lines to callbacks.
+ *
+ * ELM327 responses are terminated by \r (carriage return) or > (ready prompt).
+ * A single BLE notification may contain a partial response, a complete response,
+ * or even multiple responses. We must buffer and split properly.
  */
 function handleNotification(event: Event) {
   const target = event.target as BluetoothRemoteGATTCharacteristic;
@@ -277,8 +335,58 @@ function handleNotification(event: Event) {
   const decoder = new TextDecoder('utf-8');
   const text = decoder.decode(target.value);
 
-  if (callbacks?.onData) {
-    callbacks.onData(text);
+  // Accumulate in buffer
+  bleMessageBuffer += text;
+
+  // Process complete lines from the buffer
+  // ELM327 uses \r as line separator and > as ready prompt
+  while (bleMessageBuffer.length > 0) {
+    // Check for ready prompt first
+    const promptIdx = bleMessageBuffer.indexOf('>');
+    if (promptIdx !== -1) {
+      // Everything before '>' is a complete response
+      const before = bleMessageBuffer.substring(0, promptIdx).trim();
+      const after = bleMessageBuffer.substring(promptIdx + 1);
+
+      if (before && callbacks?.onData) {
+        // Split on \r in case there are multiple lines
+        const lines = before.split('\r');
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (trimmed) {
+            callbacks.onData(trimmed);
+          }
+        }
+      }
+
+      bleMessageBuffer = after;
+      continue;
+    }
+
+    // Check for \r delimiter (line complete, but more may follow)
+    const crIdx = bleMessageBuffer.indexOf('\r');
+    if (crIdx !== -1) {
+      const line = bleMessageBuffer.substring(0, crIdx).trim();
+      bleMessageBuffer = bleMessageBuffer.substring(crIdx + 1);
+
+      if (line && callbacks?.onData) {
+        callbacks.onData(line);
+      }
+      continue;
+    }
+
+    // No delimiter found — partial response, keep buffering
+    // Safety: if buffer grows too large without a delimiter, flush it
+    // (prevents memory leak from garbage data)
+    if (bleMessageBuffer.length > 512) {
+      const trimmed = bleMessageBuffer.trim();
+      if (trimmed && callbacks?.onData) {
+        callbacks.onData(trimmed);
+      }
+      bleMessageBuffer = '';
+    }
+
+    break;
   }
 }
 
@@ -290,6 +398,7 @@ function handleDisconnection() {
   isConnected = false;
   writeCharacteristic = null;
   notifyCharacteristic = null;
+  bleMessageBuffer = '';
 
   if (callbacks?.onDisconnected) {
     callbacks.onDisconnected();
@@ -339,6 +448,7 @@ export async function disconnect(): Promise<void> {
 
   bleServer = null;
   isConnected = false;
+  bleMessageBuffer = '';
 
   if (bleDevice) {
     bleDevice.removeEventListener('gattserverdisconnected', handleDisconnection);

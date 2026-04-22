@@ -12,6 +12,7 @@ import { DiagnosticsView } from '@/components/byd/DiagnosticsView';
 import { SessionView } from '@/components/byd/SessionView';
 import { ControlsView } from '@/components/byd/ControlsView';
 import { stopSimulator } from '@/lib/simulator';
+import { stopPolling } from '@/lib/obd-polling';
 import { useVoice } from '@/hooks/use-voice';
 import { Zap } from 'lucide-react';
 
@@ -34,6 +35,7 @@ function AppContent() {
     return () => {
       window.removeEventListener('tabchange', handler);
       stopSimulator();
+      stopPolling();
     };
   }, []);
 

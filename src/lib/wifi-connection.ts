@@ -5,6 +5,12 @@
 // and the app communicates via WebSocket (ws://) on the adapter's IP:port.
 //
 // Standard ports: 35000 (ELM327 WiFi), 23 (Telnet mode on some adapters)
+//
+// IMPORTANT: OBD-II WiFi adapters do NOT support TLS (wss://).
+// When this app is served over HTTPS (e.g., from Vercel), browsers block
+// mixed content (ws:// from https:// page). This is a browser security limitation.
+// Workaround: Access the app via HTTP, or use Chrome flags to allow insecure content
+// on localhost/private IPs.
 
 export interface WiFiConnectionCallbacks {
   onData: (data: string) => void;
@@ -45,6 +51,12 @@ export function checkWiFiAvailability(): { available: boolean; reason?: string }
 /**
  * Connect to a WiFi OBD-II adapter via WebSocket.
  *
+ * IMPORTANT for HTTPS deployment:
+ * - OBD-II WiFi adapters do NOT support TLS, so we must use ws:// (not wss://)
+ * - Browsers block ws:// connections from HTTPS pages (mixed content policy)
+ * - This is a fundamental limitation of the web platform
+ * - If ws:// fails, we provide a clear error message with workarounds
+ *
  * IMPORTANT for PWA usage:
  * - The phone must be connected to the adapter's WiFi hotspot FIRST
  * - The adapter typically creates an open network (no password)
@@ -74,13 +86,38 @@ export function connectWiFi(
     callbacks = cb;
     cb.onStatusChange(`Connecting to ${ip}:${port}...`);
 
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    // ─── FIX: Always use ws:// protocol ───────────────────────────
+    // OBD-II WiFi adapters do NOT support TLS (wss://).
+    // We must always use plain WebSocket (ws://).
+    // The previous code used wss:// when the page was served over HTTPS,
+    // which would always fail because OBD adapters don't support TLS.
+    const protocol = 'ws:';
     const url = `${protocol}//${ip}:${port}`;
+
+    // Check for mixed content issue (HTTPS page trying to open ws://)
+    const isSecureContext = window.location.protocol === 'https:';
+    if (isSecureContext) {
+      console.warn(
+        '[WiFi OBD] This page is served over HTTPS but OBD adapters require ws:// (non-TLS). ' +
+        'Some browsers will block this mixed content connection. ' +
+        'If connection fails, try accessing the app via HTTP or use a Bluetooth adapter instead.'
+      );
+    }
 
     try {
       ws = new WebSocket(url);
     } catch (error) {
-      reject(new Error(`Failed to create WebSocket: ${error instanceof Error ? error.message : 'Unknown error'}`));
+      const errMsg = error instanceof Error ? error.message : 'Unknown error';
+      if (isSecureContext && (errMsg.includes('secure') || errMsg.includes('mixed') || errMsg.includes('insecure'))) {
+        reject(new Error(
+          'Browser blocked ws:// connection from HTTPS page (mixed content). ' +
+          'OBD-II WiFi adapters do not support secure WebSocket (wss://). ' +
+          'To use WiFi OBD: 1) Access this app via HTTP instead of HTTPS, or ' +
+          '2) Use a Bluetooth BLE adapter instead (recommended).'
+        ));
+      } else {
+        reject(new Error(`Failed to create WebSocket: ${errMsg}`));
+      }
       return;
     }
 
@@ -88,7 +125,10 @@ export function connectWiFi(
     const timeout = setTimeout(() => {
       if (ws && ws.readyState !== WebSocket.OPEN) {
         ws.close();
-        reject(new Error(`Connection to ${ip}:${port} timed out. Ensure your phone is connected to the adapter's WiFi network (SSID: ELM327, WiFi_OBDII, etc.) and the adapter is powered on.`));
+        reject(new Error(
+          `Connection to ${ip}:${port} timed out. Ensure your phone is connected ` +
+          `to the adapter's WiFi network (SSID: ELM327, WiFi_OBDII, etc.) and the adapter is powered on.`
+        ));
       }
     }, 10000);
 
@@ -99,10 +139,12 @@ export function connectWiFi(
       // Start keep-alive pings to detect disconnection
       startKeepAlive(ip, port);
 
+      cb.onConnected();
+
       resolve({
         ip,
         port,
-        protocol: protocol === 'wss:' ? 'wss' : 'ws',
+        protocol: 'ws',
         connected: true,
       });
     };
@@ -127,7 +169,7 @@ export function connectWiFi(
 
         // Also check for '>' in buffer (ELM327 ready prompt)
         if (messageBuffer.includes('>')) {
-          const remaining = messageBuffer.replace('>', '');
+          const remaining = messageBuffer.replace(/>/g, '');
           if (remaining.trim()) {
             cb.onData(remaining.trim());
           }
@@ -136,9 +178,20 @@ export function connectWiFi(
       }
     };
 
-    ws.onerror = () => {
+    ws.onerror = (event) => {
       clearTimeout(timeout);
-      cb.onError(`WebSocket error. Ensure you're connected to the adapter's WiFi network (${ip}:${port}). The adapter should be showing a solid LED.`);
+      if (isSecureContext) {
+        cb.onError(
+          `WebSocket connection failed. Since this app is loaded over HTTPS, the browser may block ` +
+          `insecure ws:// connections to the OBD adapter. Try: 1) Access the app via HTTP, ` +
+          `2) Use a Bluetooth BLE adapter instead, or 3) Enable Chrome flag: chrome://flags/#allow-insecure-localhost`
+        );
+      } else {
+        cb.onError(
+          `WebSocket error. Ensure you're connected to the adapter's WiFi network (${ip}:${port}). ` +
+          `The adapter should be showing a solid LED.`
+        );
+      }
     };
 
     ws.onclose = (event) => {
@@ -149,7 +202,10 @@ export function connectWiFi(
 
       if (event.code === 1006) {
         // Abnormal close — likely WiFi disconnection
-        cb.onError(`Connection to adapter lost. Your phone may have disconnected from the adapter's WiFi network. Go to WiFi settings and reconnect to the adapter's network, then try again.`);
+        cb.onError(
+          `Connection to adapter lost. Your phone may have disconnected from the adapter's WiFi network. ` +
+          `Go to WiFi settings and reconnect to the adapter's network, then try again.`
+        );
       } else if (event.code !== 1000) {
         cb.onDisconnected();
         // Attempt auto-reconnect once
@@ -186,20 +242,27 @@ export function sendCommand(command: string): void {
 
 /**
  * Send ELM327 initialization commands over WebSocket.
+ * Uses adaptive delays — ATZ gets a longer wait.
  */
 export async function initializeAdapter(
   ip: string,
   port: number,
   commands: string[],
   onInitResponse: (cmd: string, response: string) => void,
-  delayMs: number = 300
+  delayMs: number = 500
 ): Promise<boolean> {
   for (const cmd of commands) {
     try {
       sendCommand(cmd);
-      // Wait for adapter to process
-      await new Promise((resolve) => setTimeout(resolve, delayMs));
-      onInitResponse(cmd, 'sent');
+
+      // ATZ (reset) needs significantly more time
+      const waitTime = cmd.toUpperCase().startsWith('ATZ') ? 3000 : delayMs;
+      await new Promise((resolve) => setTimeout(resolve, waitTime));
+
+      const response = messageBuffer.trim();
+      messageBuffer = '';
+
+      onInitResponse(cmd, response || 'sent');
     } catch (error) {
       onInitResponse(cmd, `error: ${error instanceof Error ? error.message : 'failed'}`);
       return false;
@@ -210,15 +273,18 @@ export async function initializeAdapter(
 
 /**
  * Start a keep-alive ping to detect WiFi disconnection.
- * Some adapters send periodic pings; if we don't get data for 30s,
- * the connection may be dead.
+ * FIX: Use AT (blank command) instead of ATZ (full reset) for keep-alive.
+ * ATZ resets the adapter, losing all protocol configuration — catastrophic during a session.
+ * A simple AT command (no operation) just checks if the adapter is responsive.
  */
 function startKeepAlive(ip: string, port: number) {
   stopKeepAlive();
   keepAliveTimer = setInterval(() => {
     if (ws && ws.readyState === WebSocket.OPEN) {
       try {
-        ws.send('ATZ\r');
+        // Send a harmless AT command — just checks adapter is alive
+        // AT by itself returns "OK" without resetting anything
+        ws.send('AT\r');
       } catch {
         stopKeepAlive();
         callbacks?.onError('Keep-alive failed. Connection may be lost.');

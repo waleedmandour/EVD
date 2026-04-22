@@ -5,6 +5,8 @@ import { useAppStore } from '@/lib/store';
 import { getDemoDTCs, getDemoMonitorStatus } from '@/lib/simulator';
 import { EV_MONITOR_TESTS, DTC_CODES } from '@/lib/types';
 import type { DiagnosticTroubleCode } from '@/lib/types';
+import { sendCommand as bleSendCommand, isBLEConnected } from '@/lib/ble-connection';
+import { sendCommand as wifiSendCommand, isWiFiConnected } from '@/lib/wifi-connection';
 import {
   AlertTriangle, CheckCircle2, XCircle, RefreshCw,
   Shield, Info, Search,
@@ -16,19 +18,66 @@ export function DiagnosticsView() {
 
   const handleScan = async () => {
     setIsScanning(true);
-    // Simulate scanning delay
-    await new Promise((r) => setTimeout(r, 1500));
+
     if (connectionMode === 'demo') {
+      // Demo mode — use simulated data
+      await new Promise((r) => setTimeout(r, 1500));
       setDTCs(getDemoDTCs());
       setMonitorStatus(getDemoMonitorStatus());
+    } else if (connectionMode === 'bluetooth' || connectionMode === 'wifi') {
+      // Real adapter — send Mode 03 (DTC) request
+      try {
+        const sendFn = connectionMode === 'bluetooth' ? bleSendCommand : wifiSendCommand;
+        const isConnected = connectionMode === 'bluetooth' ? isBLEConnected() : isWiFiConnected();
+
+        if (!isConnected) {
+          setIsScanning(false);
+          return;
+        }
+
+        // Send Mode 03 request to get DTCs
+        sendFn('03');
+
+        // Also send Mode 01 PID 01 to get MIL status and DTC count
+        sendFn('0101');
+
+        // Wait for responses to come back (they arrive asynchronously via notifications)
+        await new Promise((r) => setTimeout(r, 3000));
+
+        // Parse DTC responses from the OBD data stream
+        // The processOBDResponse in store.ts handles the raw data
+        // For now, if no DTCs were detected by the parser, show none
+        // (DTC parsing from Mode 03 responses is handled by parseDTCResponse)
+      } catch (error) {
+        console.error('[DTC Scan] Error:', error);
+      }
     }
+
     setIsScanning(false);
   };
 
   const handleClearDTCs = async () => {
     setIsScanning(true);
-    await new Promise((r) => setTimeout(r, 800));
-    clearDTCs();
+
+    if (connectionMode === 'demo') {
+      await new Promise((r) => setTimeout(r, 800));
+      clearDTCs();
+    } else if (connectionMode === 'bluetooth' || connectionMode === 'wifi') {
+      try {
+        const sendFn = connectionMode === 'bluetooth' ? bleSendCommand : wifiSendCommand;
+        const isConnected = connectionMode === 'bluetooth' ? isBLEConnected() : isWiFiConnected();
+
+        if (isConnected) {
+          // Send Mode 04 to clear DTCs
+          sendFn('04');
+          await new Promise((r) => setTimeout(r, 1000));
+          clearDTCs();
+        }
+      } catch (error) {
+        console.error('[Clear DTCs] Error:', error);
+      }
+    }
+
     setIsScanning(false);
   };
 

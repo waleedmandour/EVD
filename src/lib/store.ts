@@ -12,6 +12,7 @@ import {
 } from './types';
 import {
   checkBluetoothAvailability,
+  checkBluetoothAvailabilityAsync,
   requestVGateDevice,
   requestGenericBLEDevice,
   connectGATT,
@@ -25,6 +26,13 @@ import {
   isWiFiConnected,
   sendCommand as wifiSendCommand,
 } from './wifi-connection';
+import {
+  startPolling,
+  stopPolling,
+  initializeWiFiAdapter,
+  WIFI_INIT_COMMANDS,
+} from './obd-polling';
+import { OBD_COMMANDS } from './types';
 
 export interface AppState {
   // Connection
@@ -144,10 +152,27 @@ export const useAppStore = create<AppState>((set, get) => ({
   bluetoothUnavailableReason: '',
 
   checkBluetooth: () => {
-    const result = checkBluetoothAvailability();
-    set({
-      bluetoothAvailable: result.available,
-      bluetoothUnavailableReason: result.reason || '',
+    // Use async check for more reliable availability detection
+    const syncResult = checkBluetoothAvailability();
+    if (!syncResult.available) {
+      set({
+        bluetoothAvailable: false,
+        bluetoothUnavailableReason: syncResult.reason || '',
+      });
+      return;
+    }
+
+    // Immediately set available, then refine with async check
+    set({ bluetoothAvailable: true, bluetoothUnavailableReason: '' });
+
+    // Run async check in background for more accurate result
+    checkBluetoothAvailabilityAsync().then(asyncResult => {
+      if (!asyncResult.available) {
+        set({
+          bluetoothAvailable: false,
+          bluetoothUnavailableReason: asyncResult.reason || '',
+        });
+      }
     });
   },
 
@@ -156,8 +181,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ connectionStatus: 'connecting' });
 
     try {
-      // Check Web Bluetooth availability first
-      const avail = checkBluetoothAvailability();
+      // Check Web Bluetooth availability (async for accuracy)
+      const avail = await checkBluetoothAvailabilityAsync();
       if (!avail.available) {
         set({
           connectionStatus: 'error',
@@ -184,10 +209,12 @@ export const useAppStore = create<AppState>((set, get) => ({
           processOBDResponse(data, get, set);
         },
         onDisconnected: () => {
+          stopPolling();
           set({ connectionStatus: 'disconnected', connectionMode: null });
         },
         onError: (error) => {
           console.error('[BLE Error]', error);
+          stopPolling();
           set({ connectionStatus: 'error' });
         },
         onStatusChange: (status) => {
@@ -214,9 +241,19 @@ export const useAppStore = create<AppState>((set, get) => ({
       });
 
       // Initialize the adapter with BYD-specific commands
-      await bleInitialize(VGATE_INIT_COMMANDS, (cmd, resp) => {
+      const initSuccess = await bleInitialize(VGATE_INIT_COMMANDS, (cmd, resp) => {
         console.log(`[OBD Init] ${cmd} → ${resp}`);
-      });
+      }, 300); // 300ms delay between commands (was 200ms — too fast)
+
+      if (!initSuccess) {
+        console.warn('[OBD Init] Some init commands failed, but continuing...');
+      }
+
+      // ─── FIX: Start OBD-II data polling ─────────────────────────
+      // This is the critical missing piece — without this, no live
+      // vehicle data would ever appear even though the adapter is connected.
+      console.log('[connectVgate] Starting OBD-II data polling');
+      startPolling(250);
 
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Unknown error';
@@ -233,7 +270,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ connectionStatus: 'connecting' });
 
     try {
-      const avail = checkBluetoothAvailability();
+      const avail = await checkBluetoothAvailabilityAsync();
       if (!avail.available) {
         set({
           connectionStatus: 'error',
@@ -257,10 +294,12 @@ export const useAppStore = create<AppState>((set, get) => ({
           processOBDResponse(data, get, set);
         },
         onDisconnected: () => {
+          stopPolling();
           set({ connectionStatus: 'disconnected', connectionMode: null });
         },
         onError: (error) => {
           console.error('[BLE Error]', error);
+          stopPolling();
           set({ connectionStatus: 'error' });
         },
         onStatusChange: (status) => {
@@ -288,6 +327,19 @@ export const useAppStore = create<AppState>((set, get) => ({
         },
       });
 
+      // Initialize adapter with generic ELM327 commands
+      const initSuccess = await bleInitialize(VGATE_INIT_COMMANDS, (cmd, resp) => {
+        console.log(`[OBD Init] ${cmd} → ${resp}`);
+      }, 300);
+
+      if (!initSuccess) {
+        console.warn('[OBD Init] Some init commands failed, but continuing...');
+      }
+
+      // ─── FIX: Start OBD-II data polling ─────────────────────────
+      console.log('[connectBluetooth] Starting OBD-II data polling');
+      startPolling(250);
+
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Unknown error';
       console.error('[connectBluetooth]', msg);
@@ -308,10 +360,12 @@ export const useAppStore = create<AppState>((set, get) => ({
           processOBDResponse(data, get, set);
         },
         onDisconnected: () => {
+          stopPolling();
           set({ connectionStatus: 'disconnected', connectionMode: null });
         },
         onError: (error) => {
           console.error('[WiFi Error]', error);
+          stopPolling();
           set({ connectionStatus: 'error', connectionMode: null });
         },
         onStatusChange: (status) => {
@@ -339,6 +393,21 @@ export const useAppStore = create<AppState>((set, get) => ({
         },
       });
 
+      // ─── FIX: Initialize WiFi adapter with ELM327 commands ──────
+      // Previously, WiFi connection succeeded but the adapter was never
+      // initialized with AT commands, so it couldn't process OBD queries.
+      console.log('[connectWifi] Initializing WiFi OBD-II adapter');
+      const initSuccess = await initializeWiFiAdapter(ip, port);
+
+      if (initSuccess) {
+        // ─── FIX: Start OBD-II data polling ───────────────────────
+        console.log('[connectWifi] Starting OBD-II data polling');
+        startPolling(300); // WiFi may need slightly longer interval
+      } else {
+        console.warn('[connectWifi] Adapter initialization failed, starting polling anyway');
+        startPolling(300);
+      }
+
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Unknown error';
       console.error('[connectWifi]', msg);
@@ -350,6 +419,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   disconnectDevice: () => {
+    stopPolling();
     bleDisconnect();
     wifiDisconnect();
     set({ connectionStatus: 'disconnected', connectionMode: null });
@@ -386,6 +456,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   stopDemoMode: () => {
+    stopPolling();
     bleDisconnect();
     wifiDisconnect();
     set({
@@ -466,11 +537,12 @@ export const useAppStore = create<AppState>((set, get) => ({
 // Processes raw OBD-II responses from BLE/WiFi adapter and updates vehicle state.
 // Supports standard SAE J1979 PID responses.
 
-import { OBD_COMMANDS } from './types';
-
 /**
  * Process a raw OBD-II response string from the adapter.
  * Parses the hex data and updates the vehicle data in the store.
+ *
+ * Handles standard responses in the format: "41 XX YY [YY...]"
+ * where 41 = response to mode 01, XX = PID, YY... = data bytes
  */
 function processOBDResponse(
   raw: string,
@@ -485,7 +557,8 @@ function processOBDResponse(
   try {
     // Try to parse as standard OBD-II response: "41 XX YY [YY...]"
     // 41 = response to mode 01, XX = PID, YY... = data bytes
-    const match = trimmed.match(/^41\s+([0-9A-Fa-f]{2})\s+([0-9A-Fa-f\s]+)$/);
+    // Some adapters include spaces, some don't (ATH0 vs ATH1)
+    const match = trimmed.match(/^41\s*([0-9A-Fa-f]{2})\s*([0-9A-Fa-f\s]+)$/i);
     if (match) {
       const pid = match[1].toUpperCase();
       const hexData = match[2].replace(/\s+/g, '');
@@ -517,6 +590,21 @@ function processOBDResponse(
           protocol: trimmed,
         },
       }));
+    }
+
+    // Parse ELM327 version from ATI response (e.g., "ELM327 v2.1")
+    if (trimmed.toUpperCase().startsWith('ELM327')) {
+      set((s) => ({
+        deviceInfo: {
+          ...s.deviceInfo,
+          firmwareVersion: trimmed,
+        },
+      }));
+    }
+
+    // Parse "OK" responses from AT commands
+    if (trimmed.toUpperCase() === 'OK') {
+      // Adapter acknowledged a command — nothing to update
     }
 
     // Update last ping time on any successful data
