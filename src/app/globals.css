@@ -1,0 +1,271 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-evdx-surface: #1A2332;
+  --color-evdx-primary: #00D2FF;
+  --color-evdx-purple: #7B2FBE;
+  --color-evdx-green: #00E676;
+  --color-evdx-warning: #FFB300;
+  --color-evdx-critical: #FF3D00;
+  --color-evdx-text: #E8EAF6;
+  --color-evdx-text-secondary: #78909C;
+}
+
+:root {
+  --radius: 0.625rem;
+  --background: #0D1117;
+  --foreground: #E8EAF6;
+  --card: #1A2332;
+  --card-foreground: #E8EAF6;
+  --popover: #1A2332;
+  --popover-foreground: #E8EAF6;
+  --primary: #00D2FF;
+  --primary-foreground: #0D1117;
+  --secondary: #1A2332;
+  --secondary-foreground: #E8EAF6;
+  --muted: #1A2332;
+  --muted-foreground: #78909C;
+  --accent: #7B2FBE;
+  --accent-foreground: #E8EAF6;
+  --destructive: #FF3D00;
+  --border: rgba(255, 255, 255, 0.08);
+  --input: rgba(255, 255, 255, 0.12);
+  --ring: #00D2FF;
+  --chart-1: #00D2FF;
+  --chart-2: #00E676;
+  --chart-3: #7B2FBE;
+  --chart-4: #FFB300;
+  --chart-5: #FF3D00;
+  --sidebar: #1A2332;
+  --sidebar-foreground: #E8EAF6;
+  --sidebar-primary: #00D2FF;
+  --sidebar-primary-foreground: #0D1117;
+  --sidebar-accent: #7B2FBE;
+  --sidebar-accent-foreground: #E8EAF6;
+  --sidebar-border: rgba(255, 255, 255, 0.08);
+  --sidebar-ring: #00D2FF;
+}
+
+.dark {
+  --background: #0D1117;
+  --foreground: #E8EAF6;
+  --card: #1A2332;
+  --card-foreground: #E8EAF6;
+  --popover: #1A2332;
+  --popover-foreground: #E8EAF6;
+  --primary: #00D2FF;
+  --primary-foreground: #0D1117;
+  --secondary: #1A2332;
+  --secondary-foreground: #E8EAF6;
+  --muted: #1A2332;
+  --muted-foreground: #78909C;
+  --accent: #7B2FBE;
+  --accent-foreground: #E8EAF6;
+  --destructive: #FF3D00;
+  --border: rgba(255, 255, 255, 0.08);
+  --input: rgba(255, 255, 255, 0.12);
+  --ring: #00D2FF;
+  --chart-1: #00D2FF;
+  --chart-2: #00E676;
+  --chart-3: #7B2FBE;
+  --chart-4: #FFB300;
+  --chart-5: #FF3D00;
+  --sidebar: #1A2332;
+  --sidebar-foreground: #E8EAF6;
+  --sidebar-primary: #00D2FF;
+  --sidebar-primary-foreground: #0D1117;
+  --sidebar-accent: #7B2FBE;
+  --sidebar-accent-foreground: #E8EAF6;
+  --sidebar-border: rgba(255, 255, 255, 0.08);
+  --sidebar-ring: #00D2FF;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* RTL Support */
+[dir="rtl"] {
+  text-align: right;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0D1117;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1A2332;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #2A3342;
+}
+
+/* Gauge Animation */
+@keyframes gauge-needle {
+  0% {
+    transform: rotate(var(--gauge-start, -90deg));
+  }
+  100% {
+    transform: rotate(var(--gauge-end, 90deg));
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    opacity: 0.6;
+    filter: blur(4px);
+  }
+  50% {
+    opacity: 1;
+    filter: blur(8px);
+  }
+}
+
+@keyframes charging-pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 1;
+  }
+}
+
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-gauge-needle {
+  animation: gauge-needle 1s ease-out forwards;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.animate-charging-pulse {
+  animation: charging-pulse 2s ease-in-out infinite;
+}
+
+.animate-spin-slow {
+  animation: spin-slow 3s linear infinite;
+}
+
+/* Number animation */
+@keyframes number-pop {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.animate-number-pop {
+  animation: number-pop 0.2s ease-out;
+}
+
+/* Card glow effect */
+.card-glow {
+  box-shadow: 0 0 20px rgba(0, 210, 255, 0.05);
+}
+
+.card-glow-active {
+  box-shadow: 0 0 30px rgba(0, 210, 255, 0.15);
+}
+
+/* Bottom nav safe area */
+.pb-safe {
+  padding-bottom: max(env(safe-area-inset-bottom), 8px);
+}
+
+/* Voice assistant pulse */
+@keyframes voice-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(0, 210, 255, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 20px rgba(0, 210, 255, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(0, 210, 255, 0);
+  }
+}
+
+.animate-voice-pulse {
+  animation: voice-pulse 1.5s ease-out infinite;
+}
+
+/* Tab content transition */
+.tab-content-enter {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+.tab-content-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+}

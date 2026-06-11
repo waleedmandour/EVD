@@ -1,0 +1,2280 @@
+[
+  {
+    "id": "byd",
+    "name": "BYD",
+    "models": [
+      "Yuan Plus",
+      "Atto 3",
+      "Han",
+      "Tang",
+      "Seal",
+      "Dolphin",
+      "Seagull",
+      "Atto 2",
+      "Sealion 6"
+    ],
+    "batteryChemistry": "LFP (Blade Battery)",
+    "obdProfile": "BYD_E_PLATFORM_3_0",
+    "customPIDs": [
+      {
+        "pid": "2101",
+        "name": "BMS Pack Voltage",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.1",
+        "unit": "V",
+        "min": 0,
+        "max": 1000
+      },
+      {
+        "pid": "2102",
+        "name": "BMS Pack Current",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.1 - 500",
+        "unit": "A",
+        "min": -500,
+        "max": 500
+      },
+      {
+        "pid": "2103",
+        "name": "BMS SOC",
+        "mode": "22",
+        "bytes": 1,
+        "formula": "A * 0.4",
+        "unit": "%",
+        "min": 0,
+        "max": 100
+      },
+      {
+        "pid": "2104",
+        "name": "Cell Max Voltage",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.001",
+        "unit": "V",
+        "min": 0,
+        "max": 5
+      },
+      {
+        "pid": "2105",
+        "name": "Cell Min Voltage",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.001",
+        "unit": "V",
+        "min": 0,
+        "max": 5
+      },
+      {
+        "pid": "2106",
+        "name": "Battery Temperature Max",
+        "mode": "22",
+        "bytes": 1,
+        "formula": "A - 40",
+        "unit": "\u00b0C",
+        "min": -40,
+        "max": 215
+      },
+      {
+        "pid": "2107",
+        "name": "Battery Temperature Min",
+        "mode": "22",
+        "bytes": 1,
+        "formula": "A - 40",
+        "unit": "\u00b0C",
+        "min": -40,
+        "max": 215
+      },
+      {
+        "pid": "2108",
+        "name": "BMS Status Flags",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "A << 8 | B",
+        "unit": "flags",
+        "min": 0,
+        "max": 65535
+      },
+      {
+        "pid": "2109",
+        "name": "Cell Voltage Delta",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.001",
+        "unit": "V",
+        "min": 0,
+        "max": 5
+      },
+      {
+        "pid": "210A",
+        "name": "BMS Cycle Count",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "A << 8 | B",
+        "unit": "cycles",
+        "min": 0,
+        "max": 65535
+      }
+    ],
+    "dtcPrefix": ["P11", "P12", "U01", "U11", "B12"],
+    "chargingSpecs": {
+      "dcMax": 150,
+      "acMax": 11,
+      "port": "CCS2/GB/T"
+    },
+    "ecuAddresses": {
+      "BMS": "0x764",
+      "MCU": "0x765",
+      "OBC": "0x766"
+    },
+    "protocol": "CAN 29-bit"
+  },
+  {
+    "id": "tesla",
+    "name": "Tesla",
+    "models": [
+      "Model 3",
+      "Model Y",
+      "Model S",
+      "Model X",
+      "Cybertruck"
+    ],
+    "batteryChemistry": "NCA/NMC (LFP for SR models)",
+    "obdProfile": "TESLA_CAN_GATEWAY",
+    "customPIDs": [
+      {
+        "pid": "2110",
+        "name": "Pack Voltage",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.01",
+        "unit": "V",
+        "min": 0,
+        "max": 500
+      },
+      {
+        "pid": "2111",
+        "name": "Pack Current",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.1 - 819.2",
+        "unit": "A",
+        "min": -819.2,
+        "max": 819.1
+      },
+      {
+        "pid": "2112",
+        "name": "Nominal Full Pack Energy",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.1",
+        "unit": "kWh",
+        "min": 0,
+        "max": 200
+      },
+      {
+        "pid": "2113",
+        "name": "Nominal Remaining Energy",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.1",
+        "unit": "kWh",
+        "min": 0,
+        "max": 200
+      },
+      {
+        "pid": "2114",
+        "name": "Ideal Energy Remaining",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.1",
+        "unit": "kWh",
+        "min": 0,
+        "max": 200
+      },
+      {
+        "pid": "2115",
+        "name": "Battery HO Percent",
+        "mode": "22",
+        "bytes": 1,
+        "formula": "A * 0.4",
+        "unit": "%",
+        "min": 0,
+        "max": 100
+      },
+      {
+        "pid": "2116",
+        "name": "Max Cell Temperature",
+        "mode": "22",
+        "bytes": 1,
+        "formula": "A - 40",
+        "unit": "\u00b0C",
+        "min": -40,
+        "max": 215
+      },
+      {
+        "pid": "2117",
+        "name": "Min Cell Temperature",
+        "mode": "22",
+        "bytes": 1,
+        "formula": "A - 40",
+        "unit": "\u00b0C",
+        "min": -40,
+        "max": 215
+      },
+      {
+        "pid": "2118",
+        "name": "Cell Vmax Location",
+        "mode": "22",
+        "bytes": 1,
+        "formula": "A",
+        "unit": "index",
+        "min": 0,
+        "max": 255
+      },
+      {
+        "pid": "2119",
+        "name": "Cell Vmin Location",
+        "mode": "22",
+        "bytes": 1,
+        "formula": "A",
+        "unit": "index",
+        "min": 0,
+        "max": 255
+      }
+    ],
+    "dtcPrefix": ["P0A", "P0B", "U00", "U01", "B10"],
+    "chargingSpecs": {
+      "dcMax": 250,
+      "acMax": 19.2,
+      "port": "NACS/CCS1"
+    },
+    "ecuAddresses": {
+      "BMS": "0x712",
+      "MCU": "0x720",
+      "OBC": "0x722"
+    },
+    "protocol": "CAN 29-bit (variable DBC)"
+  },
+  {
+    "id": "nissan",
+    "name": "Nissan",
+    "models": [
+      "Leaf",
+      "Ariya"
+    ],
+    "batteryChemistry": "NMC (Leaf ZE0/AZE0 LMO)",
+    "obdProfile": "NISSAN_LEAF_EVS",
+    "customPIDs": [
+      {
+        "pid": "5B9A",
+        "name": "Battery Pack Voltage",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.5",
+        "unit": "V",
+        "min": 0,
+        "max": 500
+      },
+      {
+        "pid": "5B9B",
+        "name": "Battery Pack Current",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) - 32768",
+        "unit": "A",
+        "min": -32768,
+        "max": 32767
+      },
+      {
+        "pid": "5B9C",
+        "name": "SOC Display",
+        "mode": "22",
+        "bytes": 1,
+        "formula": "A * 0.5",
+        "unit": "%",
+        "min": 0,
+        "max": 100
+      },
+      {
+        "pid": "5B9D",
+        "name": "Cell Max Voltage",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.001",
+        "unit": "V",
+        "min": 0,
+        "max": 5
+      },
+      {
+        "pid": "5B9E",
+        "name": "Cell Min Voltage",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.001",
+        "unit": "V",
+        "min": 0,
+        "max": 5
+      },
+      {
+        "pid": "5BA0",
+        "name": "Battery Temperature",
+        "mode": "22",
+        "bytes": 1,
+        "formula": "A - 40",
+        "unit": "\u00b0C",
+        "min": -40,
+        "max": 215
+      },
+      {
+        "pid": "5BA1",
+        "name": "Motor Torque",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.25 - 8000",
+        "unit": "Nm",
+        "min": -8000,
+        "max": 8191
+      },
+      {
+        "pid": "5BA2",
+        "name": "Motor RPM",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) - 32768",
+        "unit": "rpm",
+        "min": -32768,
+        "max": 32767
+      },
+      {
+        "pid": "5BA3",
+        "name": "Charging Power",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.01",
+        "unit": "kW",
+        "min": 0,
+        "max": 655
+      },
+      {
+        "pid": "5BA4",
+        "name": "Quick Charge Status",
+        "mode": "22",
+        "bytes": 1,
+        "formula": "A",
+        "unit": "status",
+        "min": 0,
+        "max": 255
+      }
+    ],
+    "dtcPrefix": ["P0A", "P0B", "P31", "U10"],
+    "chargingSpecs": {
+      "dcMax": 130,
+      "acMax": 7.4,
+      "port": "CHAdeMO/CCS2"
+    },
+    "ecuAddresses": {
+      "BMS": "0x79B",
+      "MCU": "0x7C6",
+      "OBC": "0x796"
+    },
+    "protocol": "CAN 11-bit"
+  },
+  {
+    "id": "hyundai-kia",
+    "name": "Hyundai/Kia",
+    "models": [
+      "Ioniq 5",
+      "Ioniq 6",
+      "EV6",
+      "EV9",
+      "Kona EV"
+    ],
+    "batteryChemistry": "NMC (SK On)",
+    "obdProfile": "HYUNDAI_E_GMP",
+    "customPIDs": [
+      {
+        "pid": "2201",
+        "name": "BMS SOC",
+        "mode": "22",
+        "bytes": 1,
+        "formula": "A * 0.5",
+        "unit": "%",
+        "min": 0,
+        "max": 100
+      },
+      {
+        "pid": "2202",
+        "name": "Battery Pack Voltage",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.1",
+        "unit": "V",
+        "min": 0,
+        "max": 1000
+      },
+      {
+        "pid": "2203",
+        "name": "Battery Pack Current",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.1 - 500",
+        "unit": "A",
+        "min": -500,
+        "max": 500
+      },
+      {
+        "pid": "2204",
+        "name": "Cell Max Voltage",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.001",
+        "unit": "V",
+        "min": 0,
+        "max": 5
+      },
+      {
+        "pid": "2205",
+        "name": "Cell Min Voltage",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.001",
+        "unit": "V",
+        "min": 0,
+        "max": 5
+      },
+      {
+        "pid": "2206",
+        "name": "Battery Temperature Max",
+        "mode": "22",
+        "bytes": 1,
+        "formula": "A - 40",
+        "unit": "\u00b0C",
+        "min": -40,
+        "max": 215
+      },
+      {
+        "pid": "2207",
+        "name": "Battery Temperature Min",
+        "mode": "22",
+        "bytes": 1,
+        "formula": "A - 40",
+        "unit": "\u00b0C",
+        "min": -40,
+        "max": 215
+      },
+      {
+        "pid": "2208",
+        "name": "Motor Temperature",
+        "mode": "22",
+        "bytes": 1,
+        "formula": "A - 40",
+        "unit": "\u00b0C",
+        "min": -40,
+        "max": 215
+      },
+      {
+        "pid": "2209",
+        "name": "Inverter Temperature",
+        "mode": "22",
+        "bytes": 1,
+        "formula": "A - 40",
+        "unit": "\u00b0C",
+        "min": -40,
+        "max": 215
+      },
+      {
+        "pid": "220A",
+        "name": "DC-DC Converter Status",
+        "mode": "22",
+        "bytes": 1,
+        "formula": "A",
+        "unit": "status",
+        "min": 0,
+        "max": 255
+      }
+    ],
+    "dtcPrefix": ["P0A", "P0B", "P0C", "U01", "B14"],
+    "chargingSpecs": {
+      "dcMax": 350,
+      "acMax": 11,
+      "port": "CCS1/CCS2"
+    },
+    "ecuAddresses": {
+      "BMS": "0x7E4",
+      "MCU": "0x7E2",
+      "OBC": "0x7E6"
+    },
+    "protocol": "CAN 11-bit"
+  },
+  {
+    "id": "vw-group",
+    "name": "VW Group",
+    "models": [
+      "ID.3",
+      "ID.4",
+      "ID.5",
+      "ID.7",
+      "e-tron GT",
+      "Taycan",
+      "Q4 e-tron"
+    ],
+    "batteryChemistry": "NMC (LG/SKK)",
+    "obdProfile": "VW_MEB_J533",
+    "customPIDs": [
+      {
+        "pid": "2301",
+        "name": "BMS SOC Display",
+        "mode": "22",
+        "bytes": 1,
+        "formula": "A * 0.4",
+        "unit": "%",
+        "min": 0,
+        "max": 100
+      },
+      {
+        "pid": "2302",
+        "name": "HV Battery Voltage",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.1",
+        "unit": "V",
+        "min": 0,
+        "max": 1000
+      },
+      {
+        "pid": "2303",
+        "name": "HV Battery Current",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.1 - 500",
+        "unit": "A",
+        "min": -500,
+        "max": 500
+      },
+      {
+        "pid": "2304",
+        "name": "Cell Voltage Max",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.001",
+        "unit": "V",
+        "min": 0,
+        "max": 5
+      },
+      {
+        "pid": "2305",
+        "name": "Cell Voltage Min",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.001",
+        "unit": "V",
+        "min": 0,
+        "max": 5
+      },
+      {
+        "pid": "2306",
+        "name": "Battery Temp Mean",
+        "mode": "22",
+        "bytes": 1,
+        "formula": "A - 40",
+        "unit": "\u00b0C",
+        "min": -40,
+        "max": 215
+      },
+      {
+        "pid": "2307",
+        "name": "Charging AC Power",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.01",
+        "unit": "kW",
+        "min": 0,
+        "max": 655
+      },
+      {
+        "pid": "2308",
+        "name": "Charging DC Power",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.1",
+        "unit": "kW",
+        "min": 0,
+        "max": 6553
+      },
+      {
+        "pid": "2309",
+        "name": "Motor RPM",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) - 32768",
+        "unit": "rpm",
+        "min": -32768,
+        "max": 32767
+      },
+      {
+        "pid": "230A",
+        "name": "Drive Mode",
+        "mode": "22",
+        "bytes": 1,
+        "formula": "A",
+        "unit": "mode",
+        "min": 0,
+        "max": 255
+      }
+    ],
+    "dtcPrefix": ["P0A", "P0B", "P15", "U00", "U04"],
+    "chargingSpecs": {
+      "dcMax": 270,
+      "acMax": 22,
+      "port": "CCS2"
+    },
+    "ecuAddresses": {
+      "BMS": "0x7E5",
+      "MCU": "0x7E0",
+      "OBC": "0x7E7"
+    },
+    "protocol": "CAN 11-bit (UDS)"
+  },
+  {
+    "id": "mercedes-benz",
+    "name": "Mercedes-Benz",
+    "models": [
+      "EQA",
+      "EQB",
+      "EQC",
+      "EQE",
+      "EQS"
+    ],
+    "batteryChemistry": "NMC",
+    "obdProfile": "MB_EVA_XENTRY",
+    "customPIDs": [
+      {
+        "pid": "2401",
+        "name": "HV Battery SOC",
+        "mode": "22",
+        "bytes": 1,
+        "formula": "A * 0.4",
+        "unit": "%",
+        "min": 0,
+        "max": 100
+      },
+      {
+        "pid": "2402",
+        "name": "HV Battery Voltage",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.1",
+        "unit": "V",
+        "min": 0,
+        "max": 1000
+      },
+      {
+        "pid": "2403",
+        "name": "HV Battery Current",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.1 - 500",
+        "unit": "A",
+        "min": -500,
+        "max": 500
+      },
+      {
+        "pid": "2404",
+        "name": "Cell Voltage Max",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.001",
+        "unit": "V",
+        "min": 0,
+        "max": 5
+      },
+      {
+        "pid": "2405",
+        "name": "Cell Voltage Min",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.001",
+        "unit": "V",
+        "min": 0,
+        "max": 5
+      },
+      {
+        "pid": "2406",
+        "name": "Coolant Temperature In",
+        "mode": "22",
+        "bytes": 1,
+        "formula": "A - 40",
+        "unit": "\u00b0C",
+        "min": -40,
+        "max": 215
+      },
+      {
+        "pid": "2407",
+        "name": "Coolant Temperature Out",
+        "mode": "22",
+        "bytes": 1,
+        "formula": "A - 40",
+        "unit": "\u00b0C",
+        "min": -40,
+        "max": 215
+      },
+      {
+        "pid": "2408",
+        "name": "HV Battery Health",
+        "mode": "22",
+        "bytes": 1,
+        "formula": "A * 0.5",
+        "unit": "%",
+        "min": 0,
+        "max": 100
+      },
+      {
+        "pid": "2409",
+        "name": "Range Estimated",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "A << 8 | B",
+        "unit": "km",
+        "min": 0,
+        "max": 65535
+      },
+      {
+        "pid": "240A",
+        "name": "Charging Status",
+        "mode": "22",
+        "bytes": 1,
+        "formula": "A",
+        "unit": "status",
+        "min": 0,
+        "max": 255
+      }
+    ],
+    "dtcPrefix": ["P0A", "P0B", "P0C", "U00", "B14"],
+    "chargingSpecs": {
+      "dcMax": 200,
+      "acMax": 22,
+      "port": "CCS2"
+    },
+    "ecuAddresses": {
+      "BMS": "0x705",
+      "MCU": "0x702",
+      "OBC": "0x70A"
+    },
+    "protocol": "CAN 29-bit (UDS)"
+  },
+  {
+    "id": "bmw-mini",
+    "name": "BMW/Mini",
+    "models": [
+      "i3",
+      "iX1",
+      "iX3",
+      "i4",
+      "iX",
+      "i5",
+      "i7",
+      "Mini Electric"
+    ],
+    "batteryChemistry": "NMC (Samsung SDG)",
+    "obdProfile": "BMW_FA_FAHRZEUG",
+    "customPIDs": [
+      {
+        "pid": "2501",
+        "name": "HV SOC Display",
+        "mode": "22",
+        "bytes": 1,
+        "formula": "A * 0.4",
+        "unit": "%",
+        "min": 0,
+        "max": 100
+      },
+      {
+        "pid": "2502",
+        "name": "HV Battery Voltage",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.1",
+        "unit": "V",
+        "min": 0,
+        "max": 1000
+      },
+      {
+        "pid": "2503",
+        "name": "HV Battery Current",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.1 - 500",
+        "unit": "A",
+        "min": -500,
+        "max": 500
+      },
+      {
+        "pid": "2504",
+        "name": "Cell Voltage Max",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.001",
+        "unit": "V",
+        "min": 0,
+        "max": 5
+      },
+      {
+        "pid": "2505",
+        "name": "Cell Voltage Min",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.001",
+        "unit": "V",
+        "min": 0,
+        "max": 5
+      },
+      {
+        "pid": "2506",
+        "name": "Battery Temp Max",
+        "mode": "22",
+        "bytes": 1,
+        "formula": "A - 40",
+        "unit": "\u00b0C",
+        "min": -40,
+        "max": 215
+      },
+      {
+        "pid": "2507",
+        "name": "Battery Temp Min",
+        "mode": "22",
+        "bytes": 1,
+        "formula": "A - 40",
+        "unit": "\u00b0C",
+        "min": -40,
+        "max": 215
+      },
+      {
+        "pid": "2508",
+        "name": "Motor Temp",
+        "mode": "22",
+        "bytes": 1,
+        "formula": "A - 40",
+        "unit": "\u00b0C",
+        "min": -40,
+        "max": 215
+      },
+      {
+        "pid": "2509",
+        "name": "Power Electronics Temp",
+        "mode": "22",
+        "bytes": 1,
+        "formula": "A - 40",
+        "unit": "\u00b0C",
+        "min": -40,
+        "max": 215
+      },
+      {
+        "pid": "250A",
+        "name": "Charging Power AC",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.01",
+        "unit": "kW",
+        "min": 0,
+        "max": 655
+      }
+    ],
+    "dtcPrefix": ["P0A", "P0B", "U00", "U01", "B14"],
+    "chargingSpecs": {
+      "dcMax": 200,
+      "acMax": 22,
+      "port": "CCS2"
+    },
+    "ecuAddresses": {
+      "BMS": "0x610",
+      "MCU": "0x612",
+      "OBC": "0x618"
+    },
+    "protocol": "CAN 29-bit (UDS)"
+  },
+  {
+    "id": "gm",
+    "name": "GM",
+    "models": [
+      "Bolt EV",
+      "Bolt EUV",
+      "Hummer EV",
+      "Silverado EV",
+      "Lyriq",
+      "Blazer EV"
+    ],
+    "batteryChemistry": "NMC (LG Chem)",
+    "obdProfile": "GM_GVT2_ULTIUM",
+    "customPIDs": [
+      {
+        "pid": "2601",
+        "name": "Battery SOC",
+        "mode": "22",
+        "bytes": 1,
+        "formula": "A * 0.4",
+        "unit": "%",
+        "min": 0,
+        "max": 100
+      },
+      {
+        "pid": "2602",
+        "name": "Battery Voltage",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.1",
+        "unit": "V",
+        "min": 0,
+        "max": 1000
+      },
+      {
+        "pid": "2603",
+        "name": "Battery Current",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.1 - 500",
+        "unit": "A",
+        "min": -500,
+        "max": 500
+      },
+      {
+        "pid": "2604",
+        "name": "Cell Voltage Max",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.001",
+        "unit": "V",
+        "min": 0,
+        "max": 5
+      },
+      {
+        "pid": "2605",
+        "name": "Cell Voltage Min",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.001",
+        "unit": "V",
+        "min": 0,
+        "max": 5
+      },
+      {
+        "pid": "2606",
+        "name": "Battery Temp",
+        "mode": "22",
+        "bytes": 1,
+        "formula": "A - 40",
+        "unit": "\u00b0C",
+        "min": -40,
+        "max": 215
+      },
+      {
+        "pid": "2607",
+        "name": "Inverter Temp",
+        "mode": "22",
+        "bytes": 1,
+        "formula": "A - 40",
+        "unit": "\u00b0C",
+        "min": -40,
+        "max": 215
+      },
+      {
+        "pid": "2608",
+        "name": "Motor Temp",
+        "mode": "22",
+        "bytes": 1,
+        "formula": "A - 40",
+        "unit": "\u00b0C",
+        "min": -40,
+        "max": 215
+      },
+      {
+        "pid": "2609",
+        "name": "Charging Power",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.1",
+        "unit": "kW",
+        "min": 0,
+        "max": 6553
+      },
+      {
+        "pid": "260A",
+        "name": "Battery Capacity kWh",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.01",
+        "unit": "kWh",
+        "min": 0,
+        "max": 655
+      }
+    ],
+    "dtcPrefix": ["P0A", "P0B", "P0E", "U00", "B10"],
+    "chargingSpecs": {
+      "dcMax": 350,
+      "acMax": 19.2,
+      "port": "CCS1"
+    },
+    "ecuAddresses": {
+      "BMS": "0x7E4",
+      "MCU": "0x7E0",
+      "OBC": "0x7E8"
+    },
+    "protocol": "CAN 11-bit (GMLAN)"
+  },
+  {
+    "id": "rivian",
+    "name": "Rivian",
+    "models": [
+      "R1T",
+      "R1S",
+      "R2"
+    ],
+    "batteryChemistry": "NMC (Samsung SDI)",
+    "obdProfile": "RIVIAN_R1_CAN",
+    "customPIDs": [
+      {
+        "pid": "2701",
+        "name": "Battery SOC",
+        "mode": "22",
+        "bytes": 1,
+        "formula": "A * 0.5",
+        "unit": "%",
+        "min": 0,
+        "max": 100
+      },
+      {
+        "pid": "2702",
+        "name": "Pack Voltage",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.1",
+        "unit": "V",
+        "min": 0,
+        "max": 1500
+      },
+      {
+        "pid": "2703",
+        "name": "Pack Current",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.1 - 500",
+        "unit": "A",
+        "min": -500,
+        "max": 500
+      },
+      {
+        "pid": "2704",
+        "name": "Cell Voltage Max",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.001",
+        "unit": "V",
+        "min": 0,
+        "max": 5
+      },
+      {
+        "pid": "2705",
+        "name": "Cell Voltage Min",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.001",
+        "unit": "V",
+        "min": 0,
+        "max": 5
+      },
+      {
+        "pid": "2706",
+        "name": "Battery Temp Max",
+        "mode": "22",
+        "bytes": 1,
+        "formula": "A - 40",
+        "unit": "\u00b0C",
+        "min": -40,
+        "max": 215
+      },
+      {
+        "pid": "2707",
+        "name": "Front Motor Temp",
+        "mode": "22",
+        "bytes": 1,
+        "formula": "A - 40",
+        "unit": "\u00b0C",
+        "min": -40,
+        "max": 215
+      },
+      {
+        "pid": "2708",
+        "name": "Rear Motor Temp",
+        "mode": "22",
+        "bytes": 1,
+        "formula": "A - 40",
+        "unit": "\u00b0C",
+        "min": -40,
+        "max": 215
+      },
+      {
+        "pid": "2709",
+        "name": "Charging Session Power",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.1",
+        "unit": "kW",
+        "min": 0,
+        "max": 6553
+      },
+      {
+        "pid": "270A",
+        "name": "Battery Health SOH",
+        "mode": "22",
+        "bytes": 1,
+        "formula": "A * 0.5",
+        "unit": "%",
+        "min": 0,
+        "max": 100
+      }
+    ],
+    "dtcPrefix": ["P0A", "P0B", "P0C", "U01", "B14"],
+    "chargingSpecs": {
+      "dcMax": 350,
+      "acMax": 19.2,
+      "port": "CCS1/NACS"
+    },
+    "ecuAddresses": {
+      "BMS": "0x722",
+      "MCU": "0x724",
+      "OBC": "0x728"
+    },
+    "protocol": "CAN 29-bit"
+  },
+  {
+    "id": "xpeng",
+    "name": "XPeng",
+    "models": [
+      "P7",
+      "G9",
+      "G6",
+      "X9"
+    ],
+    "batteryChemistry": "NMC/LFP",
+    "obdProfile": "XPENG_SEPA2",
+    "customPIDs": [
+      {
+        "pid": "2801",
+        "name": "BMS SOC",
+        "mode": "22",
+        "bytes": 1,
+        "formula": "A * 0.4",
+        "unit": "%",
+        "min": 0,
+        "max": 100
+      },
+      {
+        "pid": "2802",
+        "name": "Pack Voltage",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.1",
+        "unit": "V",
+        "min": 0,
+        "max": 1000
+      },
+      {
+        "pid": "2803",
+        "name": "Pack Current",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.1 - 500",
+        "unit": "A",
+        "min": -500,
+        "max": 500
+      },
+      {
+        "pid": "2804",
+        "name": "Cell Max Voltage",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.001",
+        "unit": "V",
+        "min": 0,
+        "max": 5
+      },
+      {
+        "pid": "2805",
+        "name": "Cell Min Voltage",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.001",
+        "unit": "V",
+        "min": 0,
+        "max": 5
+      },
+      {
+        "pid": "2806",
+        "name": "Battery Temp Max",
+        "mode": "22",
+        "bytes": 1,
+        "formula": "A - 40",
+        "unit": "\u00b0C",
+        "min": -40,
+        "max": 215
+      },
+      {
+        "pid": "2807",
+        "name": "Motor Temp",
+        "mode": "22",
+        "bytes": 1,
+        "formula": "A - 40",
+        "unit": "\u00b0C",
+        "min": -40,
+        "max": 215
+      },
+      {
+        "pid": "2808",
+        "name": "Charging Power",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.1",
+        "unit": "kW",
+        "min": 0,
+        "max": 6553
+      },
+      {
+        "pid": "2809",
+        "name": "BMS Fault Code",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "A << 8 | B",
+        "unit": "code",
+        "min": 0,
+        "max": 65535
+      },
+      {
+        "pid": "280A",
+        "name": "Range Remaining",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "A << 8 | B",
+        "unit": "km",
+        "min": 0,
+        "max": 65535
+      }
+    ],
+    "dtcPrefix": ["P11", "P12", "U01", "U10"],
+    "chargingSpecs": {
+      "dcMax": 300,
+      "acMax": 22,
+      "port": "CCS2"
+    },
+    "ecuAddresses": {
+      "BMS": "0x770",
+      "MCU": "0x772",
+      "OBC": "0x776"
+    },
+    "protocol": "CAN 29-bit"
+  },
+  {
+    "id": "nio",
+    "name": "NIO",
+    "models": [
+      "ET5",
+      "ET7",
+      "ES6",
+      "ES8",
+      "EL7"
+    ],
+    "batteryChemistry": "NMC (CATL) - swappable",
+    "obdProfile": "NIO_NIO_OS_CAN",
+    "customPIDs": [
+      {
+        "pid": "2901",
+        "name": "BMS SOC",
+        "mode": "22",
+        "bytes": 1,
+        "formula": "A * 0.4",
+        "unit": "%",
+        "min": 0,
+        "max": 100
+      },
+      {
+        "pid": "2902",
+        "name": "Pack Voltage",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.1",
+        "unit": "V",
+        "min": 0,
+        "max": 1000
+      },
+      {
+        "pid": "2903",
+        "name": "Pack Current",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.1 - 500",
+        "unit": "A",
+        "min": -500,
+        "max": 500
+      },
+      {
+        "pid": "2904",
+        "name": "Cell Voltage Max",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.001",
+        "unit": "V",
+        "min": 0,
+        "max": 5
+      },
+      {
+        "pid": "2905",
+        "name": "Cell Voltage Min",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.001",
+        "unit": "V",
+        "min": 0,
+        "max": 5
+      },
+      {
+        "pid": "2906",
+        "name": "Battery Temp Max",
+        "mode": "22",
+        "bytes": 1,
+        "formula": "A - 40",
+        "unit": "\u00b0C",
+        "min": -40,
+        "max": 215
+      },
+      {
+        "pid": "2907",
+        "name": "Battery Pack SN",
+        "mode": "22",
+        "bytes": 8,
+        "formula": "ASCII",
+        "unit": "string",
+        "min": 0,
+        "max": 0
+      },
+      {
+        "pid": "2908",
+        "name": "Swap Station Compatible",
+        "mode": "22",
+        "bytes": 1,
+        "formula": "A",
+        "unit": "bool",
+        "min": 0,
+        "max": 1
+      },
+      {
+        "pid": "2909",
+        "name": "Motor Temp Front",
+        "mode": "22",
+        "bytes": 1,
+        "formula": "A - 40",
+        "unit": "\u00b0C",
+        "min": -40,
+        "max": 215
+      },
+      {
+        "pid": "290A",
+        "name": "Motor Temp Rear",
+        "mode": "22",
+        "bytes": 1,
+        "formula": "A - 40",
+        "unit": "\u00b0C",
+        "min": -40,
+        "max": 215
+      }
+    ],
+    "dtcPrefix": ["P11", "P12", "U01", "U11"],
+    "chargingSpecs": {
+      "dcMax": 180,
+      "acMax": 11,
+      "port": "CCS2/BSS"
+    },
+    "ecuAddresses": {
+      "BMS": "0x780",
+      "MCU": "0x782",
+      "OBC": "0x786"
+    },
+    "protocol": "CAN 29-bit"
+  },
+  {
+    "id": "mg-saic",
+    "name": "MG/SAIC",
+    "models": [
+      "MG4",
+      "MG5",
+      "MG ZS EV",
+      "Cyberster"
+    ],
+    "batteryChemistry": "LFP/NMC (CATL)",
+    "obdProfile": "SAIC_MG_CAN",
+    "customPIDs": [
+      {
+        "pid": "2A01",
+        "name": "BMS SOC",
+        "mode": "22",
+        "bytes": 1,
+        "formula": "A * 0.4",
+        "unit": "%",
+        "min": 0,
+        "max": 100
+      },
+      {
+        "pid": "2A02",
+        "name": "Pack Voltage",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.1",
+        "unit": "V",
+        "min": 0,
+        "max": 1000
+      },
+      {
+        "pid": "2A03",
+        "name": "Pack Current",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.1 - 500",
+        "unit": "A",
+        "min": -500,
+        "max": 500
+      },
+      {
+        "pid": "2A04",
+        "name": "Cell Max Voltage",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.001",
+        "unit": "V",
+        "min": 0,
+        "max": 5
+      },
+      {
+        "pid": "2A05",
+        "name": "Cell Min Voltage",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.001",
+        "unit": "V",
+        "min": 0,
+        "max": 5
+      },
+      {
+        "pid": "2A06",
+        "name": "Battery Temp Max",
+        "mode": "22",
+        "bytes": 1,
+        "formula": "A - 40",
+        "unit": "\u00b0C",
+        "min": -40,
+        "max": 215
+      },
+      {
+        "pid": "2A07",
+        "name": "Motor Temp",
+        "mode": "22",
+        "bytes": 1,
+        "formula": "A - 40",
+        "unit": "\u00b0C",
+        "min": -40,
+        "max": 215
+      },
+      {
+        "pid": "2A08",
+        "name": "Charging Power",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.1",
+        "unit": "kW",
+        "min": 0,
+        "max": 6553
+      },
+      {
+        "pid": "2A09",
+        "name": "BMS Cycle Count",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "A << 8 | B",
+        "unit": "cycles",
+        "min": 0,
+        "max": 65535
+      },
+      {
+        "pid": "2A0A",
+        "name": "SOH Estimate",
+        "mode": "22",
+        "bytes": 1,
+        "formula": "A * 0.5",
+        "unit": "%",
+        "min": 0,
+        "max": 100
+      }
+    ],
+    "dtcPrefix": ["P11", "P12", "U01", "B12"],
+    "chargingSpecs": {
+      "dcMax": 150,
+      "acMax": 11,
+      "port": "CCS2"
+    },
+    "ecuAddresses": {
+      "BMS": "0x790",
+      "MCU": "0x792",
+      "OBC": "0x796"
+    },
+    "protocol": "CAN 29-bit"
+  },
+  {
+    "id": "chery",
+    "name": "Chery",
+    "models": [
+      "Omoda E5",
+      "Jaecoo 7 EV"
+    ],
+    "batteryChemistry": "LFP (CATL/Gotion)",
+    "obdProfile": "CHERY_OMODA_CAN",
+    "customPIDs": [
+      {
+        "pid": "2B01",
+        "name": "BMS SOC",
+        "mode": "22",
+        "bytes": 1,
+        "formula": "A * 0.4",
+        "unit": "%",
+        "min": 0,
+        "max": 100
+      },
+      {
+        "pid": "2B02",
+        "name": "Pack Voltage",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.1",
+        "unit": "V",
+        "min": 0,
+        "max": 1000
+      },
+      {
+        "pid": "2B03",
+        "name": "Pack Current",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.1 - 500",
+        "unit": "A",
+        "min": -500,
+        "max": 500
+      },
+      {
+        "pid": "2B04",
+        "name": "Cell Max Voltage",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.001",
+        "unit": "V",
+        "min": 0,
+        "max": 5
+      },
+      {
+        "pid": "2B05",
+        "name": "Cell Min Voltage",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.001",
+        "unit": "V",
+        "min": 0,
+        "max": 5
+      },
+      {
+        "pid": "2B06",
+        "name": "Battery Temp Max",
+        "mode": "22",
+        "bytes": 1,
+        "formula": "A - 40",
+        "unit": "\u00b0C",
+        "min": -40,
+        "max": 215
+      },
+      {
+        "pid": "2B07",
+        "name": "Motor Temp",
+        "mode": "22",
+        "bytes": 1,
+        "formula": "A - 40",
+        "unit": "\u00b0C",
+        "min": -40,
+        "max": 215
+      },
+      {
+        "pid": "2B08",
+        "name": "Charging Power",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.1",
+        "unit": "kW",
+        "min": 0,
+        "max": 6553
+      },
+      {
+        "pid": "2B09",
+        "name": "Battery Capacity",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.01",
+        "unit": "kWh",
+        "min": 0,
+        "max": 655
+      },
+      {
+        "pid": "2B0A",
+        "name": "Range Remaining",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "A << 8 | B",
+        "unit": "km",
+        "min": 0,
+        "max": 65535
+      }
+    ],
+    "dtcPrefix": ["P11", "P12", "U01", "U10"],
+    "chargingSpecs": {
+      "dcMax": 120,
+      "acMax": 11,
+      "port": "CCS2"
+    },
+    "ecuAddresses": {
+      "BMS": "0x7A0",
+      "MCU": "0x7A2",
+      "OBC": "0x7A6"
+    },
+    "protocol": "CAN 29-bit"
+  },
+  {
+    "id": "honda-acura",
+    "name": "Honda/Acura",
+    "models": [
+      "Honda e",
+      "Prologue",
+      "ZDX"
+    ],
+    "batteryChemistry": "NMC (GM Ultium/Envision AESC)",
+    "obdProfile": "HONDA_HDS_EV",
+    "customPIDs": [
+      {
+        "pid": "2C01",
+        "name": "Battery SOC",
+        "mode": "22",
+        "bytes": 1,
+        "formula": "A * 0.4",
+        "unit": "%",
+        "min": 0,
+        "max": 100
+      },
+      {
+        "pid": "2C02",
+        "name": "Pack Voltage",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.1",
+        "unit": "V",
+        "min": 0,
+        "max": 1000
+      },
+      {
+        "pid": "2C03",
+        "name": "Pack Current",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.1 - 500",
+        "unit": "A",
+        "min": -500,
+        "max": 500
+      },
+      {
+        "pid": "2C04",
+        "name": "Cell Voltage Max",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.001",
+        "unit": "V",
+        "min": 0,
+        "max": 5
+      },
+      {
+        "pid": "2C05",
+        "name": "Cell Voltage Min",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.001",
+        "unit": "V",
+        "min": 0,
+        "max": 5
+      },
+      {
+        "pid": "2C06",
+        "name": "Battery Temp",
+        "mode": "22",
+        "bytes": 1,
+        "formula": "A - 40",
+        "unit": "\u00b0C",
+        "min": -40,
+        "max": 215
+      },
+      {
+        "pid": "2C07",
+        "name": "Motor Temp",
+        "mode": "22",
+        "bytes": 1,
+        "formula": "A - 40",
+        "unit": "\u00b0C",
+        "min": -40,
+        "max": 215
+      },
+      {
+        "pid": "2C08",
+        "name": "DC-DC Converter Temp",
+        "mode": "22",
+        "bytes": 1,
+        "formula": "A - 40",
+        "unit": "\u00b0C",
+        "min": -40,
+        "max": 215
+      },
+      {
+        "pid": "2C09",
+        "name": "Charging Power",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.1",
+        "unit": "kW",
+        "min": 0,
+        "max": 6553
+      },
+      {
+        "pid": "2C0A",
+        "name": "Regen Braking Power",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.1",
+        "unit": "kW",
+        "min": 0,
+        "max": 6553
+      }
+    ],
+    "dtcPrefix": ["P0A", "P0B", "P0E", "U00", "B12"],
+    "chargingSpecs": {
+      "dcMax": 190,
+      "acMax": 11.5,
+      "port": "CCS1"
+    },
+    "ecuAddresses": {
+      "BMS": "0x7E4",
+      "MCU": "0x7E0",
+      "OBC": "0x7E8"
+    },
+    "protocol": "CAN 11-bit (Honda K-line fallback)"
+  },
+  {
+    "id": "toyota-lexus",
+    "name": "Toyota/Lexus",
+    "models": [
+      "bZ4X",
+      "RZ 450e",
+      "C-HR EV"
+    ],
+    "batteryChemistry": "NMC (CATL/Prime Planet)",
+    "obdProfile": "TOYOTA_TECHSTREAM_EV",
+    "customPIDs": [
+      {
+        "pid": "2D01",
+        "name": "HV Battery SOC",
+        "mode": "22",
+        "bytes": 1,
+        "formula": "A * 0.4",
+        "unit": "%",
+        "min": 0,
+        "max": 100
+      },
+      {
+        "pid": "2D02",
+        "name": "Pack Voltage",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.1",
+        "unit": "V",
+        "min": 0,
+        "max": 1000
+      },
+      {
+        "pid": "2D03",
+        "name": "Pack Current",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.1 - 500",
+        "unit": "A",
+        "min": -500,
+        "max": 500
+      },
+      {
+        "pid": "2D04",
+        "name": "Cell Voltage Max",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.001",
+        "unit": "V",
+        "min": 0,
+        "max": 5
+      },
+      {
+        "pid": "2D05",
+        "name": "Cell Voltage Min",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.001",
+        "unit": "V",
+        "min": 0,
+        "max": 5
+      },
+      {
+        "pid": "2D06",
+        "name": "Battery Temp Max",
+        "mode": "22",
+        "bytes": 1,
+        "formula": "A - 40",
+        "unit": "\u00b0C",
+        "min": -40,
+        "max": 215
+      },
+      {
+        "pid": "2D07",
+        "name": "Motor Temp",
+        "mode": "22",
+        "bytes": 1,
+        "formula": "A - 40",
+        "unit": "\u00b0C",
+        "min": -40,
+        "max": 215
+      },
+      {
+        "pid": "2D08",
+        "name": "Inverter Temp",
+        "mode": "22",
+        "bytes": 1,
+        "formula": "A - 40",
+        "unit": "\u00b0C",
+        "min": -40,
+        "max": 215
+      },
+      {
+        "pid": "2D09",
+        "name": "Charging Power",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.1",
+        "unit": "kW",
+        "min": 0,
+        "max": 6553
+      },
+      {
+        "pid": "2D0A",
+        "name": "Battery Degradation",
+        "mode": "22",
+        "bytes": 1,
+        "formula": "A * 0.5",
+        "unit": "%",
+        "min": 0,
+        "max": 100
+      }
+    ],
+    "dtcPrefix": ["P0A", "P0B", "P0C", "U00", "B14"],
+    "chargingSpecs": {
+      "dcMax": 150,
+      "acMax": 11,
+      "port": "CCS1/CCS2"
+    },
+    "ecuAddresses": {
+      "BMS": "0x7E2",
+      "MCU": "0x7E0",
+      "OBC": "0x7E6"
+    },
+    "protocol": "CAN 11-bit"
+  },
+  {
+    "id": "generic-obd2-ev",
+    "name": "Generic OBD-II EV",
+    "models": [
+      "Any OBD-II compliant EV"
+    ],
+    "batteryChemistry": "Unknown",
+    "obdProfile": "GENERIC_OBD2_SAE_J1979",
+    "customPIDs": [
+      {
+        "pid": "0105",
+        "name": "Engine Coolant Temp",
+        "mode": "01",
+        "bytes": 1,
+        "formula": "A - 40",
+        "unit": "\u00b0C",
+        "min": -40,
+        "max": 215
+      },
+      {
+        "pid": "010C",
+        "name": "Engine RPM",
+        "mode": "01",
+        "bytes": 2,
+        "formula": "(A << 8 | B) / 4",
+        "unit": "rpm",
+        "min": 0,
+        "max": 16383
+      },
+      {
+        "pid": "010D",
+        "name": "Vehicle Speed",
+        "mode": "01",
+        "bytes": 1,
+        "formula": "A",
+        "unit": "km/h",
+        "min": 0,
+        "max": 255
+      },
+      {
+        "pid": "0110",
+        "name": "MAF Air Flow Rate",
+        "mode": "01",
+        "bytes": 2,
+        "formula": "(A << 8 | B) / 100",
+        "unit": "g/s",
+        "min": 0,
+        "max": 655
+      },
+      {
+        "pid": "0111",
+        "name": "Throttle Position",
+        "mode": "01",
+        "bytes": 1,
+        "formula": "A * 100 / 255",
+        "unit": "%",
+        "min": 0,
+        "max": 100
+      },
+      {
+        "pid": "011F",
+        "name": "Run Time Since Engine Start",
+        "mode": "01",
+        "bytes": 2,
+        "formula": "A << 8 | B",
+        "unit": "s",
+        "min": 0,
+        "max": 65535
+      },
+      {
+        "pid": "0121",
+        "name": "Distance With MIL On",
+        "mode": "01",
+        "bytes": 2,
+        "formula": "A << 8 | B",
+        "unit": "km",
+        "min": 0,
+        "max": 65535
+      },
+      {
+        "pid": "0142",
+        "name": "Control Module Voltage",
+        "mode": "01",
+        "bytes": 2,
+        "formula": "(A << 8 | B) / 1000",
+        "unit": "V",
+        "min": 0,
+        "max": 65
+      },
+      {
+        "pid": "0146",
+        "name": "Ambient Air Temperature",
+        "mode": "01",
+        "bytes": 1,
+        "formula": "A - 40",
+        "unit": "\u00b0C",
+        "min": -40,
+        "max": 215
+      },
+      {
+        "pid": "015C",
+        "name": "Engine Oil Temperature",
+        "mode": "01",
+        "bytes": 1,
+        "formula": "A - 40",
+        "unit": "\u00b0C",
+        "min": -40,
+        "max": 215
+      }
+    ],
+    "dtcPrefix": ["P0", "P1", "U0", "U1", "B0", "B1", "C0", "C1"],
+    "chargingSpecs": {
+      "dcMax": 0,
+      "acMax": 0,
+      "port": "Unknown"
+    },
+    "ecuAddresses": {
+      "BMS": "0x7E0",
+      "MCU": "0x7E1",
+      "OBC": "0x7E3"
+    },
+    "protocol": "CAN 11-bit (SAE J1979)"
+  },
+  {
+    "id": "lucid",
+    "name": "Lucid",
+    "models": [
+      "Air Pure",
+      "Air Touring",
+      "Air Grand Touring",
+      "Air Sapphire"
+    ],
+    "batteryChemistry": "NMC (Samsung SDI)",
+    "obdProfile": "LUCID_DREAM_CAN",
+    "customPIDs": [
+      {
+        "pid": "2E01",
+        "name": "Battery SOC",
+        "mode": "22",
+        "bytes": 1,
+        "formula": "A * 0.4",
+        "unit": "%",
+        "min": 0,
+        "max": 100
+      },
+      {
+        "pid": "2E02",
+        "name": "Pack Voltage",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.1",
+        "unit": "V",
+        "min": 0,
+        "max": 1200
+      },
+      {
+        "pid": "2E03",
+        "name": "Pack Current",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.1 - 500",
+        "unit": "A",
+        "min": -500,
+        "max": 500
+      },
+      {
+        "pid": "2E04",
+        "name": "Cell Voltage Max",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.001",
+        "unit": "V",
+        "min": 0,
+        "max": 5
+      },
+      {
+        "pid": "2E05",
+        "name": "Cell Voltage Min",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.001",
+        "unit": "V",
+        "min": 0,
+        "max": 5
+      },
+      {
+        "pid": "2E06",
+        "name": "Battery Temp Max",
+        "mode": "22",
+        "bytes": 1,
+        "formula": "A - 40",
+        "unit": "\u00b0C",
+        "min": -40,
+        "max": 215
+      },
+      {
+        "pid": "2E07",
+        "name": "Front Motor Temp",
+        "mode": "22",
+        "bytes": 1,
+        "formula": "A - 40",
+        "unit": "\u00b0C",
+        "min": -40,
+        "max": 215
+      },
+      {
+        "pid": "2E08",
+        "name": "Rear Motor Temp",
+        "mode": "22",
+        "bytes": 1,
+        "formula": "A - 40",
+        "unit": "\u00b0C",
+        "min": -40,
+        "max": 215
+      },
+      {
+        "pid": "2E09",
+        "name": "Charging Power",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.1",
+        "unit": "kW",
+        "min": 0,
+        "max": 6553
+      },
+      {
+        "pid": "2E0A",
+        "name": "Estimated Range",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "A << 8 | B",
+        "unit": "km",
+        "min": 0,
+        "max": 65535
+      }
+    ],
+    "dtcPrefix": ["P0A", "P0B", "P0C", "U01", "B14"],
+    "chargingSpecs": {
+      "dcMax": 350,
+      "acMax": 19.2,
+      "port": "CCS1/NACS"
+    },
+    "ecuAddresses": {
+      "BMS": "0x730",
+      "MCU": "0x732",
+      "OBC": "0x736"
+    },
+    "protocol": "CAN 29-bit"
+  },
+  {
+    "id": "polestar-volvo",
+    "name": "Polestar/Volvo",
+    "models": [
+      "Polestar 1",
+      "Polestar 2",
+      "Polestar 3",
+      "XC40 Recharge",
+      "C40 Recharge",
+      "EX90"
+    ],
+    "batteryChemistry": "NMC (CATL/LG)",
+    "obdProfile": "VOLVO_VIDA_EV",
+    "customPIDs": [
+      {
+        "pid": "2F01",
+        "name": "Battery SOC",
+        "mode": "22",
+        "bytes": 1,
+        "formula": "A * 0.4",
+        "unit": "%",
+        "min": 0,
+        "max": 100
+      },
+      {
+        "pid": "2F02",
+        "name": "Pack Voltage",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.1",
+        "unit": "V",
+        "min": 0,
+        "max": 1000
+      },
+      {
+        "pid": "2F03",
+        "name": "Pack Current",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.1 - 500",
+        "unit": "A",
+        "min": -500,
+        "max": 500
+      },
+      {
+        "pid": "2F04",
+        "name": "Cell Voltage Max",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.001",
+        "unit": "V",
+        "min": 0,
+        "max": 5
+      },
+      {
+        "pid": "2F05",
+        "name": "Cell Voltage Min",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.001",
+        "unit": "V",
+        "min": 0,
+        "max": 5
+      },
+      {
+        "pid": "2F06",
+        "name": "Battery Temp Max",
+        "mode": "22",
+        "bytes": 1,
+        "formula": "A - 40",
+        "unit": "\u00b0C",
+        "min": -40,
+        "max": 215
+      },
+      {
+        "pid": "2F07",
+        "name": "Motor Temp",
+        "mode": "22",
+        "bytes": 1,
+        "formula": "A - 40",
+        "unit": "\u00b0C",
+        "min": -40,
+        "max": 215
+      },
+      {
+        "pid": "2F08",
+        "name": "Charging Power",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.1",
+        "unit": "kW",
+        "min": 0,
+        "max": 6553
+      },
+      {
+        "pid": "2F09",
+        "name": "Cabin Precondition Status",
+        "mode": "22",
+        "bytes": 1,
+        "formula": "A",
+        "unit": "status",
+        "min": 0,
+        "max": 255
+      },
+      {
+        "pid": "2F0A",
+        "name": "Battery Precondition Status",
+        "mode": "22",
+        "bytes": 1,
+        "formula": "A",
+        "unit": "status",
+        "min": 0,
+        "max": 255
+      }
+    ],
+    "dtcPrefix": ["P0A", "P0B", "P0E", "U00", "B14"],
+    "chargingSpecs": {
+      "dcMax": 200,
+      "acMax": 11,
+      "port": "CCS1/CCS2"
+    },
+    "ecuAddresses": {
+      "BMS": "0x7E5",
+      "MCU": "0x7E0",
+      "OBC": "0x7E7"
+    },
+    "protocol": "CAN 11-bit (Volvo VIDA)"
+  }
+]

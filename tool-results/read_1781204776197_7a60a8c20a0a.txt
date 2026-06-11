@@ -1,0 +1,801 @@
+     1→'use client';
+     2→
+     3→/**
+     4→ * EVDx Simulator Engine
+     5→ *
+     6→ * A multi-brand driving & charging simulator that produces realistic
+     7→ * EV telemetry data for demo and testing purposes.
+     8→ *
+     9→ * Supported brands: BYD (LFP), Tesla (NCA), Nissan (NMC), Hyundai/Kia (NCM),
+    10→ * VW Group (NMC), and a generic fallback profile.
+    11→ *
+    12→ * Design principles:
+    13→ *  - 100 ms internal tick, 500 ms store push interval
+    14→ *  - Chemistry-aware voltage models (LFP flat, NCA tapered, NMC moderate)
+    15→ *  - Brand-specific thermal behaviour
+    16→ *  - Deterministic driving phase state machine with random transitions
+    17→ *  - Pluggable charging simulation (DC fast / AC L2 / AC L1)
+    18→ *  - Eco-score calculation from driving behaviour
+    19→ */
+    20→
+    21→import { useAppStore } from './store';
+    22→import type { DTCEvent, VehicleProfile } from './types';
+    23→
+    24→// ─── Brand Profiles ───────────────────────────────────────────────────────────
+    25→
+    26→type Chemistry = 'LFP' | 'NCA' | 'NMC' | 'NCM';
+    27→
+    28→interface BrandParams {
+    29→  /** Nominal battery capacity kWh */
+    30→  capacity: number;
+    31→  /** Battery chemistry */
+    32→  chemistry: Chemistry;
+    33→  /** Pack nominal voltage V */
+    34→  nominalVoltage: number;
+    35→  /** Cell nominal voltage mV */
+    36→  cellNominalV: number;
+    37→  /** Cell max voltage mV (100 % SOC) */
+    38→  cellMaxV: number;
+    39→  /** Cell min voltage mV (0 % SOC) */
+    40→  cellMinV: number;
+    41→  /** Typical cell delta at mid-SOC mV (LFP is tighter) */
+    42→  typicalCellDelta: number;
+    43→  /** Number of cells (approximate) */
+    44→  cellCount: number;
+    45→  /** Max DC charge power kW */
+    46→  dcChargeMax: number;
+    47→  /** Max AC charge power kW */
+    48→  acChargeMax: number;
+    49→  /** Thermal management quality: lower = better cooling */
+    50→  thermalCoeff: number;
+    51→  /** WLTP range km (used to derive range from SOC) */
+    52→  wltpRange: number;
+    53→  /** Max motor power kW */
+    54→  maxMotorPower: number;
+    55→  /** DTC code prefixes specific to brand */
+    56→  dtcPrefixes: string[];
+    57→}
+    58→
+    59→const BRAND_PROFILES: Record<string, BrandParams> = {
+    60→  byd: {
+    61→    capacity: 60,
+    62→    chemistry: 'LFP',
+    63→    nominalVoltage: 512,
+    64→    cellNominalV: 3200,
+    65→    cellMaxV: 3650,
+    66→    cellMinV: 2500,
+    67→    typicalCellDelta: 8,
+    68→    cellCount: 160,
+    69→    dcChargeMax: 150,
+    70→    acChargeMax: 11,
+    71→    thermalCoeff: 0.035,
+    72→    wltpRange: 420,
+    73→    maxMotorPower: 150,
+    74→    dtcPrefixes: ['P11', 'P12', 'U01', 'U11', 'B12'],
+    75→  },
+    76→  tesla: {
+    77→    capacity: 75,
+    78→    chemistry: 'NCA',
+    79→    nominalVoltage: 350,
+    80→    cellNominalV: 3600,
+    81→    cellMaxV: 4200,
+    82→    cellMinV: 2950,
+    83→    typicalCellDelta: 25,
+    84→    cellCount: 96,
+    85→    dcChargeMax: 250,
+    86→    acChargeMax: 19.2,
+    87→    thermalCoeff: 0.02,
+    88→    wltpRange: 560,
+    89→    maxMotorPower: 258,
+    90→    dtcPrefixes: ['P0A', 'P0B', 'U00', 'U01', 'B10'],
+    91→  },
+    92→  nissan: {
+    93→    capacity: 40,
+    94→    chemistry: 'NMC',
+    95→    nominalVoltage: 360,
+    96→    cellNominalV: 3700,
+    97→    cellMaxV: 4100,
+    98→    cellMinV: 3000,
+    99→    typicalCellDelta: 30,
+   100→    cellCount: 96,
+   101→    dcChargeMax: 130,
+   102→    acChargeMax: 7.4,
+   103→    thermalCoeff: 0.045,
+   104→    wltpRange: 270,
+   105→    maxMotorPower: 110,
+   106→    dtcPrefixes: ['P0A', 'P0B', 'P31', 'U10'],
+   107→  },
+   108→  'hyundai-kia': {
+   109→    capacity: 77,
+   110→    chemistry: 'NCM',
+   111→    nominalVoltage: 396,
+   112→    cellNominalV: 3650,
+   113→    cellMaxV: 4150,
+   114→    cellMinV: 2900,
+   115→    typicalCellDelta: 22,
+   116→    cellCount: 108,
+   117→    dcChargeMax: 350,
+   118→    acChargeMax: 11,
+   119→    thermalCoeff: 0.025,
+   120→    wltpRange: 480,
+   121→    maxMotorPower: 239,
+   122→    dtcPrefixes: ['P0A', 'P0B', 'P0C', 'U01', 'B14'],
+   123→  },
+   124→  'vw-group': {
+   125→    capacity: 77,
+   126→    chemistry: 'NMC',
+   127→    nominalVoltage: 403,
+   128→    cellNominalV: 3700,
+   129→    cellMaxV: 4180,
+   130→    cellMinV: 2960,
+   131→    typicalCellDelta: 28,
+   132→    cellCount: 108,
+   133→    dcChargeMax: 270,
+   134→    acChargeMax: 22,
+   135→    thermalCoeff: 0.03,
+   136→    wltpRange: 460,
+   137→    maxMotorPower: 210,
+   138→    dtcPrefixes: ['P0A', 'P0B', 'P15', 'U00', 'U04'],
+   139→  },
+   140→  generic: {
+   141→    capacity: 60,
+   142→    chemistry: 'NMC',
+   143→    nominalVoltage: 355,
+   144→    cellNominalV: 3600,
+   145→    cellMaxV: 4100,
+   146→    cellMinV: 3000,
+   147→    typicalCellDelta: 20,
+   148→    cellCount: 96,
+   149→    dcChargeMax: 100,
+   150→    acChargeMax: 11,
+   151→    thermalCoeff: 0.04,
+   152→    wltpRange: 350,
+   153→    maxMotorPower: 150,
+   154→    dtcPrefixes: ['P0A', 'P0B', 'U00'],
+   155→  },
+   156→};
+   157→
+   158→// ─── Driving Phase ────────────────────────────────────────────────────────────
+   159→
+   160→type DrivingPhase =
+   161→  | 'stationary'
+   162→  | 'accelerating'
+   163→  | 'cruising'
+   164→  | 'decelerating'
+   165→  | 'regen_braking'
+   166→  | 'city_driving';
+   167→
+   168→interface SimState {
+   169→  speed: number;             // km/h (smoothed)
+   170→  targetSpeed: number;       // km/h (phase target)
+   171→  phase: DrivingPhase;
+   172→  phaseTimer: number;        // ms remaining in current phase
+   173→  soc: number;               // 0-100
+   174→  batteryTemp: number;       // °C
+   175→  motorTemp: number;         // °C
+   176→  inverterTemp: number;      // °C
+   177→  coolantInlet: number;      // °C
+   178→  coolantOutlet: number;     // °C
+   179→  tripDistance: number;       // m
+   180→  tripEnergy: number;         // Wh consumed
+   181→  tripRegen: number;          // Wh recovered
+   182→  tripMaxSpeed: number;       // km/h
+   183→  tripDuration: number;       // ms
+   184→  odometer: number;           // km
+   185→  acceleratorPedal: number;   // 0-100 %
+   186→  isCharging: boolean;
+   187→  chargeType: 'dc_fast' | 'ac_l2' | 'ac_l1';
+   188→  chargeEnergyAdded: number;  // kWh
+   189→  chargeStartSoc: number;     // %
+   190→  ecoAccelScore: number;      // 0-100 running average
+   191→  ecoBrakeScore: number;
+   192→  ecoSpeedScore: number;
+   193→  ecoEffScore: number;
+   194→  ecoSamples: number;
+   195→}
+   196→
+   197→// ─── Simulator Engine ─────────────────────────────────────────────────────────
+   198→
+   199→export class SimulatorEngine {
+   200→  private tickInterval: ReturnType<typeof setInterval> | null = null;
+   201→  private pushInterval: ReturnType<typeof setInterval> | null = null;
+   202→  private sim: SimState;
+   203→  private brand: BrandParams;
+   204→  private vehicle: VehicleProfile | null;
+   205→  private tickCount = 0;
+   206→
+   207→  constructor() {
+   208→    this.vehicle = null;
+   209→    this.brand = BRAND_PROFILES.generic;
+   210→    this.sim = this.createDefaultSimState();
+   211→  }
+   212→
+   213→  // ── Public API ──────────────────────────────────────────────────────────────
+   214→
+   215→  /** Start the simulation loop */
+   216→  start(): void {
+   217→    this.stop(); // clear any existing loop
+   218→    this.vehicle = useAppStore.getState().activeVehicle;
+   219→    this.brand = this.resolveBrand(this.vehicle);
+   220→    this.sim = this.createDefaultSimState();
+   221→    this.sim.odometer = useAppStore.getState().vehicleData.odometer;
+   222→    this.sim.soc = useAppStore.getState().vehicleData.soc || 75;
+   223→
+   224→    // 100 ms tick: physics & state machine
+   225→    this.tickInterval = setInterval(() => this.tick(), 100);
+   226→    // 500 ms push: write batched updates to the Zustand store
+   227→    this.pushInterval = setInterval(() => this.pushToStore(), 500);
+   228→  }
+   229→
+   230→  /** Stop the simulation loop */
+   231→  stop(): void {
+   232→    if (this.tickInterval) clearInterval(this.tickInterval);
+   233→    if (this.pushInterval) clearInterval(this.pushInterval);
+   234→    this.tickInterval = null;
+   235→    this.pushInterval = null;
+   236→  }
+   237→
+   238→  /** Inject a diagnostic trouble code for demo / testing */
+   239→  injectFault(code: string): void {
+   240→    const prefix = code.substring(0, 3).toUpperCase();
+   241→    const isBrandMatch = this.brand.dtcPrefixes.some((p) => prefix.startsWith(p));
+   242→    const severity = isBrandMatch ? 'high' : 'medium';
+   243→    const dtc: DTCEvent = {
+   244→      code,
+   245→      description: this.describeDTC(code),
+   246→      severity,
+   247→      timestamp: Date.now(),
+   248→      active: true,
+   249→      count: 1,
+   250→    };
+   251→    useAppStore.getState().addDTC(dtc);
+   252→    useAppStore.getState().setMilOn(true);
+   253→  }
+   254→
+   255→  /** Force the simulator into a specific driving phase */
+   256→  setPhase(phase: DrivingPhase): void {
+   257→    this.sim.phase = phase;
+   258→    this.assignPhaseTarget(phase);
+   259→  }
+   260→
+   261→  /** Force the simulator into charging mode */
+   262→  startCharging(type: 'dc_fast' | 'ac_l2' | 'ac_l1'): void {
+   263→    this.sim.isCharging = true;
+   264→    this.sim.chargeType = type;
+   265→    this.sim.chargeStartSoc = this.sim.soc;
+   266→    this.sim.chargeEnergyAdded = 0;
+   267→    this.sim.phase = 'stationary';
+   268→    this.sim.speed = 0;
+   269→    this.sim.targetSpeed = 0;
+   270→  }
+   271→
+   272→  /** Stop charging and return to driving */
+   273→  stopCharging(): void {
+   274→    this.sim.isCharging = false;
+   275→  }
+   276→
+   277→  // ── Tick (100 ms) ───────────────────────────────────────────────────────────
+   278→
+   279→  private tick(): void {
+   280→    this.tickCount++;
+   281→
+   282→    if (this.sim.isCharging) {
+   283→      this.tickCharging();
+   284→    } else {
+   285→      this.tickDriving();
+   286→    }
+   287→
+   288→    this.tickTemperatures();
+   289→    this.tickEcoScore();
+   290→  }
+   291→
+   292→  // ── Driving Simulation ──────────────────────────────────────────────────────
+   293→
+   294→  private tickDriving(): void {
+   295→    const dt = 0.1; // 100 ms in seconds
+   296→
+   297→    // Phase state machine
+   298→    this.sim.phaseTimer -= 100;
+   299→    if (this.sim.phaseTimer <= 0) {
+   300→      this.transitionPhase();
+   301→    }
+   302→
+   303→    // Smooth speed towards target
+   304→    const accelRate = this.sim.phase === 'accelerating' ? 18
+   305→      : this.sim.phase === 'regen_braking' ? -22
+   306→      : this.sim.phase === 'decelerating' ? -10
+   307→      : this.sim.phase === 'city_driving' ? (Math.random() > 0.5 ? 8 : -6)
+   308→      : 0; // stationary / cruising
+   309→
+   310→    const speedDelta = accelRate * dt + (Math.random() - 0.5) * 2;
+   311→    this.sim.speed = Math.max(0, Math.min(200, this.sim.speed + speedDelta));
+   312→
+   313→    // Clamp to target range
+   314→    if (this.sim.phase === 'cruising') {
+   315→      const diff = this.sim.targetSpeed - this.sim.speed;
+   316→      this.sim.speed += diff * 0.05;
+   317→    }
+   318→    if (this.sim.phase === 'stationary') {
+   319→      this.sim.speed *= 0.92; // coast to stop
+   320→    }
+   321→
+   322→    // Accelerator pedal
+   323→    if (this.sim.phase === 'accelerating' || this.sim.phase === 'city_driving') {
+   324→      this.sim.acceleratorPedal = Math.min(100, 30 + this.sim.speed * 0.4 + Math.random() * 15);
+   325→    } else if (this.sim.phase === 'regen_braking') {
+   326→      this.sim.acceleratorPedal = 0;
+   327→    } else if (this.sim.phase === 'decelerating') {
+   328→      this.sim.acceleratorPedal = Math.random() * 5;
+   329→    } else {
+   330→      this.sim.acceleratorPedal = this.sim.speed > 2 ? 8 + Math.random() * 5 : 0;
+   331→    }
+   332→
+   333→    // Power draw (kW)
+   334→    const motorEff = 0.92;
+   335→    const speedMs = this.sim.speed / 3.6;
+   336→    const aeroPower = 0.5 * 1.225 * 0.28 * 2.3 * Math.pow(speedMs, 3) / 1000;
+   337→    const rollingPower = 1800 * 9.81 * 0.01 * speedMs / 1000;
+   338→    const accessoryPower = 0.8; // HVAC, electronics
+   339→    const drivePower = (aeroPower + rollingPower + accessoryPower) / motorEff;
+   340→    const regenPower = this.sim.phase === 'regen_braking' ? drivePower * 0.6 * motorEff : 0;
+   341→    const netPower = drivePower - regenPower;
+   342→
+   343→    // SOC drain
+   344→    const energyDelta = (netPower * dt) / 60; // kWh in 100 ms
+   345→    this.sim.soc -= (energyDelta / this.brand.capacity) * 100;
+   346→    this.sim.soc = Math.max(0, Math.min(100, this.sim.soc));
+   347→
+   348→    // Trip tracking
+   349→    this.sim.tripDistance += speedMs * dt;
+   350→    this.sim.tripEnergy += Math.max(0, drivePower * dt * 1000 / 3600); // Wh
+   351→    this.sim.tripRegen += regenPower * dt * 1000 / 3600; // Wh
+   352→    this.sim.tripMaxSpeed = Math.max(this.sim.tripMaxSpeed, this.sim.speed);
+   353→    this.sim.tripDuration += 100;
+   354→    this.sim.odometer += (speedMs * dt) / 1000;
+   355→  }
+   356→
+   357→  // ── Charging Simulation ─────────────────────────────────────────────────────
+   358→
+   359→  private tickCharging(): void {
+   360→    const dt = 0.1; // seconds
+   361→
+   362→    // Determine max power based on type
+   363→    let maxPower: number;
+   364→    switch (this.sim.chargeType) {
+   365→      case 'dc_fast':  maxPower = this.brand.dcChargeMax; break;
+   366→      case 'ac_l2':    maxPower = Math.min(this.brand.acChargeMax, 11); break;
+   367→      case 'ac_l1':    maxPower = 2.3; break;
+   368→    }
+   369→
+   370→    // DC fast charging tapers above ~50-80% SOC depending on chemistry
+   371→    let taperFactor = 1.0;
+   372→    if (this.sim.chargeType === 'dc_fast') {
+   373→      const taperStart = this.brand.chemistry === 'LFP' ? 80 : 50;
+   374→      if (this.sim.soc > taperStart) {
+   375→        taperFactor = Math.max(0.05, 1.0 - Math.pow((this.sim.soc - taperStart) / (100 - taperStart), 1.5));
+   376→      }
+   377→    }
+   378→
+   379→    const power = maxPower * taperFactor * (0.95 + Math.random() * 0.1);
+   380→    const energyAdded = (power * dt) / 3600; // kWh
+   381→    this.sim.chargeEnergyAdded += energyAdded;
+   382→    this.sim.soc += (energyAdded / this.brand.capacity) * 100;
+   383→    this.sim.soc = Math.min(100, this.sim.soc);
+   384→    this.sim.acceleratorPedal = 0;
+   385→  }
+   386→
+   387→  // ── Temperature Model ───────────────────────────────────────────────────────
+   388→
+   389→  private tickTemperatures(): void {
+   390→    const dt = 0.1;
+   391→    const ambient = 28 + Math.sin(Date.now() / 60000) * 3; // slow drift
+   392→
+   393→    // Battery temp: heats with power, cools via thermal management
+   394→    const powerDissipation = this.sim.isCharging
+   395→      ? this.getChargingPower() * this.brand.thermalCoeff
+   396→      : Math.abs(this.sim.speed) * 0.08 * this.brand.thermalCoeff;
+   397→    const cooling = (this.sim.batteryTemp - ambient) * 0.02; // passive + active
+   398→    this.sim.batteryTemp += (powerDissipation - cooling) * dt;
+   399→    this.sim.batteryTemp = Math.max(ambient - 2, Math.min(55, this.sim.batteryTemp));
+   400→
+   401→    // Motor temp: proportional to speed and load
+   402→    const motorHeat = (this.sim.speed / 120) * 0.6 + (this.sim.acceleratorPedal / 100) * 0.3;
+   403→    const motorCool = (this.sim.motorTemp - ambient) * 0.03;
+   404→    this.sim.motorTemp += (motorHeat - motorCool) * dt;
+   405→    this.sim.motorTemp = Math.max(ambient - 1, Math.min(120, this.sim.motorTemp));
+   406→
+   407→    // Inverter temp: tracks motor but with lower thermal mass
+   408→    this.sim.inverterTemp += ((this.sim.motorTemp * 0.95) - this.sim.inverterTemp) * 0.05;
+   409→    this.sim.inverterTemp = Math.max(ambient - 1, Math.min(95, this.sim.inverterTemp));
+   410→
+   411→    // Coolant
+   412→    this.sim.coolantInlet = this.sim.batteryTemp - 2 + Math.random() * 0.5;
+   413→    this.sim.coolantOutlet = this.sim.batteryTemp + 2 + Math.random() * 0.5;
+   414→  }
+   415→
+   416→  // ── Eco Score ───────────────────────────────────────────────────────────────
+   417→
+   418→  private tickEcoScore(): void {
+   419→    this.sim.ecoSamples++;
+   420→
+   421→    // Acceleration score: gentle = good
+   422→    const accelPenalty = this.sim.phase === 'accelerating'
+   423→      ? Math.min(1, this.sim.acceleratorPedal / 80)
+   424→      : 0;
+   425→    this.sim.ecoAccelScore += ((1 - accelPenalty) * 100 - this.sim.ecoAccelScore) * 0.01;
+   426→
+   427→    // Braking score: regen = good, hard = bad
+   428→    const brakeScore = this.sim.phase === 'regen_braking' ? 90
+   429→      : this.sim.phase === 'decelerating' ? 70 : 85;
+   430→    this.sim.ecoBrakeScore += (brakeScore - this.sim.ecoBrakeScore) * 0.01;
+   431→
+   432→    // Speed score: optimal around 60-90 km/h
+   433→    const speedOpt = 1 - Math.abs(this.sim.speed - 75) / 120;
+   434→    this.sim.ecoSpeedScore += (Math.max(0, speedOpt) * 100 - this.sim.ecoSpeedScore) * 0.01;
+   435→
+   436→    // Efficiency score: lower consumption = better
+   437→    const consumption = this.sim.speed > 5
+   438→      ? (this.getInstantPower() / this.sim.speed) * 100
+   439→      : 0;
+   440→    const effScore = Math.max(0, 100 - consumption * 20);
+   441→    this.sim.ecoEffScore += (effScore - this.sim.ecoEffScore) * 0.01;
+   442→  }
+   443→
+   444→  // ── Phase Transitions ───────────────────────────────────────────────────────
+   445→
+   446→  private transitionPhase(): void {
+   447→    const phases: DrivingPhase[] = [
+   448→      'stationary', 'accelerating', 'cruising', 'decelerating',
+   449→      'regen_braking', 'city_driving',
+   450→    ];
+   451→    const weights: Record<DrivingPhase, { next: DrivingPhase; chance: number }[]> = {
+   452→      stationary:     [{ next: 'accelerating', chance: 0.6 }, { next: 'city_driving', chance: 0.4 }],
+   453→      accelerating:   [{ next: 'cruising', chance: 0.55 }, { next: 'city_driving', chance: 0.35 }, { next: 'decelerating', chance: 0.1 }],
+   454→      cruising:       [{ next: 'decelerating', chance: 0.35 }, { next: 'regen_braking', chance: 0.3 }, { next: 'accelerating', chance: 0.2 }, { next: 'stationary', chance: 0.15 }],
+   455→      decelerating:   [{ next: 'stationary', chance: 0.4 }, { next: 'accelerating', chance: 0.3 }, { next: 'city_driving', chance: 0.3 }],
+   456→      regen_braking:  [{ next: 'stationary', chance: 0.35 }, { next: 'accelerating', chance: 0.35 }, { next: 'city_driving', chance: 0.3 }],
+   457→      city_driving:   [{ next: 'stationary', chance: 0.2 }, { next: 'accelerating', chance: 0.25 }, { next: 'regen_braking', chance: 0.25 }, { next: 'cruising', chance: 0.15 }, { next: 'decelerating', chance: 0.15 }],
+   458→    };
+   459→
+   460→    const transitions = weights[this.sim.phase];
+   461→    let r = Math.random();
+   462→    let chosen: DrivingPhase = 'stationary';
+   463→    for (const t of transitions) {
+   464→      r -= t.chance;
+   465→      if (r <= 0) { chosen = t.next; break; }
+   466→    }
+   467→
+   468→    this.sim.phase = chosen;
+   469→    this.assignPhaseTarget(chosen);
+   470→  }
+   471→
+   472→  private assignPhaseTarget(phase: DrivingPhase): void {
+   473→    const duration = (): number => {
+   474→      switch (phase) {
+   475→        case 'stationary':    return 3000 + Math.random() * 8000;
+   476→        case 'accelerating':  return 4000 + Math.random() * 6000;
+   477→        case 'cruising':      return 8000 + Math.random() * 20000;
+   478→        case 'decelerating':  return 3000 + Math.random() * 5000;
+   479→        case 'regen_braking': return 2000 + Math.random() * 4000;
+   480→        case 'city_driving':  return 10000 + Math.random() * 20000;
+   481→      }
+   482→    };
+   483→    this.sim.phaseTimer = duration();
+   484→
+   485→    switch (phase) {
+   486→      case 'accelerating':
+   487→        this.sim.targetSpeed = 60 + Math.random() * 100; break;
+   488→      case 'cruising':
+   489→        this.sim.targetSpeed = 70 + Math.random() * 70; break;
+   490→      case 'city_driving':
+   491→        this.sim.targetSpeed = 20 + Math.random() * 40; break;
+   492→      case 'decelerating':
+   493→        this.sim.targetSpeed = Math.random() * 30; break;
+   494→      case 'regen_braking':
+   495→        this.sim.targetSpeed = 0; break;
+   496→      case 'stationary':
+   497→        this.sim.targetSpeed = 0; break;
+   498→    }
+   499→  }
+   500→
+   501→  // ── Push to Store (500 ms) ──────────────────────────────────────────────────
+   502→
+   503→  private pushToStore(): void {
+   504→    const s = this.sim;
+   505→    const b = this.brand;
+   506→    const store = useAppStore.getState();
+   507→    const now = Date.now();
+   508→
+   509→    // Voltage model: chemistry-dependent
+   510→    const voltage = this.computeVoltage(s.soc);
+   511→    const current = this.getInstantPower() / (voltage || 1) * 1000; // mA approx
+   512→    const power = this.getInstantPower();
+   513→
+   514→    // Cell voltages: simulate 96 cells with chemistry-appropriate spread
+   515→    const cellDeltaBase = b.typicalCellDelta;
+   516→    const socEffect = Math.sin(s.soc / 100 * Math.PI) * 0.6 + 0.4; // tighter at extremes
+   517→    const cellDelta = cellDeltaBase * socEffect;
+   518→    const cellMaxV = this.computeCellVoltage(s.soc);
+   519→    const cellMinV = cellMaxV - cellDelta;
+   520→
+   521→    // Range from SOC
+   522→    const range = (s.soc / 100) * b.wltpRange;
+   523→
+   524→    // Torque model
+   525→    const torqueDemand = (s.acceleratorPedal / 100) * 350 * (b.maxMotorPower / 150);
+   526→    const torqueActual = s.phase === 'regen_braking' ? -80 - Math.random() * 40 : torqueDemand * (0.9 + Math.random() * 0.1);
+   527→    const regenTorque = s.phase === 'regen_braking' ? -torqueActual : 0;
+   528→
+   529→    // RPM: approximate from speed (gear ratio ~9:1 for EV)
+   530→    const rpm = (s.speed / 3.6) * 9 * 60 / (2 * Math.PI * 0.32);
+   531→
+   532→    // Update vehicle data
+   533→    store.updateVehicleData({
+   534→      speed: Math.round(s.speed * 10) / 10,
+   535→      rpm: Math.round(rpm),
+   536→      soc: Math.round(s.soc * 10) / 10,
+   537→      soh: 96 + Math.random() * 4,
+   538→      voltage: Math.round(voltage * 10) / 10,
+   539→      current: Math.round(current) / 10,
+   540→      power: Math.round(power * 10) / 10,
+   541→      motorTemp: Math.round(s.motorTemp * 10) / 10,
+   542→      batteryTemp: Math.round(s.batteryTemp * 10) / 10,
+   543→      inverterTemp: Math.round(s.inverterTemp * 10) / 10,
+   544→      range: Math.round(range),
+   545→      odometer: Math.round(s.odometer * 10) / 10,
+   546→      mode: s.acceleratorPedal > 70 ? 'sport' : s.acceleratorPedal < 20 && s.speed < 50 ? 'eco' : 'normal',
+   547→      auxBatteryV: 12.2 + Math.random() * 0.4,
+   548→      insulationResistance: 800 + Math.random() * 400,
+   549→      cellMaxV: Math.round(cellMaxV),
+   550→      cellMinV: Math.round(cellMinV),
+   551→      cellDeltaV: Math.round(cellMaxV - cellMinV),
+   552→      acceleratorPedal: Math.round(s.acceleratorPedal * 10) / 10,
+   553→      torqueDemand: Math.round(torqueDemand),
+   554→      torqueActual: Math.round(torqueActual),
+   555→      regenTorque: Math.round(regenTorque),
+   556→      dcdcStatus: s.speed > 2 || s.isCharging,
+   557→      chargingStatus: s.isCharging,
+   558→      bmsStatus: s.isCharging ? 'charging' : s.speed > 2 ? 'discharging' : 'idle',
+   559→      coolantInletTemp: Math.round(s.coolantInlet * 10) / 10,
+   560→      coolantOutletTemp: Math.round(s.coolantOutlet * 10) / 10,
+   561→      ambientTemp: 28 + Math.sin(Date.now() / 60000) * 3,
+   562→    });
+   563→
+   564→    // Update charging data if charging
+   565→    if (s.isCharging) {
+   566→      const chargePower = this.getChargingPower();
+   567→      const chargeVoltage = s.chargeType === 'dc_fast' ? voltage * 1.05 : 400;
+   568→      const chargeCurrent = chargePower * 1000 / (chargeVoltage || 1);
+   569→      const targetSoc = 80;
+   570→      const socRemaining = targetSoc - s.soc;
+   571→      const timeRemaining = socRemaining > 0
+   572→        ? (socRemaining / 100 * b.capacity) / chargePower * 60
+   573→        : 0;
+   574→
+   575→      store.updateChargingData({
+   576→        isCharging: true,
+   577→        chargeType: s.chargeType,
+   578→        power: Math.round(chargePower * 10) / 10,
+   579→        voltage: Math.round(chargeVoltage * 10) / 10,
+   580→        current: Math.round(chargeCurrent * 10) / 10,
+   581→        energyAdded: Math.round(s.chargeEnergyAdded * 100) / 100,
+   582→        startSoc: s.chargeStartSoc,
+   583→        targetSoc,
+   584→        timeRemaining: Math.round(timeRemaining),
+   585→        efficiency: 88 + Math.random() * 6,
+   586→        costOmr: Math.round(s.chargeEnergyAdded * store.settings.electricityCostPerKwh * 1000) / 1000,
+   587→        costUsd: Math.round(s.chargeEnergyAdded * 0.12 * 100) / 100,
+   588→        cellVoltages: Array.from({ length: 24 }, (_, i) =>
+   589→          Math.round(cellMinV + (cellDelta * i / 24) + Math.random() * 3)
+   590→        ),
+   591→      });
+   592→    } else {
+   593→      store.updateChargingData({
+   594→        isCharging: false,
+   595→        power: 0,
+   596→        voltage: 0,
+   597→        current: 0,
+   598→      });
+   599→    }
+   600→
+   601→    // History points
+   602→    store.addBatteryHistory({ value: s.soc, timestamp: now });
+   603→    store.addPowerHistory({ value: power, timestamp: now });
+   604→    if (this.tickCount % 2 === 0) {
+   605→      store.addTemperatureHistory({
+   606→        value: s.batteryTemp,
+   607→        timestamp: now,
+   608→      });
+   609→    }
+   610→
+   611→    // Trip data
+   612→    const tripHours = s.tripDuration / 3600000;
+   613→    const tripKm = s.tripDistance / 1000;
+   614→    store.updateTripData({
+   615→      distance: Math.round(tripKm * 10) / 10,
+   616→      avgSpeed: tripHours > 0 ? Math.round(tripKm / tripHours * 10) / 10 : 0,
+   617→      maxSpeed: Math.round(s.tripMaxSpeed * 10) / 10,
+   618→      energyConsumed: Math.round(s.tripEnergy / 1000 * 100) / 100,
+   619→      energyRegen: Math.round(s.tripRegen / 1000 * 100) / 100,
+   620→      duration: Math.round(s.tripDuration / 1000),
+   621→      endSoc: Math.round(s.soc * 10) / 10,
+   622→    });
+   623→
+   624→    // Eco score
+   625→    const overall = Math.round(
+   626→      (s.ecoAccelScore * 0.25 + s.ecoBrakeScore * 0.25 +
+   627→       s.ecoSpeedScore * 0.25 + s.ecoEffScore * 0.25)
+   628→    );
+   629→    store.updateEcoScore({
+   630→      overall,
+   631→      acceleration: Math.round(s.ecoAccelScore),
+   632→      braking: Math.round(s.ecoBrakeScore),
+   633→      speed: Math.round(s.ecoSpeedScore),
+   634→      efficiency: Math.round(s.ecoEffScore),
+   635→    });
+   636→
+   637→    // Device info
+   638→    store.updateDeviceInfo({
+   639→      name: 'EVDx Simulator',
+   640→      type: 'OBD-II Emulator',
+   641→      firmware: '2.4.1',
+   642→      protocol: 'ISO 15765-4 (CAN)',
+   643→      voltage: 12.4 + Math.random() * 0.2,
+   644→      chipset: 'ELM327 (Sim)',
+   645→      bleVersion: '5.0',
+   646→      signalStrength: -40 - Math.random() * 20,
+   647→      responseTime: 15 + Math.random() * 30,
+   648→      adapterId: 'SIM-001',
+   649→      quality: 'excellent',
+   650→      isClone: false,
+   651→    });
+   652→
+   653→    // Session logging (if enabled)
+   654→    if (store.isLogging) {
+   655→      store.addSessionLog({
+   656→        timestamp: now,
+   657→        level: 'info',
+   658→        message: `phase=${s.phase} speed=${s.speed.toFixed(1)} soc=${s.soc.toFixed(1)} power=${power.toFixed(1)}`,
+   659→      });
+   660→    }
+   661→  }
+   662→
+   663→  // ── Voltage Models ──────────────────────────────────────────────────────────
+   664→
+   665→  /**
+   666→   * Compute pack voltage from SOC using chemistry-specific discharge curves.
+   667→   *
+   668→   * LFP: very flat curve, ~3.2-3.3 V across 20-90% SOC
+   669→   * NCA: steeper taper, ~3.0-4.1 V
+   670→   * NMC/NCM: moderate, ~3.1-4.0 V
+   671→   */
+   672→  private computeVoltage(soc: number): number {
+   673→    const cellV = this.computeCellVoltage(soc);
+   674→    return (cellV / 1000) * this.brand.cellCount;
+   675→  }
+   676→
+   677→  private computeCellVoltage(soc: number): number {
+   678→    const { cellMaxV, cellMinV, chemistry } = this.brand;
+   679→    const range = cellMaxV - cellMinV;
+   680→    const socNorm = Math.max(0, Math.min(1, soc / 100));
+   681→
+   682→    switch (chemistry) {
+   683→      case 'LFP': {
+   684→        // LFP has a very flat mid-region; steep drop at top and bottom
+   685→        const mid = cellMinV + range * 0.78;
+   686→        if (socNorm > 0.9) return mid + (cellMaxV - mid) * Math.pow((socNorm - 0.9) / 0.1, 0.5);
+   687→        if (socNorm < 0.1) return cellMinV + (mid - cellMinV) * Math.pow(socNorm / 0.1, 1.5);
+   688→        return mid + (Math.random() - 0.5) * 5; // ±2.5 mV noise
+   689→      }
+   690→      case 'NCA': {
+   691→        // NCA has noticeable taper
+   692→        return cellMinV + range * (0.3 * socNorm + 0.7 * Math.pow(socNorm, 0.7));
+   693→      }
+   694→      case 'NMC':
+   695→      case 'NCM':
+   696→      default: {
+   697→        // Moderate curve
+   698→        return cellMinV + range * Math.pow(socNorm, 0.8);
+   699→      }
+   700→    }
+   701→  }
+   702→
+   703→  // ── Helpers ─────────────────────────────────────────────────────────────────
+   704→
+   705→  private getInstantPower(): number {
+   706→    if (this.sim.isCharging) return -this.getChargingPower();
+   707→    if (this.sim.speed < 1) return 0.3; // accessory load
+   708→    const speedMs = this.sim.speed / 3.6;
+   709→    const aero = 0.5 * 1.225 * 0.28 * 2.3 * Math.pow(speedMs, 3) / 1000;
+   710→    const rolling = 1800 * 9.81 * 0.01 * speedMs / 1000;
+   711→    const accessory = 0.8;
+   712→    const drive = (aero + rolling + accessory) / 0.92;
+   713→    const regen = this.sim.phase === 'regen_braking' ? drive * 0.55 : 0;
+   714→    return drive - regen;
+   715→  }
+   716→
+   717→  private getChargingPower(): number {
+   718→    if (!this.sim.isCharging) return 0;
+   719→    let maxPower: number;
+   720→    switch (this.sim.chargeType) {
+   721→      case 'dc_fast':  maxPower = this.brand.dcChargeMax; break;
+   722→      case 'ac_l2':    maxPower = Math.min(this.brand.acChargeMax, 11); break;
+   723→      case 'ac_l1':    maxPower = 2.3; break;
+   724→    }
+   725→    // Apply taper for DC fast
+   726→    if (this.sim.chargeType === 'dc_fast') {
+   727→      const taperStart = this.brand.chemistry === 'LFP' ? 80 : 50;
+   728→      if (this.sim.soc > taperStart) {
+   729→        maxPower *= Math.max(0.05, 1.0 - Math.pow((this.sim.soc - taperStart) / (100 - taperStart), 1.5));
+   730→      }
+   731→    }
+   732→    return maxPower * (0.95 + Math.random() * 0.1);
+   733→  }
+   734→
+   735→  private resolveBrand(vehicle: VehicleProfile | null): BrandParams {
+   736→    if (!vehicle) return BRAND_PROFILES.generic;
+   737→    const brandId = vehicle.brand.toLowerCase().replace(/\s+/g, '-');
+   738→    return BRAND_PROFILES[brandId] ?? BRAND_PROFILES.generic;
+   739→  }
+   740→
+   741→  private createDefaultSimState(): SimState {
+   742→    return {
+   743→      speed: 0,
+   744→      targetSpeed: 0,
+   745→      phase: 'stationary',
+   746→      phaseTimer: 3000,
+   747→      soc: 75,
+   748→      batteryTemp: 28,
+   749→      motorTemp: 30,
+   750→      inverterTemp: 29,
+   751→      coolantInlet: 26,
+   752→      coolantOutlet: 28,
+   753→      tripDistance: 0,
+   754→      tripEnergy: 0,
+   755→      tripRegen: 0,
+   756→      tripMaxSpeed: 0,
+   757→      tripDuration: 0,
+   758→      odometer: 45000,
+   759→      acceleratorPedal: 0,
+   760→      isCharging: false,
+   761→      chargeType: 'dc_fast',
+   762→      chargeEnergyAdded: 0,
+   763→      chargeStartSoc: 0,
+   764→      ecoAccelScore: 70,
+   765→      ecoBrakeScore: 75,
+   766→      ecoSpeedScore: 65,
+   767→      ecoEffScore: 70,
+   768→      ecoSamples: 0,
+   769→    };
+   770→  }
+   771→
+   772→  /** Basic DTC description lookup for common EV codes */
+   773→  private describeDTC(code: string): string {
+   774→    const descriptions: Record<string, string> = {
+   775→      'P0A80': 'Hybrid Battery Pack Deterioration',
+   776→      'P0A81': 'Hybrid Battery Pack Cooling Fan 1',
+   777→      'P0A82': 'Hybrid Battery Pack Cooling Fan 2',
+   778→      'P0AFA': 'Hybrid Battery Voltage Out Of Range',
+   779→      'P0B94': 'Drive Motor Inverter Over Temperature',
+   780→      'P0BE1': 'Drive Motor Phase U Current',
+   781→      'P0BE2': 'Drive Motor Phase V Current',
+   782→      'P0BE3': 'Drive Motor Phase W Current',
+   783→      'P0C34': 'Hybrid Battery Precharge Time Too Long',
+   784→      'P0C79': 'Drive Motor Inverter Performance',
+   785→      'P1100': 'BMS Communication Error',
+   786→      'P1200': 'MCU Over Temperature Protection',
+   787→      'U0100': 'Lost Communication With ECM/PCM',
+   788→      'U0111': 'Lost Communication With Battery Energy Control Module',
+   789→      'U0140': 'Lost Communication With Body Control Module',
+   790→      'B1200': 'Climate Control Module Fault',
+   791→      'B1234': 'Battery Pack Insulation Failure',
+   792→    };
+   793→    return descriptions[code] ?? `Unknown Fault - ${code}`;
+   794→  }
+   795→}
+   796→
+   797→// ─── Singleton Export ─────────────────────────────────────────────────────────
+   798→
+   799→/** Global simulator instance – safe to import anywhere in the app */
+   800→export const simulator = new SimulatorEngine();
+   801→
