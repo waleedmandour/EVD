@@ -10,13 +10,36 @@ import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { AnimatedNumber } from '@/components/shared/Gauges';
-import { Search, AlertTriangle, CheckCircle2, XCircle, ChevronDown, Loader2, Shield } from 'lucide-react';
+import { Search, AlertTriangle, CheckCircle2, XCircle, ChevronDown, Loader2, Shield, FileDown } from 'lucide-react';
+import { generateReport, downloadBlob, getReportFilename } from '@/lib/pdf/report-generator';
 
 export default function DiagnosticsView() {
   const { t } = useTranslation('diagnostics');
-  const { dtcs, milOn, monitorStatus, setDTCs, clearDTCs, setMilOn, connectionStatus } = useAppStore();
+  const { dtcs, milOn, monitorStatus, setDTCs, clearDTCs, setMilOn, connectionStatus, vehicleData, chargingData, tripData, ecoScore, activeVehicle, settings } = useAppStore();
   const [scanning, setScanning] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
+  const [generatingPDF, setGeneratingPDF] = useState(false);
+
+  const handleGenerateReport = async () => {
+    setGeneratingPDF(true);
+    try {
+      const blob = await generateReport({
+        type: 'diagnostic_scan',
+        vehicle: activeVehicle,
+        vehicleData,
+        chargingData,
+        dtcs,
+        tripData,
+        ecoScore,
+        language: settings.language,
+      });
+      downloadBlob(blob, getReportFilename('diagnostic_scan', activeVehicle));
+    } catch (err) {
+      console.error('PDF generation failed:', err);
+    } finally {
+      setGeneratingPDF(false);
+    }
+  };
 
   const handleScan = () => {
     if (connectionStatus !== 'connected') return;
@@ -272,6 +295,17 @@ export default function DiagnosticsView() {
           </div>
         </CardContent>
       </Card>
+
+      {/* PDF Report */}
+      <Button
+        onClick={handleGenerateReport}
+        disabled={generatingPDF}
+        variant="outline"
+        className="w-full border-evdx-primary/30 text-evdx-primary hover:bg-evdx-primary/10 h-11 rounded-xl"
+      >
+        <FileDown size={16} className="mr-2" />
+        {generatingPDF ? 'Generating...' : t('generateReport', { defaultValue: 'Generate Diagnostic Report' })}
+      </Button>
     </div>
   );
 }

@@ -6,12 +6,37 @@ import { useAppStore } from '@/lib/store';
 import { CircleGauge, AnimatedNumber, TempBar } from '@/components/shared/Gauges';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Battery, Heart, Thermometer, Shield, Zap, Activity } from 'lucide-react';
+import { Battery, Heart, Thermometer, Shield, Zap, Activity, FileDown } from 'lucide-react';
+import { generateReport, downloadBlob, getReportFilename } from '@/lib/pdf/report-generator';
+import type { ReportType } from '@/lib/pdf/report-generator';
 
 export default function BatteryView() {
   const { t } = useTranslation('battery');
-  const { vehicleData, batteryHistory, activeVehicle } = useAppStore();
+  const { vehicleData, batteryHistory, activeVehicle, chargingData, dtcs, tripData, ecoScore, settings } = useAppStore();
+  const [generatingPDF, setGeneratingPDF] = React.useState(false);
+
+  const handleGenerateReport = async (type: ReportType) => {
+    setGeneratingPDF(true);
+    try {
+      const blob = await generateReport({
+        type,
+        vehicle: activeVehicle,
+        vehicleData,
+        chargingData,
+        dtcs,
+        tripData,
+        ecoScore,
+        language: settings.language,
+      });
+      downloadBlob(blob, getReportFilename(type, activeVehicle));
+    } catch (err) {
+      console.error('PDF generation failed:', err);
+    } finally {
+      setGeneratingPDF(false);
+    }
+  };
 
   const sohColor = vehicleData.soh > 80 ? '#00E676' : vehicleData.soh > 70 ? '#FFB300' : vehicleData.soh > 60 ? '#FF9800' : '#FF3D00';
   const sohLabel = vehicleData.soh > 80 ? t('healthStatus.excellent') : vehicleData.soh > 70 ? t('healthStatus.good') : vehicleData.soh > 60 ? t('healthStatus.fair') : t('healthStatus.poor');
@@ -205,6 +230,15 @@ export default function BatteryView() {
           </div>
         </CardContent>
       </Card>
+      {/* PDF Report */}
+      <Button
+        onClick={() => handleGenerateReport('battery_health')}
+        disabled={generatingPDF}
+        className="w-full bg-evdx-primary hover:bg-evdx-primary/90 text-[#0D1117] font-semibold h-12 rounded-xl"
+      >
+        <FileDown size={18} className="mr-2" />
+        {generatingPDF ? 'Generating...' : t('generateReport', { defaultValue: 'Generate Battery Report' })}
+      </Button>
     </div>
   );
 }

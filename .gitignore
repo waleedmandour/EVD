@@ -52,3 +52,19 @@ prompt
 server.log
 # Skills directory
 /skills/
+
+# Android build outputs
+android/app/build/
+android/.gradle/
+android/build/
+evdx.keystore
+
+# Prisma (not used in static export)
+prisma/
+
+# Tool results
+tool-results/
+
+# Download directory (generated files)
+download/*.png
+download/*.pdf
