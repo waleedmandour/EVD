@@ -69,3 +69,27 @@ Stage Summary:
 - 3 AI features implemented (Battery Predictor, Smart DTC Analyzer, Eco-Driving Coach)
 - New bilingual logo with ع and E
 - Credentials added: Dr. Waleed Mandour © 2026 with GitHub link
+
+---
+Task ID: 3
+Agent: Main Agent
+Task: Review APK build for critical errors, add v1.1.0 user manuals to GitHub release
+
+Work Log:
+- Reviewed all Android configuration files (AndroidManifest.xml, build.gradle, styles.xml, colors.xml, MainActivity.java, capacitor.build.gradle)
+- Found critical bug: android:fullBackupContent="@xml/network_security_config" in AndroidManifest.xml was pointing to the wrong file — network_security_config.xml is for network security rules, not backup rules. Android trying to parse it as backup content could cause silent launch crash (the "app installs but doesn't show on screen" symptom).
+- Created proper backup_rules.xml with exclusion rules for sensitive diagnostic data
+- Fixed AndroidManifest.xml to reference @xml/backup_rules instead of @xml/network_security_config
+- Aligned Java version in app/build.gradle from VERSION_17 to VERSION_21 (matching capacitor.build.gradle override)
+- Rebuilt APK v1.1.0 with fixes (BUILD SUCCESSFUL, 289 tasks)
+- Created comprehensive English user manual (29 pages, 486 KB) covering all 19 sections
+- Created comprehensive Arabic user manual (20 pages, 670 KB) with full RTL layout
+- Uploaded both manuals + rebuilt APK to GitHub v1.1.0-pre-release
+- Committed fix and pushed to GitHub
+
+Stage Summary:
+- Critical fix: fullBackupContent reference corrected (likely cause of app not appearing on screen)
+- APK: /home/z/my-project/download/EVDx-v1.1.0.apk (24MB, rebuilt with fix)
+- English Manual: /home/z/my-project/download/EVDx-User-Manual-English-v1.1.0.pdf (486 KB, 29 pages)
+- Arabic Manual: /home/z/my-project/download/EVDx-User-Manual-Arabic-v1.1.0.pdf (670 KB, 20 pages)
+- GitHub Release: https://github.com/waleedmandour/EVD/releases/tag/v1.1.0-pre-release
