@@ -8,6 +8,7 @@
 
 **Author:** Dr. Waleed Mandour
 **Email:** waleedmandour@gmail.com
+**Email2:** w.abumandour@squ.edu.om
 **Version:** 1.0.0-pre-release
 
 ---
