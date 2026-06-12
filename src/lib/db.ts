@@ -126,7 +126,7 @@ export function exportAllData(): Record<string, unknown> {
     settings: getSettings(),
     onboardingComplete: isOnboardingComplete(),
     exportedAt: new Date().toISOString(),
-    appVersion: '1.0.0',
+    appVersion: '1.2.0',
   };
 }
 

@@ -70,6 +70,7 @@ export default function VoiceAssistant() {
   const [showSummary, setShowSummary] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const processingRef = useRef(false);
+  const listenerHandlesRef = useRef<any[]>([]);
 
   const lang = settings.language;
 
@@ -186,7 +187,17 @@ export default function VoiceAssistant() {
 
   const toggleListening = useCallback(async () => {
     if (voiceListening) {
+      // Stop speech recognition and clean up listeners
       setVoiceListening(false);
+      try {
+        const { SpeechRecognition } = await import('@capacitor-community/speech-recognition');
+        await SpeechRecognition.stop();
+      } catch {}
+      // Remove all stored listeners
+      for (const handle of listenerHandlesRef.current) {
+        try { await handle.remove(); } catch {}
+      }
+      listenerHandlesRef.current = [];
       return;
     }
 
@@ -217,7 +228,7 @@ export default function VoiceAssistant() {
 
         // Set up listener BEFORE starting — partialResults captures both
         // partial and final results; we process only once via processingRef
-        SpeechRecognition.addListener('partialResults', (data: any) => {
+        const handle1 = await SpeechRecognition.addListener('partialResults', (data: any) => {
           if (data.matches && data.matches.length > 0 && !processingRef.current) {
             processingRef.current = true;
             const transcript = data.matches[0];
@@ -227,13 +238,15 @@ export default function VoiceAssistant() {
             processingRef.current = false;
           }
         });
+        listenerHandlesRef.current.push(handle1);
 
         // Listen for state changes to detect when recognition ends
-        SpeechRecognition.addListener('listeningState', (data: any) => {
+        const handle2 = await SpeechRecognition.addListener('listeningState', (data: any) => {
           if (data.status === 'stopped') {
             setVoiceListening(false);
           }
         });
+        listenerHandlesRef.current.push(handle2);
 
         // Start listening with partialResults: true so the listener fires
         await SpeechRecognition.start({

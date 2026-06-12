@@ -1,13 +1,18 @@
 /**
  * EVDx — Real BLE OBD Connection Service
  *
- * Uses @capacitor-community/bluetooth-le for native Android BLE.
+ * Uses @capacitor-community/bluetooth-le BleClient for native Android BLE.
  * Handles scanning, connecting, reading/writing OBD-II commands via ELM327.
+ *
+ * IMPORTANT: Must use BleClient (not BluetoothLe) for requestLEScan and
+ * startNotifications, because the low-level BluetoothLe plugin does NOT
+ * accept callbacks. BleClient wraps the listener pattern automatically.
  *
  * Preserves vGate iCar Pro FFE0 UUID profile and ELM327 AT command sequences.
  */
 
 import { Capacitor } from '@capacitor/core';
+import { BleClient, type BleDevice, type dataViewToHexString } from '@capacitor-community/bluetooth-le';
 import { requestBlePermissions } from './permissions';
 
 // ─── OBD Adapter BLE Profiles ─────────────────────────────────────────────────
@@ -74,13 +79,11 @@ export interface ScannedDevice {
 class BLEService {
   private connectedDeviceId: string | null = null;
   private activeProfile: BLEAdapterProfile | null = null;
-  private commandQueue: string[] = [];
-  private isProcessing = false;
   private responseBuffer = '';
   private responseResolve: ((value: string) => void) | null = null;
   private notifyCallback: ((data: string) => void) | null = null;
   private pollingInterval: ReturnType<typeof setInterval> | null = null;
-  private BluetoothLe: any = null;
+  private initialized = false;
 
   async initialize(): Promise<void> {
     if (!Capacitor.isNativePlatform()) {
@@ -89,18 +92,17 @@ class BLEService {
     }
 
     try {
-      const bleModule = await import('@capacitor-community/bluetooth-le');
-      this.BluetoothLe = bleModule.BluetoothLe;
-
       // Request permissions first
       const permResult = await requestBlePermissions();
       if (!permResult.granted) {
         throw new Error('BLE permissions not granted');
       }
 
-      // Initialize the plugin
-      await this.BluetoothLe.initialize();
-      console.log('[BLE] Initialized successfully');
+      // Initialize BleClient — must pass androidNeverForLocation: true
+      // because AndroidManifest declares BLUETOOTH_SCAN with neverForLocation
+      await BleClient.initialize({ androidNeverForLocation: true });
+      this.initialized = true;
+      console.log('[BLE] BleClient initialized successfully');
     } catch (error) {
       console.error('[BLE] Initialization failed:', error);
       throw error;
@@ -108,27 +110,30 @@ class BLEService {
   }
 
   async scan(timeoutMs = 10000): Promise<ScannedDevice[]> {
-    if (!this.BluetoothLe) {
+    if (!this.initialized) {
       await this.initialize();
     }
 
     const devices: ScannedDevice[] = [];
+    const seenIds = new Set<string>();
 
     try {
-      await this.BluetoothLe.requestLEScan({}, (result: any) => {
+      // BleClient.requestLEScan accepts a callback correctly
+      await BleClient.requestLEScan({}, (result: { device: BleDevice; rssi?: number; localName?: string }) => {
         const device = result.device;
         if (!device) return;
 
-        const name = device.name || device.localName || '';
+        const name = device.name || result.localName || '';
         const deviceId = device.deviceId;
 
         // Skip duplicates
-        if (devices.some(d => d.deviceId === deviceId)) return;
+        if (seenIds.has(deviceId)) return;
+        seenIds.add(deviceId);
 
         // Try to match a known adapter profile
         const profile = this.matchProfile(name, deviceId);
 
-        // Only include devices that look like OBD adapters
+        // Only include devices that look like OBD adapters or have names
         const isOBDLike = profile ||
           name.toLowerCase().includes('obd') ||
           name.toLowerCase().includes('elm') ||
@@ -136,8 +141,7 @@ class BLEService {
           name.toLowerCase().includes('icar') ||
           name.toLowerCase().includes('vgate') ||
           name.toLowerCase().includes('carly') ||
-          name.toLowerCase().includes('veepeak') ||
-          deviceId.startsWith(''); // Include all for now, let user choose
+          name.toLowerCase().includes('veepeak');
 
         if (isOBDLike || name) {
           devices.push({
@@ -151,11 +155,11 @@ class BLEService {
 
       // Wait for scan duration
       await new Promise(resolve => setTimeout(resolve, timeoutMs));
-      await this.BluetoothLe.stopLEScan();
+      await BleClient.stopLEScan();
     } catch (error) {
       console.error('[BLE] Scan error:', error);
       try {
-        await this.BluetoothLe.stopLEScan();
+        await BleClient.stopLEScan();
       } catch {}
     }
 
@@ -163,25 +167,26 @@ class BLEService {
   }
 
   async connect(deviceId: string, profile?: BLEAdapterProfile): Promise<boolean> {
-    if (!this.BluetoothLe) return false;
+    if (!this.initialized) return false;
 
     try {
-      await this.BluetoothLe.connect({ deviceId });
+      await BleClient.connect(deviceId);
       this.connectedDeviceId = deviceId;
       this.activeProfile = profile || this.detectProfile(deviceId);
 
       console.log('[BLE] Connected to', deviceId);
 
-      // Set up notification listener
+      // Set up notification listener using BleClient (accepts callback correctly)
       if (this.activeProfile) {
-        await this.BluetoothLe.startNotifications({
+        await BleClient.startNotifications(
           deviceId,
-          service: this.activeProfile.serviceUUID,
-          characteristic: this.activeProfile.notifyUUID,
-        }, (value: any) => {
-          const data = this.decodeValue(value);
-          this.handleNotification(data);
-        });
+          this.activeProfile.serviceUUID,
+          this.activeProfile.notifyUUID,
+          (value: DataView) => {
+            const data = this.decodeDataView(value);
+            this.handleNotification(data);
+          }
+        );
       }
 
       // Initialize ELM327
@@ -197,17 +202,17 @@ class BLEService {
   }
 
   async disconnect(): Promise<void> {
-    if (!this.BluetoothLe || !this.connectedDeviceId) return;
+    if (!this.initialized || !this.connectedDeviceId) return;
 
     try {
       if (this.activeProfile) {
-        await this.BluetoothLe.stopNotifications({
-          deviceId: this.connectedDeviceId,
-          service: this.activeProfile.serviceUUID,
-          characteristic: this.activeProfile.notifyUUID,
-        });
+        await BleClient.stopNotifications(
+          this.connectedDeviceId,
+          this.activeProfile.serviceUUID,
+          this.activeProfile.notifyUUID
+        );
       }
-      await this.BluetoothLe.disconnect({ deviceId: this.connectedDeviceId });
+      await BleClient.disconnect(this.connectedDeviceId);
     } catch (error) {
       console.error('[BLE] Disconnect error:', error);
     } finally {
@@ -218,11 +223,11 @@ class BLEService {
   }
 
   async sendCommand(command: string): Promise<string> {
-    if (!this.BluetoothLe || !this.connectedDeviceId || !this.activeProfile) {
+    if (!this.initialized || !this.connectedDeviceId || !this.activeProfile) {
       return '';
     }
 
-    return new Promise(async (resolve, reject) => {
+    return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
         this.responseResolve = null;
         resolve('');
@@ -233,19 +238,18 @@ class BLEService {
         resolve(data);
       };
 
-      try {
-        const encoded = this.encodeValue(command + '\r');
-        await this.BluetoothLe.write({
-          deviceId: this.connectedDeviceId!,
-          service: this.activeProfile!.serviceUUID,
-          characteristic: this.activeProfile!.writeUUID,
-          value: encoded,
-        });
-      } catch (error) {
+      // Encode command string to DataView for BleClient.write
+      const encoded = this.encodeCommand(command + '\r');
+      BleClient.write(
+        this.connectedDeviceId!,
+        this.activeProfile!.serviceUUID,
+        this.activeProfile!.writeUUID,
+        encoded
+      ).catch((error: unknown) => {
         clearTimeout(timeout);
         this.responseResolve = null;
         reject(error);
-      }
+      });
     });
   }
 
@@ -345,26 +349,28 @@ class BLEService {
     }
   }
 
-  private encodeValue(str: string): string {
-    // Convert string to hex for BLE write
-    let hex = '';
+  /**
+   * Encode a string command to DataView for BleClient.write()
+   * BleClient.write expects a DataView, not a hex string
+   */
+  private encodeCommand(str: string): DataView {
+    const buffer = new ArrayBuffer(str.length);
+    const view = new DataView(buffer);
     for (let i = 0; i < str.length; i++) {
-      hex += str.charCodeAt(i).toString(16).padStart(2, '0');
+      view.setUint8(i, str.charCodeAt(i));
     }
-    return hex;
+    return view;
   }
 
-  private decodeValue(value: any): string {
-    if (typeof value === 'string') {
-      // Value is already hex string
-      let str = '';
-      for (let i = 0; i < value.length; i += 2) {
-        const code = parseInt(value.substring(i, i + 2), 16);
-        if (!isNaN(code)) str += String.fromCharCode(code);
-      }
-      return str;
+  /**
+   * Decode a DataView from BLE notification to string
+   */
+  private decodeDataView(value: DataView): string {
+    let str = '';
+    for (let i = 0; i < value.byteLength; i++) {
+      str += String.fromCharCode(value.getUint8(i));
     }
-    return String(value);
+    return str;
   }
 }
 

@@ -26,11 +26,10 @@ export async function requestBlePermissions(): Promise<PermissionResult> {
   const results: Record<string, PermissionState> = {};
 
   try {
-    // On Android 12+, need BLUETOOTH_SCAN, BLUETOOTH_CONNECT, and location
-    const { BluetoothLe } = await import('@capacitor-community/bluetooth-le');
-
-    // Initialize BLE (this triggers permission prompts on Android 12+)
-    await BluetoothLe.initialize();
+    // Use BleClient.initialize with androidNeverForLocation: true
+    // because AndroidManifest declares BLUETOOTH_SCAN with neverForLocation
+    const { BleClient } = await import('@capacitor-community/bluetooth-le');
+    await BleClient.initialize({ androidNeverForLocation: true });
 
     // Also request location permission (required for BLE scan on Android 11-)
     const locationResult = await requestLocationPermission();
@@ -47,12 +46,13 @@ export async function requestBlePermissions(): Promise<PermissionResult> {
 
 /**
  * Request fine location permission (needed for BLE scanning on Android 11-)
+ * Uses @capacitor/geolocation (separate package since Capacitor v3)
  */
 async function requestLocationPermission(): Promise<boolean> {
   if (!Capacitor.isNativePlatform()) return true;
 
   try {
-    const { Geolocation } = await import('@capacitor/core');
+    const { Geolocation } = await import('@capacitor/geolocation');
     // Requesting geolocation triggers the location permission prompt
     // We don't actually use the location — just need the permission for BLE
     const status = await Geolocation.checkPermissions();
@@ -61,8 +61,10 @@ async function requestLocationPermission(): Promise<boolean> {
     const requestResult = await Geolocation.requestPermissions();
     return requestResult.location === 'granted';
   } catch {
-    // Geolocation plugin might not be installed — try alternate approach
-    return true;
+    // On Android 12+, location is not required for BLE with neverForLocation flag
+    // So failure here is acceptable on modern devices
+    console.warn('[Permissions] Geolocation plugin unavailable — location permission not requested');
+    return false;
   }
 }
 
@@ -115,8 +117,8 @@ export async function checkBlePermissions(): Promise<boolean> {
   if (!Capacitor.isNativePlatform()) return true;
 
   try {
-    const { BluetoothLe } = await import('@capacitor-community/bluetooth-le');
-    await BluetoothLe.initialize();
+    const { BleClient } = await import('@capacitor-community/bluetooth-le');
+    await BleClient.initialize({ androidNeverForLocation: true });
     return true;
   } catch {
     return false;

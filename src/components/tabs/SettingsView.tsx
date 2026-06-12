@@ -288,7 +288,7 @@ export default function SettingsView() {
           <div className="space-y-2">
             <div className="flex items-center justify-between bg-[#0D1117] rounded-lg px-3 py-2">
               <span className="text-xs text-evdx-text-secondary">{t('appVersion')}</span>
-              <span className="text-sm text-evdx-text">1.1.0</span>
+              <span className="text-sm text-evdx-text">1.2.0</span>
             </div>
             <div className="flex items-center justify-between bg-[#0D1117] rounded-lg px-3 py-2">
               <span className="text-xs text-evdx-text-secondary">{isRTL ? 'المؤلف' : 'Author'}</span>
