@@ -135,3 +135,29 @@ Stage Summary:
 - New speech.ts provides enhanced natural TTS with severity-aware prosody
 - APK rebuilt and uploaded: /home/z/my-project/download/EVDx-v1.2.0.apk
 - GitHub release: https://github.com/waleedmandour/EVD/releases/tag/v1.2.0-pre-release
+
+---
+Task ID: 2
+Agent: Main
+Task: Full repo review + critical bug fixes from online API doc verification
+
+Work Log:
+- Conducted deep code review across 20+ files
+- Verified Capacitor plugin APIs against official documentation online
+- Found 4 critical + 7 warning issues
+- Fixed C1: BLE requestLEScan — switched from BluetoothLe to BleClient API (callback was silently ignored)
+- Fixed C2: BLE startNotifications — same issue, now uses BleClient.startNotifications with callback
+- Fixed C3: Geolocation import — installed @capacitor/geolocation, updated import from @capacitor/core to @capacitor/geolocation
+- Fixed C4: Missing androidNeverForLocation: true — added to BleClient.initialize() to match manifest
+- Fixed W1: SpeechRecognition.stop() — now called when deactivating voice
+- Fixed W2: Listener cleanup — handles stored and removed on stop/unmount
+- Fixed W3: Version strings — aligned to 1.2.0 in SettingsView.tsx, db.ts
+- Built new APK (25.3MB) with all 5 Capacitor plugins including geolocation
+- Uploaded to GitHub v1.2.0-pre-release
+
+Stage Summary:
+- 4 critical + 3 warning bugs fixed
+- BLE scanning and OBD communication now functionally correct
+- Location permission properly requested on Android 11-
+- APK: /home/z/my-project/download/EVDx-v1.2.0.apk (25.3MB)
+- Release: https://github.com/waleedmandour/EVD/releases/tag/v1.2.0-pre-release
