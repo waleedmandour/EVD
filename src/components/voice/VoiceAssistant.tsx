@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { useAppStore } from '@/lib/store';
 import { Capacitor } from '@capacitor/core';
 import { Mic, MicOff, Volume2, Sparkles, X } from 'lucide-react';
-import { formatCommandResponse, formatSpeech, severityFromData } from '@/lib/speech';
+import { formatCommandResponse } from '@/lib/speech';
 
 // ─── Page Summary Data ─────────────────────────────────────────────────────────
 
@@ -171,13 +171,13 @@ export default function VoiceAssistant() {
 
     try {
       const { TextToSpeech } = await import('@capacitor-community/text-to-speech');
-      // Format with SSML for natural speech — severity auto-detected from content
-      const ssmlText = formatCommandResponse(text, lang);
+      // Format speech with natural pauses, spelled-out DTCs, and severity-based prosody
+      const { text: formattedText, rate, pitch } = formatCommandResponse(text, lang);
       await TextToSpeech.speak({
-        text: ssmlText,
+        text: formattedText,
         lang: lang === 'ar' ? 'ar-SA' : 'en-US',
-        rate: 1.0,
-        pitch: 1.0,
+        rate,
+        pitch,
       });
     } catch (error) {
       console.warn('TTS not available:', error);
@@ -215,14 +215,8 @@ export default function VoiceAssistant() {
 
         setVoiceListening(true);
 
-        // Start listening
-        await SpeechRecognition.start({
-          language: lang === 'ar' ? 'ar-SA' : 'en-US',
-          partialResults: false,
-          popup: false,
-        });
-
-        // Listen for results
+        // Set up listener BEFORE starting — partialResults captures both
+        // partial and final results; we process only once via processingRef
         SpeechRecognition.addListener('partialResults', (data: any) => {
           if (data.matches && data.matches.length > 0 && !processingRef.current) {
             processingRef.current = true;
@@ -234,8 +228,18 @@ export default function VoiceAssistant() {
           }
         });
 
-        SpeechRecognition.addListener('end', () => {
-          setVoiceListening(false);
+        // Listen for state changes to detect when recognition ends
+        SpeechRecognition.addListener('listeningState', (data: any) => {
+          if (data.status === 'stopped') {
+            setVoiceListening(false);
+          }
+        });
+
+        // Start listening with partialResults: true so the listener fires
+        await SpeechRecognition.start({
+          language: lang === 'ar' ? 'ar-SA' : 'en-US',
+          partialResults: true,
+          popup: false,
         });
       } catch (error) {
         console.error('Speech recognition error:', error);

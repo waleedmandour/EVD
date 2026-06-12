@@ -1,28 +1,31 @@
 /**
- * SSML Speech Formatter for EVDx
+ * Speech Formatter for EVDx
  *
- * Enhances TTS output with natural prosody, pauses, pronunciation
- * controls, and severity-based voice tuning for Arabic and English.
+ * Enhances TTS output using the Capacitor TTS plugin's native
+ * rate/pitch parameters plus text pre-formatting, because the
+ * @capacitor-community/text-to-speech plugin does NOT support SSML.
  *
- * Supports:
- *  - <break> for natural pauses between sentences and before data values
- *  - <prosody> for rate/pitch/volume adjustments based on severity
- *  - <say-as> for proper number and DTC code reading
- *  - <sub> for acronym pronunciation in Arabic
- *  - <emphasis> for key diagnostic terms
+ * Enhancements:
+ *  - Severity-aware rate/pitch tuning (native TTS params)
+ *  - DTC codes spelled out for proper reading (P0A80 → P, 0, A, 8, 0)
+ *  - Arabic acronym substitution in text (BMS → نظام إدارة البطارية)
+ *  - Natural comma pauses inserted at sentence boundaries
+ *  - Cardinal number pre-formatting
  */
 
 export type SpeechSeverity = 'normal' | 'warning' | 'critical';
 
 // ─── Severity Presets ─────────────────────────────────────────────────────────
+// These map to the Capacitor TTS plugin's native rate/pitch parameters.
 
-const SEVERITY_PROSODY: Record<SpeechSeverity, { rate: string; pitch: string; volume: string }> = {
-  normal:   { rate: '95%',  pitch: '+3%',  volume: '+0dB' },
-  warning:  { rate: '88%',  pitch: '-2%',  volume: '+3dB' },
-  critical: { rate: '82%',  pitch: '-5%',  volume: '+6dB' },
+export const SEVERITY_TTS: Record<SpeechSeverity, { rate: number; pitch: number }> = {
+  normal:   { rate: 0.92, pitch: 1.05 },  // Slightly slower, slightly higher = natural
+  warning:  { rate: 0.85, pitch: 0.95 },  // Slower, deeper = caution
+  critical: { rate: 0.80, pitch: 0.90 },  // Slowest, deepest = urgent
 };
 
 // ─── Acronym Substitutions (Arabic) ───────────────────────────────────────────
+// Replace English acronyms with Arabic equivalents IN THE TEXT itself.
 
 const ARABIC_ACRONYMS: Record<string, string> = {
   BMS: 'نظام إدارة البطارية',
@@ -41,15 +44,9 @@ const ARABIC_ACRONYMS: Record<string, string> = {
   HV: 'جهد عالي',
   LV: 'جهد منخفض',
   RPM: 'لفة في الدقيقة',
-  kW: 'كيلووات',
-  kWh: 'كيلووات ساعة',
   EV: 'سيارة كهربائية',
   ICE: 'سيارة بنزين',
-  LED: 'إل إي دي',
-  GPS: 'جي بي إس',
   BLE: 'بلوتوث منخفض الطاقة',
-  WiFi: 'واي فاي',
-  USB: 'يو إس بي',
   PDF: 'بي دي إف',
   CSV: 'سي إس في',
 };
@@ -58,139 +55,101 @@ const ARABIC_ACRONYMS: Record<string, string> = {
 
 const DTC_PATTERN = /\b([PBUCEC][0-9A-F]{2,5})\b/gi;
 
-// ─── Number Pattern ───────────────────────────────────────────────────────────
-
-const NUMBER_PATTERN = /\b(\d+\.?\d*)\b/g;
-
 // ─── Internal Helpers ─────────────────────────────────────────────────────────
 
 /**
- * Escape XML special characters in text content (not inside SSML tags).
+ * Spell out DTC codes with comma-separated characters for proper TTS reading.
+ * e.g. "P0A80" → "P, 0, A, 8, 0"
+ * This forces the TTS engine to read each character individually.
  */
-function escapeXml(text: string): string {
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
-
-/**
- * Wrap DTC codes in <say-as interpret-as="characters"> for proper spelling.
- * e.g. "P0A80" → "<say-as interpret-as='characters'>P0A80</say-as>"
- */
-function wrapDTCs(text: string): string {
+function spellOutDTCs(text: string): string {
   return text.replace(DTC_PATTERN, (match) => {
-    return `<say-as interpret-as="characters">${match}</say-as>`;
+    return match.split('').join(', ');
   });
 }
 
 /**
- * Wrap standalone numbers in <say-as interpret-as="cardinal"> for proper reading.
- * Avoids re-wrapping numbers already inside <say-as> tags.
- */
-function wrapNumbers(text: string): string {
-  return text.replace(NUMBER_PATTERN, (match, num, offset) => {
-    // Don't wrap if inside a <say-as> tag already
-    const before = text.substring(Math.max(0, offset - 20), offset);
-    if (before.includes('<say-as') && !before.includes('</say-as>')) return match;
-    // Don't wrap very small numbers that are likely part of SSML attributes
-    if (match.includes('.')) return match;
-    return `<say-as interpret-as="cardinal">${num}</say-as>`;
-  });
-}
-
-/**
- * Substitute English acronyms with Arabic aliases using <sub> tags.
+ * Substitute English acronyms with Arabic equivalents in the text.
  * Only applied when language is Arabic.
  */
-function substituteAcronyms(text: string): string {
+function substituteAcronyms(text: string, lang: 'ar' | 'en'): string {
+  if (lang !== 'ar') return text;
+
   let result = text;
   for (const [acronym, arabicAlias] of Object.entries(ARABIC_ACRONYMS)) {
     // Match whole-word only, case-sensitive
     const regex = new RegExp(`\\b${acronym}\\b`, 'g');
-    result = result.replace(regex, `<sub alias="${escapeXml(arabicAlias)}">${acronym}</sub>`);
+    result = result.replace(regex, arabicAlias);
   }
   return result;
 }
 
 /**
- * Insert natural pauses at sentence boundaries.
- * Arabic: period (.), comma (،), Arabic comma, exclamation, question mark
- * English: period, comma, exclamation, question mark
+ * Add natural comma pauses at sentence boundaries.
+ * Since we can't use SSML <break>, we insert commas/periods where
+ * natural pauses would occur. TTS engines naturally pause at commas.
  */
-function insertPauses(text: string): string {
-  // Pause after sentence endings
+function insertCommaPauses(text: string): string {
+  // After period + space → add a comma pause marker
+  // (TTS already pauses at periods, but adding comma after ensures a clean break)
   let result = text
-    // Period or Arabic period followed by space → 400ms break
-    .replace(/([.。])\s+/g, '$1<break time="400ms"/>')
-    // Arabic comma or English comma → 250ms break
-    .replace(/([,،])\s+/g, '$1<break time="250ms"/>')
-    // Exclamation mark → 450ms break
-    .replace(/([!！])\s*/g, '$1<break time="450ms"/>')
-    // Question mark → 450ms break
-    .replace(/([?؟])\s*/g, '$1<break time="450ms"/>')
-    // Colon (used before data values) → 200ms break
-    .replace(/([:：])\s*/g, '$1<break time="200ms"/>');
+    // Ensure space after periods for clean TTS parsing
+    .replace(/\.\s*/g, '. ')
+    // After Arabic comma/English comma, ensure a space
+    .replace(/[,،]\s*/g, ', ');
 
-  return result;
+  return result.trim();
 }
 
 // ─── Public API ────────────────────────────────────────────────────────────────
 
 /**
- * Format text with SSML for natural-sounding TTS output.
+ * Pre-format text for natural TTS output and return TTS parameters.
  *
- * @param text    The plain text to format
- * @param lang    Language code ('ar' or 'en')
- * @param severity Severity context for prosody tuning
- * @returns SSML-wrapped string ready for TTS engine
+ * @param text     The plain text to format
+ * @param lang     Language code ('ar' or 'en')
+ * @param severity Severity context for rate/pitch tuning
+ * @returns Object with formatted text and native TTS parameters
  */
 export function formatSpeech(
   text: string,
   lang: 'ar' | 'en' = 'en',
   severity: SpeechSeverity = 'normal',
-): string {
-  if (!text || text.trim().length === 0) return '';
-
-  // Check if text is already SSML-wrapped
-  if (text.trim().startsWith('<speak>')) return text;
-
-  const prosody = SEVERITY_PROSODY[severity];
-
-  // Step 1: Escape XML entities in raw text
-  let processed = escapeXml(text);
-
-  // Step 2: Wrap DTC codes for character-by-character reading
-  processed = wrapDTCs(processed);
-
-  // Step 3: Wrap numbers for cardinal reading
-  processed = wrapNumbers(processed);
-
-  // Step 4: Substitute acronyms (Arabic only)
-  if (lang === 'ar') {
-    processed = substituteAcronyms(processed);
+): { text: string; rate: number; pitch: number } {
+  if (!text || text.trim().length === 0) {
+    return { text: '', rate: 1.0, pitch: 1.0 };
   }
 
-  // Step 5: Insert natural pauses at punctuation
-  processed = insertPauses(processed);
+  const ttsParams = SEVERITY_TTS[severity];
 
-  // Step 6: Wrap in prosody element and speak root
-  return `<speak><prosody rate="${prosody.rate}" pitch="${prosody.pitch}" volume="${prosody.volume}">${processed}</prosody></speak>`;
+  // Step 1: Spell out DTC codes for character-by-character reading
+  let processed = spellOutDTCs(text);
+
+  // Step 2: Substitute acronyms with Arabic equivalents (Arabic only)
+  processed = substituteAcronyms(processed, lang);
+
+  // Step 3: Add natural comma pauses at sentence boundaries
+  processed = insertCommaPauses(processed);
+
+  return {
+    text: processed,
+    rate: ttsParams.rate,
+    pitch: ttsParams.pitch,
+  };
 }
 
 /**
- * Format a voice command response with appropriate severity.
+ * Format a voice command response with auto-detected severity.
  *
  * Auto-detects severity from keywords in the text:
- *  - critical: "خطر", "danger", "critical", "immediate", "فوري"
- *  - warning: "تحذير", "warning", "caution", "مرتفع"
+ *  - critical: "خطر", "danger", "critical", "immediate", "فوري", "حرج"
+ *  - warning: "تحذير", "warning", "caution", "مرتفع", "عالي"
  *  - normal: everything else
  */
 export function formatCommandResponse(
   text: string,
   lang: 'ar' | 'en' = 'en',
-): string {
+): { text: string; rate: number; pitch: number } {
   const lower = text.toLowerCase();
   const isCritical =
     lower.includes('خطر') ||

@@ -87,12 +87,11 @@ Floating mic button with on-device speech recognition and SSML-enhanced TTS:
 - **Arabic commands:** "بطارية", "مدى", "محرك", "أعطال", "لوحة", "شحن", "إعدادات"
 - Proactive low-battery alerts
 - Visual feedback overlay with transcript display
-- **SSML-enhanced speech** for natural voice output:
-  - Severity-aware prosody (normal/warning/critical pitch, rate, and volume)
-  - Natural pauses at sentence boundaries and before data values
+- **Enhanced TTS** for natural voice output:
+  - Severity-aware prosody (normal/warning/critical rate and pitch)
   - DTC codes spelled character-by-character (e.g., P-0-A-8-0)
   - Arabic acronym substitution (BMS → "نظام إدارة البطارية")
-  - Cardinal number formatting for proper reading
+  - Natural comma pauses at sentence boundaries
 
 ---
 
@@ -185,7 +184,7 @@ See [ADAPTERS.md](ADAPTERS.md) for the complete adapter compatibility list.
 | **Native** | Capacitor 8 (Android) |
 | **BLE** | @capacitor-community/bluetooth-le 8 |
 | **Database** | @capacitor-community/sqlite 8 (SQLCipher) |
-| **TTS** | @capacitor-community/text-to-speech 8 (SSML-enhanced) |
+| **TTS** | @capacitor-community/text-to-speech 8 (enhanced prosody) |
 | **STT** | @capacitor-community/speech-recognition 7 |
 | **PDF** | jsPDF (on-device generation) |
 | **Icons** | Lucide React |
@@ -326,7 +325,7 @@ EVD/
 │   │   ├── db.ts                    # On-device persistence layer
 │   │   ├── dtc-codes.ts             # 500+ DTC code database
 │   │   ├── simulator.ts             # Multi-brand driving/charging simulator
-│   │   ├── speech.ts                # SSML speech formatter for natural TTS
+│   │   ├── speech.ts                # Enhanced speech formatter for natural TTS
 │   │   ├── utils.ts                 # Utility functions
 │   │   └── pdf/
 │   │       └── report-generator.ts  # PDF report generation

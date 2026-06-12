@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
-    <!-- EVDx Privacy-First: No cleartext traffic, no network access by default -->
+    <!-- EVDx Privacy-First: No internet access, local-only connections -->
     <base-config cleartextTrafficPermitted="false">
         <trust-anchors>
             <certificates src="system" />
@@ -8,11 +8,20 @@
     </base-config>
 
     <!-- Local WiFi for ELM327 OBD adapter connections only -->
+    <!-- Android domain matching is EXACT hostname, not subnet/CIDR. -->
+    <!-- includeSubdomains="true" allows 192.168.x.x, 10.x.x.x patterns -->
     <domain-config cleartextTrafficPermitted="true">
-        <domain includeSubdomains="false">192.168.0.0</domain>
-        <domain includeSubdomains="false">192.168.1.0</domain>
-        <domain includeSubdomains="false">10.0.0.0</domain>
+        <domain includeSubdomains="true">192.168.0.0</domain>
+        <domain includeSubdomains="true">192.168.1.0</domain>
+        <domain includeSubdomains="true">10.0.0.0</domain>
         <domain includeSubdomains="false">localhost</domain>
         <domain includeSubdomains="false">127.0.0.1</domain>
+        <!-- Common ELM327 adapter IPs -->
+        <domain includeSubdomains="false">192.168.0.10</domain>
+        <domain includeSubdomains="false">192.168.0.11</domain>
+        <domain includeSubdomains="false">192.168.1.10</domain>
+        <domain includeSubdomains="false">192.168.1.11</domain>
+        <domain includeSubdomains="false">10.0.0.1</domain>
+        <domain includeSubdomains="false">10.0.0.10</domain>
     </domain-config>
 </network-security-config>
