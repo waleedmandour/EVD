@@ -93,3 +93,23 @@ Stage Summary:
 - English Manual: /home/z/my-project/download/EVDx-User-Manual-English-v1.1.0.pdf (486 KB, 29 pages)
 - Arabic Manual: /home/z/my-project/download/EVDx-User-Manual-Arabic-v1.1.0.pdf (670 KB, 20 pages)
 - GitHub Release: https://github.com/waleedmandour/EVD/releases/tag/v1.1.0-pre-release
+
+---
+Task ID: 4
+Agent: Main Agent
+Task: Fix "Open button not activated" after APK install
+
+Work Log:
+- Diagnosed using aapt dump badging: APK had no launchable-activity despite correct manifest
+- Created fresh Capacitor test project for comparison - it showed launchable-activity correctly
+- Found ROOT CAUSE: AndroidManifest.xml had android.category.LAUNCHER instead of android.intent.category.LAUNCHER
+- The missing .intent in the category string caused Android PackageManager to not recognize any launchable activity
+- Also replaced Theme.SplashScreen with windowBackground-based splash
+- Created splash_screen.xml drawable and added onCreate override in MainActivity
+- Rebuilt APK, verified launchable-activity now appears in aapt output
+- Uploaded fixed APK to GitHub v1.1.0-pre-release
+
+Stage Summary:
+- CRITICAL FIX: android.category.LAUNCHER → android.intent.category.LAUNCHER
+- APK now properly recognized as having a launchable activity
+- GitHub Release: https://github.com/waleedmandour/EVD/releases/tag/v1.1.0-pre-release
