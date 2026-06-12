@@ -307,10 +307,26 @@ export const useAppStore = create<AppState>()(
       connectBluetooth: async () => {
         set({ connectionStatus: 'connecting', connectionMode: 'bluetooth' });
         try {
-          // Placeholder – real BLE connection via Capacitor/BLE plugin
-          setTimeout(() => {
+          // Real BLE connection via Capacitor plugin
+          const { bleService } = await import('./ble-service');
+          await bleService.initialize();
+          const devices = await bleService.scan(8000);
+          if (devices.length === 0) {
+            set({ connectionStatus: 'error' });
+            return;
+          }
+          // Auto-connect to first found adapter
+          const device = devices[0];
+          const connected = await bleService.connect(device.deviceId, device.profile);
+          if (connected) {
             set({ connectionStatus: 'connected' });
-          }, 2000);
+            // Start polling OBD data
+            bleService.startPolling((pid, value) => {
+              get().parseOBDResponse(value);
+            });
+          } else {
+            set({ connectionStatus: 'error' });
+          }
         } catch {
           set({ connectionStatus: 'error' });
         }
@@ -319,10 +335,19 @@ export const useAppStore = create<AppState>()(
       connectWifi: async (_ip: string, _port: number) => {
         set({ connectionStatus: 'connecting', connectionMode: 'wifi' });
         try {
-          // Placeholder – real WebSocket / ELM327 WiFi connection
-          setTimeout(() => {
+          // WiFi ELM327 connection via WebSocket
+          // The app has no INTERNET permission, but WiFi direct connections
+          // to local ELM327 adapters work without internet
+          const ws = new WebSocket(`ws://${_ip}:${_port}`);
+          ws.onopen = () => {
             set({ connectionStatus: 'connected' });
-          }, 2000);
+          };
+          ws.onerror = () => {
+            set({ connectionStatus: 'error' });
+          };
+          ws.onmessage = (event) => {
+            get().parseOBDResponse(String(event.data));
+          };
         } catch {
           set({ connectionStatus: 'error' });
         }
@@ -332,7 +357,15 @@ export const useAppStore = create<AppState>()(
         set({ connectionStatus: 'connected', connectionMode: 'demo' });
       },
 
-      disconnect: () => {
+      disconnect: async () => {
+        // Disconnect BLE if connected
+        try {
+          const { bleService } = await import('./ble-service');
+          if (bleService.isConnected()) {
+            bleService.stopPolling();
+            await bleService.disconnect();
+          }
+        } catch {}
         set({
           connectionStatus: 'disconnected',
           connectionMode: null,

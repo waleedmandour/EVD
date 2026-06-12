@@ -262,7 +262,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   loggingEnabled: false,
   notifications: true,
   soundEnabled: true,
-  voiceAssistant: false,
+  voiceAssistant: true,
   dataSharing: false,
   wifiIp: '192.168.0.10',
   wifiPort: 35000,
