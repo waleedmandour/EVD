@@ -9,18 +9,19 @@
 **Author:** Dr. Waleed Mandour
 **Email:** waleedmandour@gmail.com
 **Email2:** w.abumandour@squ.edu.om
-**Version:** 1.0.0-pre-release
+**Version:** 1.1.0-pre-release
+**License:** © 2026 Dr. Waleed Mandour
 
 ---
 
 ## 📦 Download Pre-Release APK
 
-> **EVDx v1.0.0 Pre-Release** — First public build for testing and feedback.
+> **EVDx v1.1.0 Pre-Release** — Critical fixes + 3 AI features added.
 
-[![Download APK](https://img.shields.io/badge/Download-EVDx%20v1.0.0%20APK-blue?style=for-the-badge&logo=android)](https://github.com/waleedmandour/EVD/releases/tag/v1.0.0-pre-release)
+[![Download APK](https://img.shields.io/badge/Download-EVDx%20v1.1.0%20APK-blue?style=for-the-badge&logo=android)](https://github.com/waleedmandour/EVD/releases/tag/v1.1.0-pre-release)
 
 **Installation:**
-1. Download the `EVDx-v1.0.0-pre-release.apk` from the [Releases page](https://github.com/waleedmandour/EVD/releases/tag/v1.0.0-pre-release)
+1. Download the `EVDx-v1.1.0.apk` from the [Releases page](https://github.com/waleedmandour/EVD/releases/tag/v1.1.0-pre-release)
 2. Enable "Install from Unknown Sources" in your Android settings
 3. Open the downloaded APK and tap **Install**
 4. Launch EVDx and follow the onboarding wizard
@@ -48,7 +49,7 @@ EVDx is a **production-grade universal EV diagnostic application** that transfor
 
 ## 📱 Features
 
-### 9-Tab Navigation Interface
+### Primary Navigation (5 tabs + Quick Menu)
 
 | Tab | Description |
 |---|---|
@@ -56,11 +57,24 @@ EVDx is a **production-grade universal EV diagnostic application** that transfor
 | 🔋 **Battery** | SOC/SOH tracking, cell voltage analysis, thermal management, capacity charts, PDF report generation |
 | ⚡ **Charging** | Real-time charging session tracking, DC/AC charge type selection, cost calculator (OMR/USD), cell voltage balance chart, charge curve visualization |
 | 🔍 **Diagnostics** | Full DTC scan/clear, MIL indicator, severity-coded fault list with causes & fixes, monitor readiness grid, PDF report generation |
+| ⚙️ **Settings** | Language toggle (EN/AR), voice assistant, alert thresholds, AI features access, units, data export/delete, privacy policy, credits |
+
+### Quick Menu (expandable above nav)
+
+| Tab | Description |
+|---|---|
 | 📈 **Live Data** | Multi-parameter graphing (up to 6 simultaneous), time window selection (30s/5min/30min), CSV export |
 | 🗺️ **Sessions** | Trip logging with start/stop, eco-score breakdown, EV vs ICE cost comparison, CO₂ savings calculator |
 | 🔧 **Maintenance** | Service tracker with next-due reminders, 7 service types, cost tracking, full service history log |
 | 📡 **Device** | Adapter info, signal strength, connection quality, clone detection, VIN display, supported adapter list |
-| ⚙️ **Settings** | Language toggle (EN/AR), voice assistant, alert thresholds, temperature/distance units, data export/delete, privacy policy |
+
+### AI Features (New in v1.1.0)
+
+| Feature | Description |
+|---|---|
+| 🧠 **AI Battery Predictor** | Degradation forecasting, health grading (A+ to F), risk factor detection, personalized care recommendations |
+| 🛡️ **AI Smart DTC Analyzer** | Root cause analysis correlating multiple fault codes, action plans with priority levels, estimated repair costs |
+| 🌿 **AI Eco-Driving Coach** | Real-time driving score breakdown, personalized range optimization tips, regen braking coaching |
 
 ### Onboarding Flow
 
@@ -335,7 +349,7 @@ EVD/
 
 EVDx is built with a **privacy-first architecture**:
 
-- **No INTERNET permission** in AndroidManifest.xml — the app physically cannot make network requests
+- **Network security config** blocks all non-local traffic — WiFi only for local ELM327 adapter connections (192.168.x.x, 10.x.x.x)
 - **No cloud services** — all data processing and storage is on-device
 - **No analytics SDKs** — no Firebase, Google Analytics, Sentry, or any tracking
 - **No user accounts** — no registration, no login, no server-side data
@@ -376,7 +390,9 @@ Full right-to-left support for Arabic:
 
 ## 📝 License
 
-MIT License — see [LICENSE](LICENSE) for details.
+© 2026 Dr. Waleed Mandour. All rights reserved.
+
+See [LICENSE](LICENSE) for details.
 
 ---
 
