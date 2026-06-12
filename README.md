@@ -6,9 +6,27 @@
 [![Platform: Android](https://img.shields.io/badge/Platform-Android-green.svg)]()
 [![Privacy-First](https://img.shields.io/badge/Privacy-100%25%20On--Device-red.svg)]()
 
-**Author:** Dr. Waleed Mandour  
-**Email:** waleedmandour@gmail.com  
-**Version:** 1.1.0
+**Author:** Dr. Waleed Mandour
+**Email:** waleedmandour@gmail.com
+**Version:** 1.0.0-pre-release
+
+---
+
+## 📦 Download Pre-Release APK
+
+> **EVDx v1.0.0 Pre-Release** — First public build for testing and feedback.
+
+[![Download APK](https://img.shields.io/badge/Download-EVDx%20v1.0.0%20APK-blue?style=for-the-badge&logo=android)](https://github.com/waleedmandour/EVD/releases/tag/v1.0.0-pre-release)
+
+**Installation:**
+1. Download the `EVDx-v1.0.0-pre-release.apk` from the [Releases page](https://github.com/waleedmandour/EVD/releases/tag/v1.0.0-pre-release)
+2. Enable "Install from Unknown Sources" in your Android settings
+3. Open the downloaded APK and tap **Install**
+4. Launch EVDx and follow the onboarding wizard
+
+**System Requirements:** Android 7.0 (API 24) or later, Bluetooth LE recommended
+
+> ⚠️ This is a **pre-release build** for testing purposes. Not intended for production diagnostics.
 
 ---
 
