@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { useAppStore } from '@/lib/store';
 import { Capacitor } from '@capacitor/core';
 import { Mic, MicOff, Volume2, Sparkles, X } from 'lucide-react';
+import { formatCommandResponse, formatSpeech, severityFromData } from '@/lib/speech';
 
 // ─── Page Summary Data ─────────────────────────────────────────────────────────
 
@@ -170,8 +171,10 @@ export default function VoiceAssistant() {
 
     try {
       const { TextToSpeech } = await import('@capacitor-community/text-to-speech');
+      // Format with SSML for natural speech — severity auto-detected from content
+      const ssmlText = formatCommandResponse(text, lang);
       await TextToSpeech.speak({
-        text,
+        text: ssmlText,
         lang: lang === 'ar' ? 'ar-SA' : 'en-US',
         rate: 1.0,
         pitch: 1.0,
