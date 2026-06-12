@@ -113,3 +113,25 @@ Stage Summary:
 - CRITICAL FIX: android.category.LAUNCHER → android.intent.category.LAUNCHER
 - APK now properly recognized as having a launchable activity
 - GitHub Release: https://github.com/waleedmandour/EVD/releases/tag/v1.1.0-pre-release
+
+---
+Task ID: 1
+Agent: Main
+Task: Add SSML-enhanced TTS, then fix 3 critical bugs found during review
+
+Work Log:
+- Created src/lib/speech.ts — speech formatter with severity-based prosody, DTC spelling, Arabic acronym substitution
+- Updated VoiceAssistant.tsx — imported and used formatCommandResponse for TTS calls
+- Fixed C1: Voice Recognition — changed partialResults from false to true, moved listener setup before start(), replaced invalid 'end' listener with 'listeningState'
+- Fixed C2: TTS Prosody — reworked speech.ts to use native rate/pitch params instead of SSML (Capacitor TTS plugin doesn't support SSML)
+- Fixed C3: WiFi ELM327 — updated network_security_config.xml with includeSubdomains="true" and common ELM327 IPs
+- Updated README.md with new features and corrected descriptions
+- Bumped version to 1.2.0 (versionCode 4)
+- Built APK (24.8MB) and uploaded to GitHub as v1.2.0-pre-release
+- Deleted old v1.1.0-pre-release to avoid confusion
+
+Stage Summary:
+- 3 critical bugs fixed: voice recognition, TTS output, WiFi connectivity
+- New speech.ts provides enhanced natural TTS with severity-aware prosody
+- APK rebuilt and uploaded: /home/z/my-project/download/EVDx-v1.2.0.apk
+- GitHub release: https://github.com/waleedmandour/EVD/releases/tag/v1.2.0-pre-release
