@@ -98,8 +98,11 @@ export default function OnboardingFlow() {
               </motion.div>
               <h1 className="text-3xl font-bold text-evdx-text mb-2">EVDx</h1>
               <p className="text-evdx-text-secondary mb-2">{t('welcomeSubtitle')}</p>
-              <p className="text-xs text-evdx-text-secondary/60 mb-12">
+              <p className="text-xs text-evdx-text-secondary/60 mb-1">
                 By Dr. Waleed Mandour
+              </p>
+              <p className="text-[10px] text-evdx-text-secondary/40 mb-10">
+                &copy; 2026 &middot; github.com/waleedmandour/EVD
               </p>
               <Button
                 onClick={handleNext}

@@ -14,10 +14,10 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "EVDx — Universal EV Diagnostics",
-  description: "Professional electric vehicle diagnostics companion. Real-time monitoring, battery health, fault scanning, and more.",
-  authors: [{ name: "Dr. Waleed Mandour", url: "mailto:waleedmandour@gmail.com" }],
-  keywords: ["EV", "electric vehicle", "diagnostics", "OBD2", "battery health", "DTC", "real-time data"],
+  title: "EVDx — Universal EV Diagnostics Pro",
+  description: "Professional electric vehicle diagnostics companion. Real-time monitoring, battery health, fault scanning, AI analysis, and more. By Dr. Waleed Mandour © 2026.",
+  authors: [{ name: "Dr. Waleed Mandour", url: "https://github.com/waleedmandour/EVD" }],
+  keywords: ["EV", "electric vehicle", "diagnostics", "OBD2", "battery health", "DTC", "real-time data", "AI", "bilingual", "Arabic"],
   icons: {
     icon: "/favicon.ico",
   },

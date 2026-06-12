@@ -9,11 +9,11 @@ import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Globe, Volume2, Moon, Shield, Trash2, Download, Info, ChevronRight, Thermometer, Zap, MapPin } from 'lucide-react';
+import { Globe, Volume2, Moon, Shield, Trash2, Download, Info, ChevronRight, Thermometer, Zap, MapPin, ExternalLink, Heart, Brain, Leaf } from 'lucide-react';
 
 export default function SettingsView() {
   const { t, i18n } = useTranslation('settings');
-  const { settings, updateSettings, disconnect } = useAppStore();
+  const { settings, updateSettings, disconnect, setActiveTab } = useAppStore();
   const [lowBattery, setLowBattery] = useState(String(20));
   const [highTemp, setHighTemp] = useState(String(80));
   const [lowRange, setLowRange] = useState(String(50));
@@ -41,6 +41,8 @@ export default function SettingsView() {
       URL.revokeObjectURL(url);
     }
   };
+
+  const isRTL = settings.language === 'ar';
 
   return (
     <div className="space-y-4 pb-2">
@@ -70,6 +72,66 @@ export default function SettingsView() {
         </CardContent>
       </Card>
 
+      {/* AI Features */}
+      <Card className="bg-[#1A2332] border-evdx-purple/20">
+        <CardContent className="p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <Brain size={16} className="text-evdx-purple" />
+            <span className="text-sm font-medium text-evdx-text">
+              {isRTL ? 'ميزات الذكاء الاصطناعي' : 'AI Features'}
+            </span>
+          </div>
+
+          <button
+            onClick={() => setActiveTab('aiBattery')}
+            className="w-full flex items-center justify-between bg-[#0D1117] hover:bg-evdx-purple/5 rounded-lg px-3 py-3 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-evdx-purple/10 flex items-center justify-center">
+                <Brain size={14} className="text-evdx-purple" />
+              </div>
+              <div className="text-left">
+                <p className="text-sm text-evdx-text">{isRTL ? 'التنبؤ بصحة البطارية' : 'Battery Health Predictor'}</p>
+                <p className="text-xs text-evdx-text-secondary">{isRTL ? 'توقعات التدهور والتوصيات' : 'Degradation forecast & tips'}</p>
+              </div>
+            </div>
+            <ChevronRight size={16} className="text-evdx-text-secondary" />
+          </button>
+
+          <button
+            onClick={() => setActiveTab('aiDtc')}
+            className="w-full flex items-center justify-between bg-[#0D1117] hover:bg-evdx-purple/5 rounded-lg px-3 py-3 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-evdx-critical/10 flex items-center justify-center">
+                <Shield size={14} className="text-evdx-critical" />
+              </div>
+              <div className="text-left">
+                <p className="text-sm text-evdx-text">{isRTL ? 'محلل الأعطال الذكي' : 'Smart DTC Analyzer'}</p>
+                <p className="text-xs text-evdx-text-secondary">{isRTL ? 'تحليل السبب الجذري بالذكاء الاصطناعي' : 'AI root cause analysis'}</p>
+              </div>
+            </div>
+            <ChevronRight size={16} className="text-evdx-text-secondary" />
+          </button>
+
+          <button
+            onClick={() => setActiveTab('aiCoach')}
+            className="w-full flex items-center justify-between bg-[#0D1117] hover:bg-evdx-purple/5 rounded-lg px-3 py-3 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-evdx-green/10 flex items-center justify-center">
+                <Leaf size={14} className="text-evdx-green" />
+              </div>
+              <div className="text-left">
+                <p className="text-sm text-evdx-text">{isRTL ? 'مدرب القيادة الاقتصادية' : 'Eco-Driving Coach'}</p>
+                <p className="text-xs text-evdx-text-secondary">{isRTL ? 'نصائح مخصصة لتحسين المدى' : 'Personalized range tips'}</p>
+              </div>
+            </div>
+            <ChevronRight size={16} className="text-evdx-text-secondary" />
+          </button>
+        </CardContent>
+      </Card>
+
       {/* Voice Assistant */}
       <Card className="bg-[#1A2332] border-white/5">
         <CardContent className="p-4 space-y-4">
@@ -80,8 +142,8 @@ export default function SettingsView() {
 
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-evdx-text">Voice Assistant</p>
-              <p className="text-xs text-evdx-text-secondary">Enable voice commands & alerts</p>
+              <p className="text-sm text-evdx-text">{isRTL ? 'مساعد الصوت' : 'Voice Assistant'}</p>
+              <p className="text-xs text-evdx-text-secondary">{isRTL ? 'تمكين الأوامر والتنبيهات الصوتية' : 'Enable voice commands & alerts'}</p>
             </div>
             <Switch
               checked={settings.voiceAssistant}
@@ -114,7 +176,7 @@ export default function SettingsView() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Thermometer size={14} className="text-evdx-critical" />
-                <span className="text-sm text-evdx-text">Low Battery %</span>
+                <span className="text-sm text-evdx-text">{isRTL ? 'بطارية منخفضة %' : 'Low Battery %'}</span>
               </div>
               <Input
                 type="number"
@@ -127,7 +189,7 @@ export default function SettingsView() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Thermometer size={14} className="text-evdx-warning" />
-                <span className="text-sm text-evdx-text">High Temp °C</span>
+                <span className="text-sm text-evdx-text">{isRTL ? 'حرارة عالية °م' : 'High Temp °C'}</span>
               </div>
               <Input
                 type="number"
@@ -140,7 +202,7 @@ export default function SettingsView() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <MapPin size={14} className="text-evdx-primary" />
-                <span className="text-sm text-evdx-text">Low Range km</span>
+                <span className="text-sm text-evdx-text">{isRTL ? 'مدى منخفض كم' : 'Low Range km'}</span>
               </div>
               <Input
                 type="number"
@@ -163,19 +225,8 @@ export default function SettingsView() {
 
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-evdx-text">{t('highContrast')}</p>
-              <p className="text-xs text-evdx-text-secondary">{t('highContrastDescription')}</p>
-            </div>
-            <Switch
-              checked={false}
-              onCheckedChange={() => {}}
-            />
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-evdx-text">Temperature Unit</p>
-              <p className="text-xs text-evdx-text-secondary">Celsius or Fahrenheit</p>
+              <p className="text-sm text-evdx-text">{isRTL ? 'وحدة الحرارة' : 'Temperature Unit'}</p>
+              <p className="text-xs text-evdx-text-secondary">{isRTL ? 'مئوية أو فهرنهايت' : 'Celsius or Fahrenheit'}</p>
             </div>
             <Button
               onClick={() => updateSettings({ temperatureUnit: settings.temperatureUnit === 'celsius' ? 'fahrenheit' : 'celsius' })}
@@ -188,8 +239,8 @@ export default function SettingsView() {
 
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-evdx-text">Distance Unit</p>
-              <p className="text-xs text-evdx-text-secondary">Kilometers or Miles</p>
+              <p className="text-sm text-evdx-text">{isRTL ? 'وحدة المسافة' : 'Distance Unit'}</p>
+              <p className="text-xs text-evdx-text-secondary">{isRTL ? 'كيلومتر أو ميل' : 'Kilometers or Miles'}</p>
             </div>
             <Button
               onClick={() => updateSettings({ distanceUnit: settings.distanceUnit === 'km' ? 'miles' : 'km' })}
@@ -202,7 +253,7 @@ export default function SettingsView() {
         </CardContent>
       </Card>
 
-      {/* Security */}
+      {/* Security & Cost */}
       <Card className="bg-[#1A2332] border-white/5">
         <CardContent className="p-4 space-y-4">
           <div className="flex items-center gap-2">
@@ -212,18 +263,7 @@ export default function SettingsView() {
 
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-evdx-text">{t('autoWipe')}</p>
-              <p className="text-xs text-evdx-text-secondary">{t('autoWipeDescription')}</p>
-            </div>
-            <Switch
-              checked={false}
-              onCheckedChange={() => {}}
-            />
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-evdx-text">Electricity Rate</p>
+              <p className="text-sm text-evdx-text">{isRTL ? 'سعر الكهرباء' : 'Electricity Rate'}</p>
               <p className="text-xs text-evdx-text-secondary">{settings.electricityCostPerKwh} OMR/kWh</p>
             </div>
             <Input
@@ -237,8 +277,8 @@ export default function SettingsView() {
         </CardContent>
       </Card>
 
-      {/* About */}
-      <Card className="bg-[#1A2332] border-white/5">
+      {/* About - Dr. Waleed Mandour */}
+      <Card className="bg-[#1A2332] border-evdx-primary/20">
         <CardContent className="p-4 space-y-3">
           <div className="flex items-center gap-2">
             <Info size={16} className="text-evdx-primary" />
@@ -248,16 +288,41 @@ export default function SettingsView() {
           <div className="space-y-2">
             <div className="flex items-center justify-between bg-[#0D1117] rounded-lg px-3 py-2">
               <span className="text-xs text-evdx-text-secondary">{t('appVersion')}</span>
-              <span className="text-sm text-evdx-text">1.0.0</span>
+              <span className="text-sm text-evdx-text">1.1.0</span>
             </div>
             <div className="flex items-center justify-between bg-[#0D1117] rounded-lg px-3 py-2">
-              <span className="text-xs text-evdx-text-secondary">{t('author', { ns: 'common' })}</span>
-              <span className="text-sm text-evdx-text">Dr. Waleed Mandour</span>
+              <span className="text-xs text-evdx-text-secondary">{isRTL ? 'المؤلف' : 'Author'}</span>
+              <span className="text-sm text-evdx-text font-medium">Dr. Waleed Mandour</span>
             </div>
             <div className="flex items-center justify-between bg-[#0D1117] rounded-lg px-3 py-2">
-              <span className="text-xs text-evdx-text-secondary">Email</span>
+              <span className="text-xs text-evdx-text-secondary">{isRTL ? 'البريد الإلكتروني' : 'Email'}</span>
               <span className="text-sm text-evdx-primary">waleedmandour@gmail.com</span>
             </div>
+            <div className="flex items-center justify-between bg-[#0D1117] rounded-lg px-3 py-2">
+              <span className="text-xs text-evdx-text-secondary">{isRTL ? 'الترخيص' : 'License'}</span>
+              <span className="text-sm text-evdx-text">&copy; 2026 Dr. Waleed Mandour</span>
+            </div>
+          </div>
+
+          <a
+            href="https://github.com/waleedmandour/EVD"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-between bg-gradient-to-r from-evdx-primary/10 to-evdx-purple/10 border border-evdx-primary/20 rounded-lg px-3 py-3 hover:from-evdx-primary/15 hover:to-evdx-purple/15 transition-all"
+          >
+            <div className="flex items-center gap-2">
+              <svg viewBox="0 0 24 24" className="w-5 h-5 fill-evdx-text">
+                <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+              </svg>
+              <span className="text-sm text-evdx-text font-medium">GitHub Repository</span>
+            </div>
+            <ExternalLink size={16} className="text-evdx-primary" />
+          </a>
+
+          <div className="text-center pt-2">
+            <p className="text-[10px] text-evdx-text-secondary flex items-center justify-center gap-1">
+              Made with <Heart size={10} className="text-evdx-critical fill-evdx-critical" /> in Oman
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -294,8 +359,12 @@ export default function SettingsView() {
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel className="bg-[#0D1117] text-evdx-text border-white/10">Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDeleteAllData} className="bg-evdx-critical text-white">Delete</AlertDialogAction>
+                <AlertDialogCancel className="bg-[#0D1117] text-evdx-text border-white/10">
+                  {isRTL ? 'إلغاء' : 'Cancel'}
+                </AlertDialogCancel>
+                <AlertDialogAction onClick={handleDeleteAllData} className="bg-evdx-critical text-white">
+                  {isRTL ? 'حذف' : 'Delete'}
+                </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
@@ -303,13 +372,17 @@ export default function SettingsView() {
       </Card>
 
       {/* Privacy */}
-      <Card className="bg-[#1A2332] border-white/5">
+      <Card className="bg-[#1A2332] border-evdx-green/20">
         <CardContent className="p-4">
           <div className="flex items-center gap-3">
             <Shield size={16} className="text-evdx-green" />
             <div>
               <p className="text-sm font-medium text-evdx-text">{t('privacyPolicy')}</p>
-              <p className="text-xs text-evdx-text-secondary">All data stored locally. Never shared.</p>
+              <p className="text-xs text-evdx-text-secondary">
+                {isRTL
+                  ? 'جميع البيانات مخزنة محلياً. لا يتم مشاركتها أبداً. صفر بيانات تتبع.'
+                  : 'All data stored locally. Never shared. Zero telemetry.'}
+              </p>
             </div>
           </div>
         </CardContent>

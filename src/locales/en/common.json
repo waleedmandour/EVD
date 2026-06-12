@@ -103,7 +103,10 @@
     "maintenance": "Maintenance",
     "device": "Device",
     "settings": "Settings",
-    "more": "More"
+    "more": "More",
+    "aiBattery": "AI Battery",
+    "aiDtc": "AI DTC",
+    "aiCoach": "AI Coach"
   },
   "connectionStatus": {
     "disconnected": "Disconnected",

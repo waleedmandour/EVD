@@ -103,7 +103,10 @@
     "maintenance": "الصيانة",
     "device": "الجهاز",
     "settings": "الإعدادات",
-    "more": "المزيد"
+    "more": "المزيد",
+    "aiBattery": "ذكاء البطارية",
+    "aiDtc": "ذكاء الأعطال",
+    "aiCoach": "مدرب القيادة"
   },
   "connectionStatus": {
     "disconnected": "غير متصل",

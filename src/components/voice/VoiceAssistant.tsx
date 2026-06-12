@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { useAppStore } from '@/lib/store';
 import { Capacitor } from '@capacitor/core';
-import { Mic, MicOff, Volume2, Sparkles } from 'lucide-react';
+import { Mic, MicOff, Volume2, Sparkles, X } from 'lucide-react';
 
 // ─── Page Summary Data ─────────────────────────────────────────────────────────
 
@@ -46,6 +46,18 @@ const PAGE_SUMMARIES: Record<string, Record<string, string>> = {
     en: 'Settings: Configure language, voice assistant, units, alert thresholds, data export, and privacy.',
     ar: 'الإعدادات: تكوين اللغة ومساعد الصوت والوحدات وعتبات التنبيه وتصدير البيانات والخصوصية.',
   },
+  aiBattery: {
+    en: 'AI Battery Predictor: Machine learning-based battery degradation forecast with personalized care recommendations.',
+    ar: 'التنبؤ بالبطارية: توقعات تدهور البطارية بالتعلم الآلي مع توصيات رعاية مخصصة.',
+  },
+  aiDtc: {
+    en: 'AI Smart DTC Analyzer: Root cause analysis correlating multiple fault codes with real-time vehicle data.',
+    ar: 'محلل الأعطال الذكي: تحليل السبب الجذبي بربط رموز الأعطال المتعددة مع بيانات السيارة.',
+  },
+  aiCoach: {
+    en: 'AI Eco-Driving Coach: Personalized driving tips to maximize range and extend battery life.',
+    ar: 'مدرب القيادة الاقتصادية: نصائح قيادة مخصصة لتعظيم المدى وإطالة عمر البطارية.',
+  },
 };
 
 export default function VoiceAssistant() {
@@ -55,9 +67,13 @@ export default function VoiceAssistant() {
   const [feedbackText, setFeedbackText] = useState('');
   const [lastTranscript, setLastTranscript] = useState('');
   const [showSummary, setShowSummary] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
   const processingRef = useRef(false);
 
   const lang = settings.language;
+
+  // Don't render if voice assistant is disabled
+  if (!settings.voiceAssistant) return null;
 
   // Generate dynamic page summary
   const getPageSummary = useCallback((): string => {
@@ -285,33 +301,33 @@ export default function VoiceAssistant() {
 
   return (
     <>
-      {/* Floating Buttons Container */}
-      <div className="fixed bottom-20 right-4 z-40 flex flex-col gap-3">
+      {/* Floating Voice Assistant — visible on all screens */}
+      <div className={`fixed z-50 flex flex-col gap-2 ${settings.language === 'ar' ? 'left-4' : 'right-4'}`} style={{ bottom: '76px' }}>
         {/* Summarize Page Button */}
         <motion.button
           onClick={handleSummarizePage}
-          className="w-12 h-12 rounded-full bg-evdx-purple/80 hover:bg-evdx-purple flex items-center justify-center shadow-lg transition-colors"
+          className="w-11 h-11 rounded-full bg-evdx-purple/80 hover:bg-evdx-purple flex items-center justify-center shadow-lg shadow-evdx-purple/20 transition-colors"
           whileTap={{ scale: 0.9 }}
           aria-label={lang === 'ar' ? 'تلخيص الصفحة' : 'Summarize page'}
         >
-          <Sparkles size={20} className="text-white" />
+          <Sparkles size={18} className="text-white" />
         </motion.button>
 
         {/* Mic Button */}
         <motion.button
           onClick={toggleListening}
-          className={`w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-colors ${
+          className={`w-12 h-12 rounded-full flex items-center justify-center shadow-lg transition-colors ${
             voiceListening
-              ? 'bg-evdx-critical animate-voice-pulse'
-              : 'bg-evdx-primary hover:bg-evdx-primary/90'
+              ? 'bg-evdx-critical shadow-evdx-critical/30 animate-voice-pulse'
+              : 'bg-evdx-primary shadow-evdx-primary/20 hover:bg-evdx-primary/90'
           }`}
           whileTap={{ scale: 0.9 }}
           aria-label={voiceListening ? t('listening') : t('tapToActivate')}
         >
           {voiceListening ? (
-            <MicOff size={24} className="text-white" />
+            <MicOff size={22} className="text-white" />
           ) : (
-            <Mic size={24} className="text-[#0D1117]" />
+            <Mic size={22} className="text-[#0D1117]" />
           )}
         </motion.button>
       </div>
@@ -324,7 +340,7 @@ export default function VoiceAssistant() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            className="fixed bottom-36 left-4 right-4 z-40 max-w-md mx-auto"
+            className="fixed bottom-32 left-4 right-4 z-50 max-w-md mx-auto"
           >
             <div className={`border rounded-2xl p-4 shadow-xl flex items-start gap-3 ${
               showSummary
@@ -354,6 +370,9 @@ export default function VoiceAssistant() {
                   <p className="text-xs text-evdx-text-secondary mt-1 italic">&ldquo;{lastTranscript}&rdquo;</p>
                 )}
               </div>
+              <button onClick={() => setShowFeedback(false)} className="text-evdx-text-secondary hover:text-evdx-text shrink-0">
+                <X size={14} />
+              </button>
             </div>
           </motion.div>
         )}
@@ -366,7 +385,7 @@ export default function VoiceAssistant() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}
-            className="fixed bottom-36 left-4 right-4 z-40 max-w-md mx-auto"
+            className="fixed bottom-32 left-4 right-4 z-50 max-w-md mx-auto"
           >
             <div className="bg-evdx-critical/10 border border-evdx-critical/20 rounded-2xl p-4 flex items-center gap-3">
               <div className="flex gap-1">
