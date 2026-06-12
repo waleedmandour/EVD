@@ -14,7 +14,11 @@
         <item name="android:background">@null</item>
     </style>
 
-    <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
-        <item name="android:background">@color/colorPrimaryDark</item>
+    <!-- Splash screen launch theme - uses windowBackground for instant splash
+         without requiring the SplashScreen API installSplashScreen() call -->
+    <style name="AppTheme.NoActionBarLaunch" parent="AppTheme.NoActionBar">
+        <item name="android:windowBackground">@drawable/splash_screen</item>
+        <item name="android:windowFullscreen">false</item>
+        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
     </style>
 </resources>
