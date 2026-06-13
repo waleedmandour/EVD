@@ -9,19 +9,25 @@
 **Author:** Dr. Waleed Mandour
 **Email:** waleedmandour@gmail.com
 **Email2:** w.abumandour@squ.edu.om
-**Version:** 1.2.0-pre-release
+**Version:** 1.3.0-pre-release
 **License:** © 2026 Dr. Waleed Mandour
 
 ---
 
-## 📦 Download Pre-Release APK
+## 📦 Download Pre-Release
 
-> **EVDx v1.1.0 Pre-Release** — Critical fixes + 3 AI features added.
+> **EVDx v1.3.0 Pre-Release** — 90+ multilingual voice commands, 3 Arabic dialects, enhanced TTS.
 
-[![Download APK](https://img.shields.io/badge/Download-EVDx%20v1.1.0%20APK-blue?style=for-the-badge&logo=android)](https://github.com/waleedmandour/EVD/releases/tag/v1.1.0-pre-release)
+[![Download APK](https://img.shields.io/badge/Download-EVDx%20v1.3.0%20APK-blue?style=for-the-badge&logo=android)](https://github.com/waleedmandour/EVD/releases/tag/v1.3.0-pre-release)
+
+| Asset | Description |
+|---|---|
+| 📦 [EVDx-v1.3.0.apk](https://github.com/waleedmandour/EVD/releases/download/v1.3.0-pre-release/EVDx-v1.3.0.apk) | Android APK (25 MB) |
+| 📘 [User Guide (English)](https://github.com/waleedmandour/EVD/releases/download/v1.3.0-pre-release/EVDx-UserGuide-EN-v1.3.0.pdf) | Complete English guide (8 pages) |
+| 📗 [دليل المستخدم (العربية)](https://github.com/waleedmandour/EVD/releases/download/v1.3.0-pre-release/EVDx-UserGuide-AR-v1.3.0.pdf) | دليل عربي كامل (8 صفحات) |
 
 **Installation:**
-1. Download the `EVDx-v1.1.0.apk` from the [Releases page](https://github.com/waleedmandour/EVD/releases/tag/v1.1.0-pre-release)
+1. Download the APK from the [Releases page](https://github.com/waleedmandour/EVD/releases/tag/v1.3.0-pre-release)
 2. Enable "Install from Unknown Sources" in your Android settings
 3. Open the downloaded APK and tap **Install**
 4. Launch EVDx and follow the onboarding wizard
@@ -40,7 +46,7 @@ EVDx is a **production-grade universal EV diagnostic application** that transfor
 
 - **🔒 Privacy-First:** No internet permission in AndroidManifest. All data stays on-device. Zero cloud. Zero telemetry. Zero analytics.
 - **🌍 Universal:** Supports 16+ EV brands worldwide with brand-specific OBD profiles and proprietary PIDs
-- **🧠 Intelligent:** Bilingual voice assistant (English/Arabic) with on-device TTS/STT
+- **🧠 Intelligent:** Bilingual voice assistant (English/Arabic) with 90+ commands across 3 Arabic dialects, on-device TTS/STT
 - **📊 Comprehensive:** 500+ DTC codes database covering all major EV systems
 - **📄 Report Generation:** Professional PDF reports for battery health, diagnostic scans, and trip summaries
 - **🌐 Bilingual:** Full English and Arabic support with complete RTL layout
@@ -68,7 +74,7 @@ EVDx is a **production-grade universal EV diagnostic application** that transfor
 | 🔧 **Maintenance** | Service tracker with next-due reminders, 7 service types, cost tracking, full service history log |
 | 📡 **Device** | Adapter info, signal strength, connection quality, clone detection, VIN display, supported adapter list |
 
-### AI Features (New in v1.1.0)
+### AI Features
 
 | Feature | Description |
 |---|---|
@@ -80,18 +86,34 @@ EVDx is a **production-grade universal EV diagnostic application** that transfor
 
 5-step guided setup: Splash → Language Selection → Privacy Consent → Vehicle Setup (brand/model/battery) → Adapter/Demo Connection
 
-### Voice Assistant
+### Voice Assistant (v1.3.0 — Major Upgrade)
 
-Floating mic button with on-device speech recognition and SSML-enhanced TTS:
-- **English commands:** "battery", "range", "motor", "scan faults", "dashboard", "charging", "settings"
-- **Arabic commands:** "بطارية", "مدى", "محرك", "أعطال", "لوحة", "شحن", "إعدادات"
-- Proactive low-battery alerts
+Floating mic + summarize buttons with on-device speech recognition and enhanced TTS:
+
+**90+ voice command phrases** across **3 Arabic dialects** and English:
+
+| Dialect | Example Commands |
+|---|---|
+| **Modern Standard Arabic** | حالة البطارية، المدى، أعطال، تشخيص، الإعدادات، ملخص |
+| **Gulf Arabic** | كم الشحن، كم اقدر امشي، ايش العطل، وصّل، اشبك، لخّص، سبورت |
+| **Egyptian Arabic** | قد ايه الشحن، هاوصل فين، الموتور، سكان، التابلو، اقرألي، ديمو |
+| **English** | battery, battery health, range, scan faults, clear codes, summarize, help |
+
+**20+ command categories** supported:
+- **Navigation:** dashboard, battery, charging, sessions, maintenance, settings, diagnostics
+- **Data queries:** battery level, battery health, range, motor temp, speed, temperature, cell voltage
+- **Actions:** clear codes, export report, demo mode, connect/disconnect adapter
+- **Voice control:** read aloud, stop reading, summarize page, voice help, mute alerts
+- **Drive modes:** eco, sport, normal
+- **Intelligent sub-detection:** "صحة البطارية" gives health-specific SOH response; "شحن البطارية" gives charge level
+
+**Enhanced TTS** for natural voice output:
+- Severity-aware prosody (normal/warning/critical with distinct rate and pitch)
+- DTC codes spelled character-by-character (e.g., P, 0, A, 8, 0)
+- Arabic acronym substitution (BMS → "نظام إدارة البطارية", SOC → "حالة الشحن", 22+ acronyms)
+- Natural comma pauses at sentence boundaries
 - Visual feedback overlay with transcript display
-- **Enhanced TTS** for natural voice output:
-  - Severity-aware prosody (normal/warning/critical rate and pitch)
-  - DTC codes spelled character-by-character (e.g., P-0-A-8-0)
-  - Arabic acronym substitution (BMS → "نظام إدارة البطارية")
-  - Natural comma pauses at sentence boundaries
+- Page summarization via Sparkles button
 
 ---
 
