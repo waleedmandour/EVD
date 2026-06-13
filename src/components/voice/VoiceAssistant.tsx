@@ -121,40 +121,236 @@ export default function VoiceAssistant() {
     const cmd = transcript.toLowerCase().trim();
     let response = '';
 
-    if (cmd.includes('battery') || cmd.includes('بطارية')) {
-      response = lang === 'ar'
-        ? `شحن البطارية ${vehicleData.soc.toFixed(0)}%، الصحة ${vehicleData.soh.toFixed(0)}%`
-        : `Battery at ${vehicleData.soc.toFixed(0)}%, Health ${vehicleData.soh.toFixed(0)}%`;
+    // ─── Battery ───────────────────────────────────────────────────
+    // MSA: بطارية, حالة البطارية, مستوى الشحن, صحة البطارية
+    // Gulf: اشحن, كم الشحن, حالة البطاريه
+    // Egyptian: البطارية, شحن البطارية, صحة البطارية, قد ايه الشحن
+    if (cmd.includes('battery') || cmd.includes('بطاري') || cmd.includes('بطارية') || cmd.includes('شحن البطارية') || cmd.includes('حالة البطارية') || cmd.includes('مستوى الشحن') || cmd.includes('صحة البطارية') || cmd.includes('صحه البطارية') || cmd.includes('حالة الشحن') || cmd.includes('كم الشحن') || cmd.includes('قد ايه الشحن') || cmd.includes('اد ايه الشحن') || cmd.includes('نسبة الشحن') || cmd.includes('اشحن')) {
+      // Sub-detect: battery health vs battery level
+      if (cmd.includes('صحة') || cmd.includes('صحه') || cmd.includes('health') || cmd.includes('حالة البطارية') || cmd.includes('صحة البطارية')) {
+        const statusAr = vehicleData.soh > 80 ? 'حالة جيدة' : vehicleData.soh > 60 ? 'تحتاج متابعة' : 'تحتاج استبدال';
+        const statusEn = vehicleData.soh > 80 ? 'good condition' : vehicleData.soh > 60 ? 'needs monitoring' : 'needs replacement';
+        response = lang === 'ar'
+          ? `صحة البطارية ${vehicleData.soh.toFixed(0)}%، ${statusAr}`
+          : `Battery health is ${vehicleData.soh.toFixed(0)}%, ${statusEn}`;
+      } else {
+        response = lang === 'ar'
+          ? `شحن البطارية ${vehicleData.soc.toFixed(0)}%، الصحة ${vehicleData.soh.toFixed(0)}%`
+          : `Battery at ${vehicleData.soc.toFixed(0)}%, Health ${vehicleData.soh.toFixed(0)}%`;
+      }
       setActiveTab('battery');
-    } else if (cmd.includes('range') || cmd.includes('مدى')) {
+
+    // ─── Range ─────────────────────────────────────────────────────
+    // MSA: مدى, المسافة المتبقية
+    // Gulf: كم المسافة, كم اقدر امشي, كم ابقى, كم باقي
+    // Egyptian: قد ايه, هاوصل فين, أقدر أمشي قد ايه, كام كيلو
+    } else if (cmd.includes('range') || cmd.includes('مدى') || cmd.includes('المسافة') || cmd.includes('كم المسافة') || cmd.includes('كم المسافة المتبقية') || cmd.includes('كم ابقى') || cmd.includes('كم باقي') || cmd.includes('عرض المدى') || cmd.includes('المسافة المتبقية') || cmd.includes('قد ايه') || cmd.includes('هاوصل فين') || cmd.includes('أقدر أمشي') || cmd.includes('اقدر امشي') || cmd.includes('كام كيلو') || cmd.includes('كم اقدر امشي') || cmd.includes('كم أقدر أمشي') || cmd.includes('كيلو')) {
       response = lang === 'ar'
         ? `المدى المتبقي ${vehicleData.range.toFixed(0)} كم`
         : `Range remaining: ${vehicleData.range.toFixed(0)} km`;
-    } else if (cmd.includes('motor') || cmd.includes('محرك')) {
+
+    // ─── Motor ─────────────────────────────────────────────────────
+    // MSA: محرك, حرارة المحرك
+    // Gulf: حرارة المحرك, درجة حرارة المحرك
+    // Egyptian: الموتور, حرارة الموتور, الموتور سخن
+    } else if (cmd.includes('motor') || cmd.includes('محرك') || cmd.includes('موتور') || cmd.includes('حرارة المحرك') || cmd.includes('درجة حرارة المحرك') || cmd.includes('حراره المحرك') || cmd.includes('حرارة الموتور') || cmd.includes('الموتور سخن') || cmd.includes('المحرك سخن')) {
       response = lang === 'ar'
         ? `درجة حرارة المحرك ${vehicleData.motorTemp.toFixed(0)} درجة مئوية`
         : `Motor temperature: ${vehicleData.motorTemp.toFixed(0)}°C`;
       setActiveTab('dashboard');
-    } else if (cmd.includes('fault') || cmd.includes('scan') || cmd.includes('أعطال') || cmd.includes('فحص')) {
+
+    // ─── Faults / Diagnostics ──────────────────────────────────────
+    // MSA: أعطال, فحص الأعطال, تشخيص, رمز العطل
+    // Gulf: عطل, أعطال, فحص, فيها عطل, ايش العطل
+    // Egyptian: عطل, أعطال, فحص, في عطل, سكان, سكان للأعطال
+    } else if (cmd.includes('fault') || cmd.includes('scan') || cmd.includes('أعطال') || cmd.includes('فحص') || cmd.includes('عطل') || cmd.includes('فحص الأعطال') || cmd.includes('تشخيص') || cmd.includes('رمز العطل') || cmd.includes('رموز الأعطال') || cmd.includes('افتح التشخيص') || cmd.includes('فتح التشخيص') || cmd.includes('فيها عطل') || cmd.includes('في عطل') || cmd.includes('ايش العطل') || cmd.includes('سكان') || cmd.includes('سكان للأعطال') || cmd.includes('اشيك')) {
       if (dtcs.length > 0) {
         response = lang === 'ar'
           ? `تم العثور على ${dtcs.length} رمز عطل`
           : `Found ${dtcs.length} fault code(s)`;
       } else {
-        response = lang === 'ar' ? 'لا توجد أعطال' : 'No faults found';
+        response = lang === 'ar' ? 'لا توجد أعطال، مركبتك بحالة جيدة' : 'No faults found. Your vehicle is healthy!';
       }
       setActiveTab('diagnostics');
-    } else if (cmd.includes('dashboard') || cmd.includes('لوحة')) {
+
+    // ─── Clear Codes ───────────────────────────────────────────────
+    // MSA: مسح الرموز, إزالة الأعطال
+    // Gulf: امسح الرموز, مسح الأعطال
+    // Egyptian: امسح الأعطال, مسح الكودات, نمسح الأعطال
+    } else if (cmd.includes('clear code') || cmd.includes('مسح الرموز') || cmd.includes('مسح الرمز') || cmd.includes('مسح الأعطال') || cmd.includes('امسح الرموز') || cmd.includes('إزالة الأعطال') || cmd.includes('مسح الكودات') || cmd.includes('نمسح الأعطال') || cmd.includes('امسح الأعطال')) {
+      response = lang === 'ar' ? 'تم مسح جميع الرموز التشخيصية' : 'All diagnostic codes have been cleared';
+
+    // ─── Dashboard ─────────────────────────────────────────────────
+    // MSA: لوحة القيادة, عرض لوحة
+    // Gulf: لوحة القيادة, افتح لوحة القيادة
+    // Egyptian: التابلو, الداشبورد, لوحة القيادة
+    } else if (cmd.includes('dashboard') || cmd.includes('لوحة') || cmd.includes('لوحة القيادة') || cmd.includes('عرض لوحة') || cmd.includes('افتح لوحة القيادة') || cmd.includes('تابلو') || cmd.includes('داشبورد')) {
       setActiveTab('dashboard');
       response = lang === 'ar' ? 'تم فتح لوحة القيادة' : 'Switched to Dashboard';
-    } else if (cmd.includes('charging') || cmd.includes('شحن')) {
-      setActiveTab('charging');
-      response = lang === 'ar' ? 'تم فتح صفحة الشحن' : 'Switched to Charging';
-    } else if (cmd.includes('setting') || cmd.includes('إعداد')) {
+
+    // ─── Charging ──────────────────────────────────────────────────
+    // MSA: الشحن, حالة الشحن
+    // Gulf: عرض الشحن, افتح الشحن
+    // Egyptian: الشحن, بيشحن, بيشتغل شحن
+    } else if (cmd.includes('charging') || cmd.includes('حالة الشحن') || cmd.includes('عرض الشحن') || cmd.includes('افتح الشحن') || cmd.includes('بيشحن') || cmd.includes('بيشتغل شحن') || cmd.includes('الشحن')) {
+      // Avoid false match with "شحن البطارية" — that's caught by battery above
+      if (!cmd.includes('بطارية') && !cmd.includes('battery') && !cmd.includes('بطاري')) {
+        setActiveTab('charging');
+        response = lang === 'ar' ? 'تم فتح صفحة الشحن' : 'Switched to Charging';
+      } else {
+        response = lang === 'ar'
+          ? `شحن البطارية ${vehicleData.soc.toFixed(0)}%`
+          : `Battery at ${vehicleData.soc.toFixed(0)}%`;
+        setActiveTab('battery');
+      }
+
+    // ─── Sessions / Trips ──────────────────────────────────────────
+    // MSA: رحلات, جلسات
+    // Gulf: الرحلات, عرض الرحلات, الجلسات
+    // Egyptian: التريب, الرحلات, الرحلة, مشاوير
+    } else if (cmd.includes('session') || cmd.includes('trip') || cmd.includes('رحلات') || cmd.includes('رحلة') || cmd.includes('عرض الرحلات') || cmd.includes('الجلسات') || cmd.includes('عرض الجلسات') || cmd.includes('تريب') || cmd.includes('مشاوير') || cmd.includes('المشاوير')) {
+      setActiveTab('sessions');
+      response = lang === 'ar' ? 'تم فتح صفحة الرحلات' : 'Switched to Sessions';
+
+    // ─── Maintenance ───────────────────────────────────────────────
+    // MSA: صيانة, خدمة
+    // Gulf: صيانه, عرض الصيانة, افتح الصيانة, خدمة
+    // Egyptian: صيانة, التصليح, السيرفس
+    } else if (cmd.includes('maintenance') || cmd.includes('service') || cmd.includes('صيانة') || cmd.includes('صيانه') || cmd.includes('عرض الصيانة') || cmd.includes('افتح الصيانة') || cmd.includes('خدمة') || cmd.includes('تصليح') || cmd.includes('التصليح') || cmd.includes('سيرفس')) {
+      setActiveTab('maintenance');
+      response = lang === 'ar' ? 'تم فتح صفحة الصيانة' : 'Switched to Maintenance';
+
+    // ─── Settings ──────────────────────────────────────────────────
+    // MSA: إعدادات, الإعدادات
+    // Gulf: الإعدادات, افتح الإعدادات, ضبط
+    // Egyptian: الإعدادات, الضبط, السيتينج
+    } else if (cmd.includes('setting') || cmd.includes('إعداد') || cmd.includes('إعدادات') || cmd.includes('الإعدادات') || cmd.includes('عرض الإعدادات') || cmd.includes('افتح الإعدادات') || cmd.includes('ضبط') || cmd.includes('الضبط') || cmd.includes('سيتينج')) {
       setActiveTab('settings');
       response = lang === 'ar' ? 'تم فتح الإعدادات' : 'Switched to Settings';
-    } else if (cmd.includes('summarize') || cmd.includes('ملخص') || cmd.includes('summary') || cmd.includes('صفحة')) {
+
+    // ─── Language Switch ───────────────────────────────────────────
+    } else if (cmd.includes('switch to arabic') || cmd.includes('عربي') || cmd.includes('العربية') || cmd.includes('التبديل إلى العربية') || cmd.includes('لغة عربية') || cmd.includes('غيّر اللغة') || cmd.includes('غير اللغة')) {
+      response = lang === 'ar' ? 'تم تغيير اللغة إلى العربية' : 'Language changed to Arabic';
+
+    } else if (cmd.includes('switch to english') || cmd.includes('إنجليزي') || cmd.includes('الإنجليزية') || cmd.includes('التبديل إلى الإنجليزية') || cmd.includes('لغة إنجليزية') || cmd.includes('english')) {
+      response = lang === 'ar' ? 'تم تغيير اللغة إلى الإنجليزية' : 'Language changed to English';
+
+    // ─── Voice Control ─────────────────────────────────────────────
+    // MSA: إيقاف الصوت
+    // Gulf: أوقف الصوت, اصمت
+    // Egyptian: خلاص, يلا باي, بس كده, اقفل الصوت
+    } else if (cmd.includes('turn off voice') || cmd.includes('إيقاف الصوت') || cmd.includes('أوقف الصوت') || cmd.includes('اصمت') || cmd.includes('اسكت') || cmd.includes('خلاص') || cmd.includes('بس كده') || cmd.includes('اقفل الصوت') || cmd.includes('سكّت')) {
+      response = lang === 'ar' ? 'تم إيقاف الصوت' : 'Voice turned off';
+
+    // ─── Alerts ────────────────────────────────────────────────────
+    // MSA: تفعيل التنبيهات, كتم التنبيهات
+    // Gulf: فعّل التنبيهات, شغّل التنبيهات
+    // Egyptian: فعّل التنبيهات, شغّل التنبيهات, طفي التنبيهات
+    } else if (cmd.includes('enable alert') || cmd.includes('تفعيل التنبيهات') || cmd.includes('فعّل التنبيهات') || cmd.includes('شغّل التنبيهات') || cmd.includes('فعّل التنبيه') || cmd.includes('شغّل التنبيه') || cmd.includes('فعّل الإشعارات')) {
+      response = lang === 'ar' ? 'تم تفعيل التنبيهات' : 'Alerts enabled';
+
+    } else if (cmd.includes('mute alert') || cmd.includes('كتم') || cmd.includes('كتم التنبيهات') || cmd.includes('أكتم التنبيهات') || cmd.includes('اكتم') || cmd.includes('أسكت التنبيهات') || cmd.includes('طفي التنبيهات') || cmd.includes('اطفي التنبيهات') || cmd.includes('سكت التنبيهات') || cmd.includes('أوقف التنبيهات')) {
+      response = lang === 'ar' ? 'تم كتم التنبيهات' : 'Alerts muted';
+
+    // ─── Drive Modes ───────────────────────────────────────────────
+    // MSA: الوضع الاقتصادي, الوضع الرياضي, الوضع العادي
+    // Gulf: نمط اقتصادي, توفير, سبورت
+    // Egyptian: مود اقتصادي, مود رياضي, ايكو, سبورت
+    } else if (cmd.includes('eco') || cmd.includes('اقتصادي') || cmd.includes('الوضع الاقتصادي') || cmd.includes('نمط اقتصادي') || cmd.includes('توفير') || cmd.includes('مود اقتصادي') || cmd.includes('ايكو') || cmd.includes('إيكو')) {
+      response = lang === 'ar' ? 'تم ضبط نمط القيادة على الاقتصادي' : 'Drive mode set to Eco';
+
+    } else if (cmd.includes('sport') || cmd.includes('رياضي') || cmd.includes('الوضع الرياضي') || cmd.includes('نمط رياضي') || cmd.includes('سبورت') || cmd.includes('مود رياضي')) {
+      response = lang === 'ar' ? 'تم ضبط نمط القيادة على الرياضي' : 'Drive mode set to Sport';
+
+    } else if (cmd.includes('normal mode') || cmd.includes('عادي') || cmd.includes('الوضع العادي') || cmd.includes('نمط عادي') || cmd.includes('مود عادي') || cmd.includes('نورمال')) {
+      response = lang === 'ar' ? 'تم ضبط نمط القيادة على العادي' : 'Drive mode set to Normal';
+
+    // ─── Export Report ─────────────────────────────────────────────
+    // MSA: تصدير التقرير
+    // Gulf: اصدر تقرير, اطلع تقرير
+    // Egyptian: اصدر تقرير, عمل ريبورت, طلع ريبورت
+    } else if (cmd.includes('export') || cmd.includes('report') || cmd.includes('تصدير') || cmd.includes('تصدير التقرير') || cmd.includes('تقرير') || cmd.includes('اصدر تقرير') || cmd.includes('اطلع تقرير') || cmd.includes('عمل ريبورت') || cmd.includes('طلع ريبورت') || cmd.includes('ريبورت')) {
+      response = lang === 'ar' ? 'جارٍ تصدير التقرير' : 'Exporting report...';
+
+    // ─── Demo Mode ─────────────────────────────────────────────────
+    // MSA: بدء وضع العرض, وضع العرض
+    // Gulf: وضع العرض, تجريبي
+    // Egyptian: عرض تجريبي, ديمو, تشغيل ديمو
+    } else if (cmd.includes('start demo') || cmd.includes('بدء العرض') || cmd.includes('وضع العرض') || cmd.includes('بدء وضع العرض') || cmd.includes('تجريبي') || cmd.includes('عرض تجريبي') || cmd.includes('ديمو') || cmd.includes('تشغيل ديمو') || cmd.includes('شغّل الديمو')) {
+      response = lang === 'ar' ? 'تم بدء وضع العرض' : 'Demo mode started';
+
+    } else if (cmd.includes('stop demo') || cmd.includes('إيقاف العرض') || cmd.includes('إيقاف وضع العرض') || cmd.includes('أوقف العرض') || cmd.includes('أوقف الديمو') || cmd.includes('قفل الديمو') || cmd.includes('اطفي الديمو')) {
+      response = lang === 'ar' ? 'تم إيقاف وضع العرض' : 'Demo mode stopped';
+
+    // ─── Adapter Connection ────────────────────────────────────────
+    // MSA: اتصال بالمحوّل, قطع اتصال المحوّل
+    // Gulf: وصّل, وصل المحول, اتصل بالمحول
+    // Egyptian: وصل المحول, ربط, اربط المحول
+    } else if (cmd.includes('connect adapter') || cmd.includes('اتصال') || cmd.includes('اتصال بالمحوّل') || cmd.includes('وصّل') || cmd.includes('وصل المحول') || cmd.includes('اتصل بالمحول') || cmd.includes('اربط') || cmd.includes('اربط المحول') || cmd.includes('ربط المحول') || cmd.includes('اشبك') || cmd.includes('شبّك المحول')) {
+      response = lang === 'ar' ? 'جارٍ الاتصال بمحوّل المركبة' : 'Connecting to vehicle adapter...';
+
+    } else if (cmd.includes('disconnect adapter') || cmd.includes('قطع اتصال') || cmd.includes('اقطع الاتصال') || cmd.includes('قطع اتصال المحوّل') || cmd.includes('افصل') || cmd.includes('افصل المحول') || cmd.includes('فكّ الربط') || cmd.includes('فك الربط') || cmd.includes('اطلع المحول') || cmd.includes('اقفل المحول')) {
+      response = lang === 'ar' ? 'تم قطع الاتصال بمحوّل المركبة' : 'Disconnected from vehicle adapter';
+
+    // ─── Read Aloud / Stop Reading ─────────────────────────────────
+    // MSA: قراءة بصوت عالٍ, إيقاف القراءة
+    // Gulf: اقرأ, اقرأ الصفحة
+    // Egyptian: اقرألي, اقرأ الصفحة, قولي, قولي اللي في الصفحة
+    } else if (cmd.includes('read aloud') || cmd.includes('قراءة') || cmd.includes('قراءة بصوت') || cmd.includes('اقرأ') || cmd.includes('اقرأ الصفحة') || cmd.includes('اقرألي') || cmd.includes('قولي') || cmd.includes('قولي اللي في الصفحة') || cmd.includes('اقرألي الصفحة')) {
       response = getPageSummary();
+
+    // ─── Stop Reading ──────────────────────────────────────────────
+    // MSA: إيقاف القراءة
+    // Gulf: أوقف القراءة
+    // Egyptian: بس, خلاص, يلا بس
+    } else if (cmd.includes('stop reading') || cmd.includes('إيقاف القراءة') || cmd.includes('أوقف القراءة') || cmd.includes('توقف عن القراءة') || cmd.includes('بس') || cmd.includes('خلاص كده') || cmd.includes('يلا بس')) {
+      response = lang === 'ar' ? 'تم إيقاف القراءة' : 'Reading stopped';
+
+    // ─── Summarize Page ────────────────────────────────────────────
+    // MSA: ملخص, ملخص الصفحة
+    // Gulf: لخّص, لخص الصفحة
+    // Egyptian: لخصلي, قولي ملخص, خليني افهم
+    } else if (cmd.includes('summarize') || cmd.includes('ملخص') || cmd.includes('summary') || cmd.includes('صفحة') || cmd.includes('لخّص') || cmd.includes('لخص الصفحة') || cmd.includes('ملخص الصفحة') || cmd.includes('لخصلي') || cmd.includes('قولي ملخص') || cmd.includes('خليني افهم') || cmd.includes('خليني أفهم')) {
+      response = getPageSummary();
+
+    // ─── Cell Voltage ──────────────────────────────────────────────
+    // MSA: جهد الخلية
+    // Gulf: فولت الخلية
+    // Egyptian: فولت الخلية, الفولت
+    } else if (cmd.includes('cell voltage') || cmd.includes('جهد الخلية') || cmd.includes('جهود الخلايا') || cmd.includes('فولت الخلية') || cmd.includes('فولت') || cmd.includes('الفولت') || cmd.includes('الجهد')) {
+      response = lang === 'ar' ? 'جهد الخلايا — يرجى الاطلاع على صفحة البطارية' : 'Cell voltages — see Battery page for details';
+      setActiveTab('battery');
+
+    // ─── Vehicle Speed ─────────────────────────────────────────────
+    // MSA: السرعة
+    // Gulf: السرعه, كم السرعة
+    // Egyptian: السرعة, كام السرعة, بسرعة كده
+    } else if (cmd.includes('speed') || cmd.includes('السرعة') || cmd.includes('السرعه') || cmd.includes('كم السرعة') || cmd.includes('كام السرعة')) {
+      response = lang === 'ar'
+        ? `السرعة الحالية ${vehicleData.speed.toFixed(0)} كم/س`
+        : `Current speed: ${vehicleData.speed.toFixed(0)} km/h`;
+      setActiveTab('dashboard');
+
+    // ─── Temperature ───────────────────────────────────────────────
+    // MSA: درجة الحرارة, الحرارة
+    // Gulf: الحراره, درجة الحراره
+    // Egyptian: الحرارة, درجة الحرارة, حرارة
+    } else if (cmd.includes('temperature') || cmd.includes('الحرارة') || cmd.includes('الحراره') || cmd.includes('درجة الحرارة') || cmd.includes('درجة الحراره') || cmd.includes('حرارة') || cmd.includes('حراره')) {
+      response = lang === 'ar'
+        ? `درجة حرارة المحرك ${vehicleData.motorTemp.toFixed(0)}°م`
+        : `Motor temperature: ${vehicleData.motorTemp.toFixed(0)}°C`;
+      setActiveTab('dashboard');
+
+    // ─── Voice Help ────────────────────────────────────────────────
+    // MSA: مساعدة صوتية
+    // Gulf: مساعدة, ايش الأوامر
+    // Egyptian: مساعدة, الأوامر إيه, إيه الأوامر
+    } else if (cmd.includes('help') || cmd.includes('مساعدة') || cmd.includes('مساعدة صوتية') || cmd.includes('الأوامر') || cmd.includes('ما الأوامر') || cmd.includes('شو الأوامر') || cmd.includes('ايش الأوامر') || cmd.includes('إيه الأوامر') || cmd.includes('الأوامر إيه') || cmd.includes('اوامر')) {
+      response = lang === 'ar'
+        ? 'الأوامر المتاحة: بطارية، مدى، محرك، أعطال، لوحة القيادة، الشحن، الرحلات، الصيانة، الإعدادات، ملخص، سرعة، حرارة، مساعدة'
+        : 'Available commands: battery, range, motor, faults, dashboard, charging, sessions, maintenance, settings, summarize, speed, temperature, help';
+
+    // ─── Fallback ──────────────────────────────────────────────────
     } else {
       response = lang === 'ar' ? 'لم أفهم، حاول مرة أخرى' : "Didn't catch that. Try again.";
     }
