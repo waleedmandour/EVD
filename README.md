@@ -9,25 +9,25 @@
 **Author:** Dr. Waleed Mandour
 **Email:** waleedmandour@gmail.com
 **Email2:** w.abumandour@squ.edu.om
-**Version:** 1.3.0-pre-release
+**Version:** 1.4.0-pre-release
 **License:** © 2026 Dr. Waleed Mandour
 
 ---
 
 ## 📦 Download Pre-Release
 
-> **EVDx v1.3.0 Pre-Release** — 90+ multilingual voice commands, 3 Arabic dialects, enhanced TTS.
+> **EVDx v1.4.0 Pre-Release** — Production-grade OBD-II connection, 10 adapter profiles, ELM327 protocol detection, clone detection.
 
-[![Download APK](https://img.shields.io/badge/Download-EVDx%20v1.3.0%20APK-blue?style=for-the-badge&logo=android)](https://github.com/waleedmandour/EVD/releases/tag/v1.3.0-pre-release)
+[![Download APK](https://img.shields.io/badge/Download-EVDx%20v1.4.0%20APK-blue?style=for-the-badge&logo=android)](https://github.com/waleedmandour/EVD/releases/tag/v1.4.0-pre-release)
 
 | Asset | Description |
 |---|---|
-| 📦 [EVDx-v1.3.0.apk](https://github.com/waleedmandour/EVD/releases/download/v1.3.0-pre-release/EVDx-v1.3.0.apk) | Android APK (25 MB) |
+| 📦 [EVDx-v1.4.0.apk](https://github.com/waleedmandour/EVD/releases/download/v1.4.0-pre-release/EVDx-v1.4.0.apk) | Android APK (25 MB) |
 | 📘 [User Guide (English)](https://github.com/waleedmandour/EVD/releases/download/v1.3.0-pre-release/EVDx-UserGuide-EN-v1.3.0.pdf) | Complete English guide (8 pages) |
 | 📗 [دليل المستخدم (العربية)](https://github.com/waleedmandour/EVD/releases/download/v1.3.0-pre-release/EVDx-UserGuide-AR-v1.3.0.pdf) | دليل عربي كامل (8 صفحات) |
 
 **Installation:**
-1. Download the APK from the [Releases page](https://github.com/waleedmandour/EVD/releases/tag/v1.3.0-pre-release)
+1. Download the APK from the [Releases page](https://github.com/waleedmandour/EVD/releases/tag/v1.4.0-pre-release)
 2. Enable "Install from Unknown Sources" in your Android settings
 3. Open the downloaded APK and tap **Install**
 4. Launch EVDx and follow the onboarding wizard
@@ -144,17 +144,55 @@ See [VEHICLES.md](VEHICLES.md) for the complete vehicle database with all models
 
 ## 📡 Supported OBD Adapters
 
-| Adapter | Protocol | Quality | Notes |
+| Adapter | BLE Profile | Quality | Notes |
 |---|---|---|---|
-| **vGate iCar Pro BLE 4.0** | BLE (FFE0 UUID) | ⭐⭐⭐⭐⭐ | Primary development target |
-| **OBDLink MX+** | BLE | ⭐⭐⭐⭐⭐ | Professional-grade |
-| **vLinker MC+** | BLE (Nordic NUS) | ⭐⭐⭐⭐⭐ | High-speed diagnostics |
-| **ELM327 v1.5+** | BLE/WiFi | ⭐⭐⭐⭐ | Budget-friendly |
-| **Veepeak OBDCheck** | BLE | ⭐⭐⭐⭐ | Reliable |
-| **Carista** | BLE | ⭐⭐⭐⭐ | Brand-specific features |
-| **Carly Universal** | BLE | ⭐⭐⭐ | Compatible |
+| **vGate iCar Pro** | FFE0/FFE1 | ⭐⭐⭐⭐⭐ | Primary development target |
+| **OBDLink MX+** | 18F0/2AF0/2AF1 | ⭐⭐⭐⭐⭐ | Professional-grade, STN chip |
+| **OBDLink CX** | 18F0/2AF0/2AF1 | ⭐⭐⭐⭐⭐ | Compact BLE, STN chip |
+| **vLinker MC+** | Nordic NUS | ⭐⭐⭐⭐⭐ | High-speed diagnostics |
+| **vLinker FS** | Nordic NUS | ⭐⭐⭐⭐ | Ford-specific adapter |
+| **vLinker BM+** | Nordic NUS | ⭐⭐⭐⭐ | BMW-specific adapter |
+| **Veepeak OBDCheck BLE+** | FFE0/FFE1/FFE2 | ⭐⭐⭐⭐ | Reliable, alternate notify |
+| **ELM327 Generic** | FFE0/FFE1 | ⭐⭐⭐ | Budget-friendly, clone detection |
+| **Carly Universal** | FFE0/FFE1 | ⭐⭐⭐ | Compatible |
+| **LEMON OBD2** | FFE0/FFE1 | ⭐⭐⭐ | Compatible |
 
-WiFi ELM327 adapters also supported (IP:port configuration).
+WiFi ELM327 adapters also supported (default: IP 192.168.0.10, Port 35000).
+
+### ELM327 Initialization Sequence
+
+On connection, EVDx runs a complete ELM327 initialization per the ELM Electronics datasheet:
+
+```
+ATD  → Set defaults          ATZ  → Hardware reset
+ATE0 → Echo off              ATL0 → Linefeeds off
+ATS0 → Spaces off            ATH0 → Headers off
+ATAT1→ Adaptive timing       ATSP0→ Auto protocol detect
+ATST64→ 100ms timeout        ATI  → Identify device
+AT@1 → Device description   AT@2 → Device identifier
+ATDP → Describe protocol    0100 → Validate vehicle comm
+```
+
+### OBD-II Protocol Support
+
+EVDx supports all SAE J1979 OBD-II protocols via ATSP auto-detection:
+
+| Code | Protocol |
+|---|---|
+| 0 | Automatic (default) |
+| 6 | ISO 15765-4 CAN (11-bit, 500 kbaud) — **Most EVs** |
+| 7 | ISO 15765-4 CAN (29-bit, 500 kbaud) — **BYD, VW, Mercedes** |
+| 8 | ISO 15765-4 CAN (11-bit, 250 kbaud) |
+| 9 | ISO 15765-4 CAN (29-bit, 250 kbaud) |
+| A | SAE J1939 CAN (29-bit, 250 kbaud) |
+| 1-5 | Legacy protocols (J1850, ISO 9141, KWP2000) |
+
+### Clone Detection
+
+EVDx automatically detects clone ELM327 chips:
+- **STN chips** (OBDLink, ScanTool.net): Identified as genuine, high-quality adapters
+- **Genuine ELM327** (v1.x): Rare, identified by firmware string
+- **PIC clones** (most "v2.x"): Detected and flagged, basic OBD-II works but advanced features may be unreliable
 
 See [ADAPTERS.md](ADAPTERS.md) for the complete adapter compatibility list.
 
@@ -436,7 +474,9 @@ See [LICENSE](LICENSE) for details.
 ## 🙏 Acknowledgments
 
 - **SAE International** for the J1979 OBD-II standard
-- **ELM Electronics** for the ELM327 command set
+- **ELM Electronics** for the ELM327 command set and datasheet
+- **ISO** for the 15765-4 CAN bus protocol standard
+- **OBDTester.com** for ELM327 AT command reference
 - **Capacitor** by Ionic for the native bridge
 - **shadcn/ui** for the component library
 - The global EV community for feedback and testing
