@@ -467,6 +467,7 @@ See [LICENSE](LICENSE) for details.
 **Dr. Waleed Mandour**
 
 - Email: waleedmandour@gmail.com
+- University Email: w.abumandour@squ.edu.om
 - GitHub: [@waleedmandour](https://github.com/waleedmandour)
 
 ---
