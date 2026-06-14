@@ -488,3 +488,15 @@ See [LICENSE](LICENSE) for details.
 أُهدي هذا المشروع إلى مجتمع السيارات الكهربائية في العالم العربي، سواء في مصر أو الأردن أو عمان أو المغرب أو أي بلد عربي. فقد صممت هذه الأداة لتكون عوناً لكم في العناية بمركباتكم بكل سهولة. نفعنا الله وإياكم.
 
 I dedicate this project to the Arab EV community, whether in Egypt, Jordan, Oman, Morocco, or any other Arab country. I designed this tool to help you care for your vehicles with ease. May it be of benefit to us all.
+
+---
+
+## 📜 Disclaimer
+
+**English:**
+
+This project is an independent, self-funded initiative developed solely by Dr. Waleed Mandour. It is not sponsored, endorsed, funded, or affiliated with any company, institution, organization, or commercial entity — including but not limited to vehicle manufacturers, OBD adapter vendors, or software corporations. All development costs, hosting, and maintenance are borne entirely by the developer. This tool is provided as-is to support the global electric vehicle community, with no commercial intent or financial backing whatsoever.
+
+**العربية:**
+
+هذا المشروع مبادرة مستقلة يمولها المطوّر بالكامل من ميزانيته الشخصية، أنشأها الدكتور وليد مندور بمفرده دون أي دعم خارجي. لا يحظى هذا المشروع برعاية أو تمويل أو إقرار أو انتماء من أي شركة أو مؤسسة أو منظمة أو جهة تجارية — بما في ذلك على سبيل المثال لا الحصر مصنعي المركبات أو بائعي محولات OBD أو شركات البرمجيات. تتحمل التكاليف التطويرية والاستضافة والصيانة بالكامل على عاتق المطوّر. تُقدَّم هذه الأداة كما هي لدعم مجتمع السيارات الكهربائية العالمي، دون أي هدف تجاري أو دعم مالي من أي جهة كانت.
