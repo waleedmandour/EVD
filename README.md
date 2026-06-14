@@ -480,3 +480,15 @@ See [LICENSE](LICENSE) for details.
 - **Capacitor** by Ionic for the native bridge
 - **shadcn/ui** for the component library
 - The global EV community for feedback and testing
+
+---
+
+## 🕊️ Dedication
+
+**English:**
+
+This project is dedicated to the Arab EV Community — the passionate drivers, engineers, mechanics, and enthusiasts across the Middle East and North Africa who are leading the electric vehicle revolution in the region. From the Gulf's futuristic megaprojects to North Africa's emerging green corridors, your curiosity, resilience, and commitment to sustainable mobility inspire every line of code in EVDx. This tool was built so that every Arab EV owner — whether in Riyadh, Cairo, Dubai, Muscat, Doha, or Amman — can understand, diagnose, and care for their electric vehicle with confidence and pride. The road ahead is electric, and it belongs to all of us.
+
+**العربية:**
+
+يهدي هذا المشروع مجتمع السيارات الكهربائية العرب — السائقين والمهندسين والفنيين والشغوفين في أنحاء الشرق الأوسط وشمال أفريقيا الذين يقودون ثورة السيارات الكهربائية في المنطقة. من المشاريع المستقبلية العملاقة في الخليج إلى ممرات النقل الأخضر الناشئة في شمال أفريقيا، إن فضولكم وصمودكم والتزامكم بالتنقل المستدام يلهم كل سطر برمجي في EVDx. صُمّمت هذه الأداة لكي يتمكن كل مالك عربي لسيارة كهربائية — سواء في الرياض أو القاهرة أو دبي أو مسقط أو الدوحة أو عمّان — من فهم سيارته وتشخيصها والعناية بها بثقة واعتزاز. الطريق أمامنا كهربائي، وهو ملك لنا جميعاً.
