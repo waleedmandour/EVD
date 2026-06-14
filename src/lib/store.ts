@@ -320,6 +320,25 @@ export const useAppStore = create<AppState>()(
           const connected = await bleService.connect(device.deviceId, device.profile);
           if (connected) {
             set({ connectionStatus: 'connected' });
+
+            // Update device info from adapter identification
+            const adapterInfo = bleService.getAdapterInfo();
+            if (adapterInfo) {
+              get().updateDeviceInfo({
+                name: device.name,
+                type: 'bluetooth',
+                adapterId: device.deviceId,
+                signalStrength: device.rssi,
+                quality: device.rssi > -50 ? 'excellent' : device.rssi > -70 ? 'good' : device.rssi > -85 ? 'fair' : 'poor',
+                firmware: adapterInfo.firmware,
+                chipset: adapterInfo.chipset,
+                protocol: adapterInfo.protocol,
+                isClone: adapterInfo.isClone,
+                voltage: adapterInfo.voltage,
+                vin: adapterInfo.vin,
+              });
+            }
+
             // Start polling OBD data
             bleService.startPolling((pid, value) => {
               get().parseOBDResponse(value);
@@ -335,19 +354,39 @@ export const useAppStore = create<AppState>()(
       connectWifi: async (_ip: string, _port: number) => {
         set({ connectionStatus: 'connecting', connectionMode: 'wifi' });
         try {
-          // WiFi ELM327 connection via WebSocket
-          // The app has no INTERNET permission, but WiFi direct connections
-          // to local ELM327 adapters work without internet
-          const ws = new WebSocket(`ws://${_ip}:${_port}`);
-          ws.onopen = () => {
+          // WiFi ELM327 connection — uses bleService.connectWifi which
+          // handles WebSocket setup + full AT command initialization
+          // Default: IP 192.168.0.10, Port 35000 (standard ELM327 WiFi)
+          const { bleService } = await import('./ble-service');
+          const connected = await bleService.connectWifi(_ip, _port);
+
+          if (connected) {
             set({ connectionStatus: 'connected' });
-          };
-          ws.onerror = () => {
+
+            // Update device info from adapter identification
+            const adapterInfo = bleService.getAdapterInfo();
+            if (adapterInfo) {
+              get().updateDeviceInfo({
+                name: `WiFi ELM327 (${_ip})`,
+                type: 'wifi',
+                adapterId: `wifi-${_ip}:${_port}`,
+                firmware: adapterInfo.firmware,
+                chipset: adapterInfo.chipset,
+                protocol: adapterInfo.protocol,
+                isClone: adapterInfo.isClone,
+                voltage: adapterInfo.voltage,
+                vin: adapterInfo.vin,
+                quality: 'good',
+              });
+            }
+
+            // Start polling OBD data
+            bleService.startPolling((pid, value) => {
+              get().parseOBDResponse(value);
+            });
+          } else {
             set({ connectionStatus: 'error' });
-          };
-          ws.onmessage = (event) => {
-            get().parseOBDResponse(String(event.data));
-          };
+          }
         } catch {
           set({ connectionStatus: 'error' });
         }
@@ -525,16 +564,80 @@ export const useAppStore = create<AppState>()(
        *   `41 XX YY ZZ ...`
        * where XX = PID, YY-ZZ = data bytes.
        */
+      /**
+       * Parse a raw OBD-II hex response string and update the store.
+       *
+       * Handles SAE J1979 standard responses:
+       * - Mode 01 (41 XX): Show current data — real-time vehicle parameters
+       * - Mode 03 (43): Stored DTCs
+       * - Mode 07 (47): Pending DTCs
+       * - Mode 04 (44): Clear DTCs confirmation
+       * - Mode 09 (49): Vehicle information (VIN, etc.)
+       *
+       * Response format: [Mode+40] [PID] [Data bytes]
+       * E.g., "41 0D 50" = Mode 01 PID 0D, speed = 0x50 = 80 km/h
+       *
+       * References: SAE J1979-2016, Wikipedia OBD-II PIDs
+       */
       parseOBDResponse: (response: string) => {
+        if (!response || response === 'UNABLE TO CONNECT' || response === 'BUS ERROR' || response === 'NO DATA') {
+          return;
+        }
+
         const state = get();
         const clean = response.replace(/\s/g, '');
 
-        // Mode 01 responses: "41 XX YY..."
-        if (clean.startsWith('41')) {
+        if (clean.length < 4) return;
+
+        const modeResponse = clean.substring(0, 2).toUpperCase();
+
+        // ── Mode 01 (41): Show current data ──────────────────────────────────
+        if (modeResponse === '41') {
           const pid = clean.substring(2, 4).toUpperCase();
           const dataBytes = clean.substring(4);
 
           switch (pid) {
+            // PID 00 – Supported PIDs [01-20]
+            case '00': break;  // Handled by ble-service detectSupportedPIDs()
+
+            // PID 01 – Monitor status since DTCs cleared
+            // Bit 7 of byte A = MIL on/off, bytes A-B = DTC count
+            case '01': {
+              const byteA = parseInt(dataBytes.substring(0, 2), 16) || 0;
+              const milOn = (byteA & 0x80) !== 0;
+              const dtcCount = byteA & 0x7F;
+              state.setMilOn(milOn);
+              if (dtcCount > 0 && state.dtcs.length === 0) {
+                // Trigger DTC read when MIL is on and we don't have codes yet
+                // This is done async, not in the parser
+              }
+              break;
+            }
+
+            // PID 04 – Calculated engine load (%)
+            case '04': {
+              const load = ((parseInt(dataBytes.substring(0, 2), 16) || 0) * 100) / 255;
+              state.updateVehicleData({ acceleratorPedal: load });
+              break;
+            }
+
+            // PID 05 – Coolant temperature (°C) — used as motor temp for EVs
+            case '05': {
+              const temp = (parseInt(dataBytes.substring(0, 2), 16) || 0) - 40;
+              state.updateVehicleData({ motorTemp: temp });
+              state.addTemperatureHistory({ value: temp, timestamp: Date.now() });
+              break;
+            }
+
+            // PID 0C – Engine RPM (for EVs: motor RPM)
+            // Formula: (A * 256 + B) / 4
+            case '0C': {
+              const a = parseInt(dataBytes.substring(0, 2), 16) || 0;
+              const b = parseInt(dataBytes.substring(2, 4), 16) || 0;
+              state.updateVehicleData({ rpm: (a * 256 + b) / 4 });
+              break;
+            }
+
             // PID 0D – Vehicle speed (km/h)
             case '0D': {
               const speed = parseInt(dataBytes, 16) || 0;
@@ -543,51 +646,47 @@ export const useAppStore = create<AppState>()(
               break;
             }
 
-            // PID 0C – Engine RPM (for EVs: motor RPM)
-            case '0C': {
-              const a = parseInt(dataBytes.substring(0, 2), 16) || 0;
-              const b = parseInt(dataBytes.substring(2, 4), 16) || 0;
-              state.updateVehicleData({ rpm: (a * 256 + b) / 4 });
-              break;
-            }
-
-            // PID 05 – Coolant temperature (used as motor temp for EVs)
-            case '05': {
-              const temp = (parseInt(dataBytes.substring(0, 2), 16) || 0) - 40;
-              state.updateVehicleData({ motorTemp: temp });
-              break;
-            }
-
-            // PID 42 – Control module voltage
-            case '42': {
-              const a = parseInt(dataBytes.substring(0, 2), 16) || 0;
-              const b = parseInt(dataBytes.substring(2, 4), 16) || 0;
-              state.updateVehicleData({ voltage: (a * 256 + b) / 1000 });
-              break;
-            }
-
-            // PID 04 – Calculated engine load (accelerator proxy)
-            case '04': {
-              const load = ((parseInt(dataBytes.substring(0, 2), 16) || 0) * 100) / 255;
-              state.updateVehicleData({ acceleratorPedal: load });
-              break;
-            }
-
-            // PID 46 – Ambient air temperature
-            case '46': {
-              const amb = (parseInt(dataBytes.substring(0, 2), 16) || 0) - 40;
-              state.updateVehicleData({ ambientTemp: amb });
-              break;
-            }
-
-            // PID 0F – Intake air temperature (used as inverter temp proxy)
+            // PID 0F – Intake air temperature (°C) — used as inverter temp proxy for EVs
             case '0F': {
               const intake = (parseInt(dataBytes.substring(0, 2), 16) || 0) - 40;
               state.updateVehicleData({ inverterTemp: intake });
               break;
             }
 
+            // PID 11 – Throttle position (%)
+            case '11': {
+              const throttle = ((parseInt(dataBytes.substring(0, 2), 16) || 0) * 100) / 255;
+              state.updateVehicleData({ acceleratorPedal: throttle });
+              break;
+            }
+
+            // PID 2F – Fuel tank level input (%) — SOC proxy for some EVs
+            case '2F': {
+              const soc = ((parseInt(dataBytes.substring(0, 2), 16) || 0) * 100) / 255;
+              state.updateVehicleData({ soc: Math.round(soc) });
+              state.addBatteryHistory({ value: soc, timestamp: Date.now() });
+              break;
+            }
+
+            // PID 42 – Control module voltage (V)
+            // Formula: (A * 256 + B) / 1000
+            case '42': {
+              const a = parseInt(dataBytes.substring(0, 2), 16) || 0;
+              const b = parseInt(dataBytes.substring(2, 4), 16) || 0;
+              const voltage = (a * 256 + b) / 1000;
+              state.updateVehicleData({ voltage });
+              break;
+            }
+
+            // PID 46 – Ambient air temperature (°C)
+            case '46': {
+              const amb = (parseInt(dataBytes.substring(0, 2), 16) || 0) - 40;
+              state.updateVehicleData({ ambientTemp: amb });
+              break;
+            }
+
             // PID 61 – Driver demanded torque (%)
+            // Formula: A - 125 (range: -125 to +125)
             case '61': {
               const torque = (parseInt(dataBytes.substring(0, 2), 16) || 0) - 125;
               state.updateVehicleData({ torqueDemand: torque });
@@ -601,11 +700,102 @@ export const useAppStore = create<AppState>()(
               break;
             }
 
-            // PID 11 – Throttle position
-            case '11': {
-              const throttle = ((parseInt(dataBytes.substring(0, 2), 16) || 0) * 100) / 255;
-              state.updateVehicleData({ acceleratorPedal: throttle });
+            // PID 63 – Engine reference torque (%)
+            case '63': {
+              const ref = (parseInt(dataBytes.substring(0, 2), 16) || 0) - 125;
+              // Could be used for torque calculations
               break;
+            }
+
+            // PID A6 – Odometer (km) — available on some vehicles
+            case 'A6': {
+              if (dataBytes.length >= 8) {
+                const a = parseInt(dataBytes.substring(0, 2), 16) || 0;
+                const b = parseInt(dataBytes.substring(2, 4), 16) || 0;
+                const c = parseInt(dataBytes.substring(4, 6), 16) || 0;
+                const d = parseInt(dataBytes.substring(6, 8), 16) || 0;
+                const odometer = (a * 16777216 + b * 65536 + c * 256 + d) / 10;
+                state.updateVehicleData({ odometer });
+              }
+              break;
+            }
+          }
+        }
+        // ── Mode 03 (43): Stored DTCs ────────────────────────────────────────
+        else if (modeResponse === '43') {
+          const data = clean.substring(2);
+          const dtcs: DTCEvent[] = [];
+          for (let i = 0; i < data.length; i += 4) {
+            if (i + 4 > data.length) break;
+            const byte1 = parseInt(data.substring(i, i + 2), 16);
+            const byte2 = parseInt(data.substring(i + 2, i + 4), 16);
+            if (byte1 === 0 && byte2 === 0) continue;
+
+            const typeMap: Record<number, string> = {
+              0: 'P', 1: 'P', 2: 'P', 3: 'P',
+              4: 'C', 5: 'C', 6: 'C', 7: 'C',
+              8: 'B', 9: 'B', 0xA: 'B', 0xB: 'B',
+              0xC: 'U', 0xD: 'U', 0xE: 'U', 0xF: 'U',
+            };
+            const type = typeMap[(byte1 >> 4) & 0xF] || 'P';
+            const code = `${type}${(byte1 & 0x0F)}${byte2.toString(16).toUpperCase().padStart(2, '0')}`;
+
+            dtcs.push({
+              code,
+              description: '',  // Will be looked up from dtc-codes.ts
+              severity: code.startsWith('P0') ? 'critical' : code.startsWith('P1') ? 'warning' : 'info',
+              timestamp: Date.now(),
+              system: type === 'P' ? 'powertrain' : type === 'C' ? 'chassis' : type === 'B' ? 'body' : 'network',
+            });
+          }
+          if (dtcs.length > 0) {
+            state.setDTCs(dtcs);
+          }
+        }
+        // ── Mode 07 (47): Pending DTCs ───────────────────────────────────────
+        else if (modeResponse === '47') {
+          // Same format as Mode 03 — pending codes detected this drive cycle
+          const data = clean.substring(2);
+          for (let i = 0; i < data.length; i += 4) {
+            if (i + 4 > data.length) break;
+            const byte1 = parseInt(data.substring(i, i + 2), 16);
+            const byte2 = parseInt(data.substring(i + 2, i + 4), 16);
+            if (byte1 === 0 && byte2 === 0) continue;
+
+            const typeMap: Record<number, string> = {
+              0: 'P', 1: 'P', 2: 'P', 3: 'P',
+              4: 'C', 5: 'C', 6: 'C', 7: 'C',
+              8: 'B', 9: 'B', 0xA: 'B', 0xB: 'B',
+              0xC: 'U', 0xD: 'U', 0xE: 'U', 0xF: 'U',
+            };
+            const type = typeMap[(byte1 >> 4) & 0xF] || 'P';
+            const code = `${type}${(byte1 & 0x0F)}${byte2.toString(16).toUpperCase().padStart(2, '0')}`;
+
+            state.addDTC({
+              code,
+              description: '',
+              severity: 'warning',  // Pending codes are less severe
+              timestamp: Date.now(),
+              system: type === 'P' ? 'powertrain' : type === 'C' ? 'chassis' : type === 'B' ? 'body' : 'network',
+            });
+          }
+        }
+        // ── Mode 09 (49): Vehicle information ─────────────────────────────────
+        else if (modeResponse === '49') {
+          const pid = clean.substring(2, 4).toUpperCase();
+          // PID 02 – VIN
+          if (pid === '02') {
+            const vinHex = clean.substring(6);  // Skip mode+pid+framecount
+            let vin = '';
+            for (let i = 0; i < vinHex.length; i += 2) {
+              const byte = parseInt(vinHex.substring(i, i + 2), 16);
+              if (byte >= 0x20 && byte <= 0x7E) {
+                vin += String.fromCharCode(byte);
+              }
+            }
+            vin = vin.replace(/[^A-HJ-NPR-Z0-9]/g, '');
+            if (vin.length >= 10) {
+              state.updateDeviceInfo({ vin: vin.substring(0, 17) });
             }
           }
         }

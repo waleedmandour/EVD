@@ -6,7 +6,7 @@ import { useAppStore } from '@/lib/store';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { AnimatedNumber } from '@/components/shared/Gauges';
-import { Bluetooth, Wifi, Zap, Signal, Clock, Cpu, Hash, Shield, CheckCircle2, XCircle, AlertTriangle, Info } from 'lucide-react';
+import { Bluetooth, Wifi, Zap, Signal, Clock, Cpu, Hash, Shield, CheckCircle2, XCircle, AlertTriangle, Info, Fingerprint } from 'lucide-react';
 
 export default function DeviceView() {
   const { t } = useTranslation('common');
@@ -40,11 +40,14 @@ export default function DeviceView() {
   };
 
   const supportedAdapters = [
-    { name: 'OBDLink MX+', type: 'Bluetooth', recommended: true },
-    { name: 'Vgate iCar Pro', type: 'Bluetooth', recommended: true },
-    { name: 'ELM327 v1.5', type: 'Bluetooth/WiFi', recommended: false },
-    { name: 'Veepeak OBDCheck', type: 'Bluetooth', recommended: false },
-    { name: 'Carly Universal', type: 'Bluetooth', recommended: false },
+    { name: 'OBDLink MX+', type: 'Bluetooth', profile: '18F0/2AF0-2AF1', recommended: true },
+    { name: 'OBDLink CX', type: 'Bluetooth', profile: '18F0/2AF0-2AF1', recommended: true },
+    { name: 'Vgate iCar Pro', type: 'Bluetooth', profile: 'FFE0/FFE1', recommended: true },
+    { name: 'vLinker MC+', type: 'Bluetooth', profile: 'Nordic NUS', recommended: true },
+    { name: 'vLinker FS/BM+', type: 'Bluetooth', profile: 'Nordic NUS', recommended: false },
+    { name: 'Veepeak OBDCheck BLE+', type: 'Bluetooth', profile: 'FFE0/FFE1/FFE2', recommended: false },
+    { name: 'ELM327 v1.5', type: 'Bluetooth/WiFi', profile: 'FFE0/FFE1', recommended: false },
+    { name: 'Carly Universal', type: 'Bluetooth', profile: 'FFE0/FFE1', recommended: false },
   ];
 
   return (
@@ -90,7 +93,8 @@ export default function DeviceView() {
               { label: 'Name', value: deviceInfo.name || (isDemo ? 'EVDx Simulator' : 'Not connected'), icon: Info },
               { label: 'Type', value: deviceInfo.type || (isDemo ? 'Virtual' : '—'), icon: Cpu },
               { label: 'Firmware', value: deviceInfo.firmware || (isDemo ? '1.0.0-sim' : '—'), icon: Hash },
-              { label: 'Protocol', value: deviceInfo.protocol || (isDemo ? 'ISO 15765 (CAN)' : '—'), icon: Shield },
+              { label: 'Chipset', value: deviceInfo.chipset || (isDemo ? 'Simulated' : '—'), icon: Fingerprint },
+              { label: 'Protocol', value: deviceInfo.protocol || (isDemo ? 'ISO 15765-4 CAN (11-bit, 500 kbaud)' : '—'), icon: Shield },
             ].map(({ label, value, icon: Icon }) => (
               <div key={label} className="flex items-center justify-between bg-[#0D1117] rounded-lg px-3 py-2">
                 <span className="flex items-center gap-2 text-xs text-evdx-text-secondary">
@@ -101,6 +105,19 @@ export default function DeviceView() {
               </div>
             ))}
           </div>
+
+          {/* Clone Detection Warning */}
+          {deviceInfo.isClone && (
+            <div className="bg-evdx-warning/10 border border-evdx-warning/20 rounded-lg p-3 flex items-center gap-2">
+              <AlertTriangle size={16} className="text-evdx-warning" />
+              <div>
+                <span className="text-xs text-evdx-warning font-medium">PIC Clone Detected</span>
+                <p className="text-[10px] text-evdx-text-secondary mt-0.5">
+                  This adapter uses a clone ELM327 chip. Basic OBD-II functions work, but some advanced features may be unreliable.
+                </p>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -141,14 +158,6 @@ export default function DeviceView() {
               </div>
             </div>
           </div>
-
-          {/* Clone Detection */}
-          {deviceInfo.isClone && (
-            <div className="bg-evdx-warning/10 border border-evdx-warning/20 rounded-lg p-3 flex items-center gap-2">
-              <AlertTriangle size={16} className="text-evdx-warning" />
-              <span className="text-xs text-evdx-warning">Clone adapter detected. Some features may not work correctly.</span>
-            </div>
-          )}
         </CardContent>
       </Card>
 
@@ -157,7 +166,7 @@ export default function DeviceView() {
         <Card className="bg-[#1A2332] border-white/5">
           <CardContent className="p-3">
             <p className="text-xs text-evdx-text-secondary mb-1">VIN</p>
-            <p className="text-sm font-mono text-evdx-text truncate">
+            <p className="text-sm font-mono text-evdx-text truncate" title={deviceInfo.vin || (isDemo ? 'WVGZZZ5NZK' : '')}>
               {deviceInfo.vin || (isDemo ? 'WVGZZZ5NZK' : '—')}
             </p>
           </CardContent>
@@ -181,7 +190,7 @@ export default function DeviceView() {
               <div key={adapter.name} className="flex items-center justify-between bg-[#0D1117] rounded-lg px-3 py-2">
                 <div>
                   <p className="text-sm text-evdx-text">{adapter.name}</p>
-                  <p className="text-xs text-evdx-text-secondary">{adapter.type}</p>
+                  <p className="text-[10px] text-evdx-text-secondary">{adapter.type} · {adapter.profile}</p>
                 </div>
                 {adapter.recommended ? (
                   <Badge className="text-[10px] bg-evdx-green/10 text-evdx-green border-evdx-green/30">Recommended</Badge>

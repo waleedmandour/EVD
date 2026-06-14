@@ -18,7 +18,7 @@ interface ConnectOverlayProps {
 
 export default function ConnectOverlay({ onClose }: ConnectOverlayProps) {
   const { t } = useTranslation('common');
-  const { connectBluetooth, connectWifi, connectDemo, connectionStatus, updateSettings, settings, updateDeviceInfo, setActiveVehicle } = useAppStore();
+  const { connectBluetooth, connectWifi, connectDemo, connectionStatus, updateSettings, settings, updateDeviceInfo, setActiveVehicle, setConnectionMode, setConnectionStatus } = useAppStore();
   const [mode, setMode] = useState<'select' | 'bluetooth' | 'wifi' | 'demo'>('select');
   const [wifiIp, setWifiIp] = useState(settings.wifiIp);
   const [wifiPort, setWifiPort] = useState(String(settings.wifiPort));
@@ -35,12 +35,13 @@ export default function ConnectOverlay({ onClose }: ConnectOverlayProps) {
     setScannedDevices([]);
 
     try {
-      // Request permissions first
+      // Request permissions first (handles Android 12+ BLE + location properly)
       const { requestBlePermissions } = await import('@/lib/permissions');
       const permResult = await requestBlePermissions();
 
       if (!permResult.granted) {
-        setPermissionError('Bluetooth and Location permissions are required. Please grant them in Settings.');
+        const missingStr = permResult.missingPermissions.join(', ');
+        setPermissionError(`Permissions required: ${missingStr}. Please grant them in Settings.`);
         setScanning(false);
         return;
       }
@@ -71,21 +72,31 @@ export default function ConnectOverlay({ onClose }: ConnectOverlayProps) {
       const connected = await bleService.connect(device.deviceId, device.profile);
 
       if (connected) {
-        // Update store
+        // Get adapter identification info
+        const adapterInfo = bleService.getAdapterInfo();
+
+        // Update store with connection + adapter info
         updateDeviceInfo({
           name: device.name,
           type: 'bluetooth',
           adapterId: device.deviceId,
           signalStrength: device.rssi,
           quality: device.rssi > -50 ? 'excellent' : device.rssi > -70 ? 'good' : device.rssi > -85 ? 'fair' : 'poor',
+          firmware: adapterInfo?.firmware || '',
+          chipset: adapterInfo?.chipset || '',
+          protocol: adapterInfo?.protocol || '',
+          isClone: adapterInfo?.isClone || false,
+          voltage: adapterInfo?.voltage || 0,
+          vin: adapterInfo?.vin || '',
         });
 
         // Set connection in store
-        await connectBluetooth();
+        setConnectionMode('bluetooth');
+        setConnectionStatus('connected');
 
-        // Start OBD polling
+        // Start OBD polling with store's parser
         bleService.startPolling((pid, value) => {
-          // The store's parseOBDResponse handles PID data
+          useAppStore.getState().parseOBDResponse(value);
         });
 
         onClose();
@@ -93,17 +104,53 @@ export default function ConnectOverlay({ onClose }: ConnectOverlayProps) {
         setPermissionError('Failed to connect to adapter.');
       }
     } catch (error: any) {
+      console.error('BLE connect error:', error);
       setPermissionError(error?.message || 'Connection failed. Try again.');
     } finally {
       setConnectingToDevice(null);
     }
-  }, [connectBluetooth, updateDeviceInfo, onClose]);
+  }, [updateDeviceInfo, setConnectionMode, setConnectionStatus, onClose]);
 
   const handleWifiConnect = async () => {
+    setPermissionError('');
     updateSettings({ wifiIp, wifiPort: Number(wifiPort) });
-    await connectWifi(wifiIp, Number(wifiPort));
-    if (connectionStatus !== 'error') {
-      onClose();
+
+    try {
+      const { bleService } = await import('@/lib/ble-service');
+      const connected = await bleService.connectWifi(wifiIp, Number(wifiPort));
+
+      if (connected) {
+        // Get adapter identification info
+        const adapterInfo = bleService.getAdapterInfo();
+
+        updateDeviceInfo({
+          name: `WiFi ELM327 (${wifiIp})`,
+          type: 'wifi',
+          adapterId: `wifi-${wifiIp}:${wifiPort}`,
+          firmware: adapterInfo?.firmware || '',
+          chipset: adapterInfo?.chipset || '',
+          protocol: adapterInfo?.protocol || '',
+          isClone: adapterInfo?.isClone || false,
+          voltage: adapterInfo?.voltage || 0,
+          vin: adapterInfo?.vin || '',
+          quality: 'good',
+        });
+
+        setConnectionMode('wifi');
+        setConnectionStatus('connected');
+
+        // Start OBD polling
+        bleService.startPolling((pid, value) => {
+          useAppStore.getState().parseOBDResponse(value);
+        });
+
+        onClose();
+      } else {
+        setPermissionError('Failed to connect to WiFi ELM327. Check IP and port.');
+      }
+    } catch (error: any) {
+      console.error('WiFi connect error:', error);
+      setPermissionError(error?.message || 'WiFi connection failed. Check IP and port.');
     }
   };
 
