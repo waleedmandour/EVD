@@ -133,10 +133,10 @@ export default function DeviceView() {
             <div className="bg-[#0D1117] rounded-lg p-3">
               <p className="text-xs text-evdx-text-secondary mb-2">Signal Strength</p>
               <div className="flex items-end gap-1 mb-1">
-                {signalBars(deviceInfo.signalStrength || -50)}
+                {signalBars(deviceInfo.signalStrength ?? -50)}
               </div>
               <p className="text-sm font-medium text-evdx-text tabular-nums">
-                {deviceInfo.signalStrength || -50} dBm
+                {deviceInfo.signalStrength ?? -50} dBm
               </p>
             </div>
 
@@ -154,7 +154,7 @@ export default function DeviceView() {
               </Badge>
               <div className="mt-2 flex items-center gap-1.5 text-xs text-evdx-text-secondary">
                 <Clock size={10} />
-                <span>{deviceInfo.responseTime || 45} ms</span>
+                <span>{deviceInfo.responseTime ?? 45} ms</span>
               </div>
             </div>
           </div>

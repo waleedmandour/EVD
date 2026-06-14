@@ -219,7 +219,7 @@ export default function BatteryView() {
             </div>
             <div className="bg-[#0D1117] rounded-lg p-2">
               <p className="text-xs text-evdx-text-secondary">{t('cellCount')}</p>
-              <p className="text-evdx-text font-medium">~{Math.round(vehicleData.voltage / (vehicleData.cellMaxV / 1000))}</p>
+              <p className="text-evdx-text font-medium">~{Math.round(vehicleData.voltage / (vehicleData.cellMaxV / 1000 || 3.7))}</p>
             </div>
             <div className="bg-[#0D1117] rounded-lg p-2">
               <p className="text-xs text-evdx-text-secondary">{t('degradation')}</p>

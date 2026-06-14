@@ -212,7 +212,7 @@ export default function ConnectOverlay({ onClose }: ConnectOverlayProps) {
                     <div className="w-12 h-12 rounded-xl bg-evdx-primary/10 flex items-center justify-center">
                       <Bluetooth size={24} className="text-evdx-primary" />
                     </div>
-                    <div className="text-left">
+                    <div className="text-start">
                       <p className="text-evdx-text font-medium">Bluetooth OBD</p>
                       <p className="text-xs text-evdx-text-secondary">Scan & connect BLE adapter</p>
                     </div>
@@ -225,7 +225,7 @@ export default function ConnectOverlay({ onClose }: ConnectOverlayProps) {
                     <div className="w-12 h-12 rounded-xl bg-evdx-purple/10 flex items-center justify-center">
                       <Wifi size={24} className="text-evdx-purple" />
                     </div>
-                    <div className="text-left">
+                    <div className="text-start">
                       <p className="text-evdx-text font-medium">WiFi OBD</p>
                       <p className="text-xs text-evdx-text-secondary">Connect via WiFi ELM327</p>
                     </div>
@@ -238,7 +238,7 @@ export default function ConnectOverlay({ onClose }: ConnectOverlayProps) {
                     <div className="w-12 h-12 rounded-xl bg-evdx-green/10 flex items-center justify-center">
                       <Zap size={24} className="text-evdx-green" />
                     </div>
-                    <div className="text-left">
+                    <div className="text-start">
                       <p className="text-evdx-text font-medium">{t('demo')}</p>
                       <p className="text-xs text-evdx-text-secondary">Try with simulated data</p>
                     </div>
@@ -284,7 +284,7 @@ export default function ConnectOverlay({ onClose }: ConnectOverlayProps) {
                               className="w-full flex items-center gap-3 bg-[#0D1117] hover:bg-evdx-primary/5 border border-white/5 rounded-lg px-4 py-3 transition-colors disabled:opacity-50"
                             >
                               <Bluetooth size={18} className="text-evdx-primary" />
-                              <div className="flex-1 text-left">
+                              <div className="flex-1 text-start">
                                 <span className="text-sm text-evdx-text block">{device.name}</span>
                                 <span className="text-xs text-evdx-text-secondary">RSSI: {device.rssi} dBm</span>
                               </div>

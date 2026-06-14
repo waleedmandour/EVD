@@ -74,9 +74,6 @@ export default function VoiceAssistant() {
 
   const lang = settings.language;
 
-  // Don't render if voice assistant is disabled
-  if (!settings.voiceAssistant) return null;
-
   // Generate dynamic page summary
   const getPageSummary = useCallback((): string => {
     const baseSummary = PAGE_SUMMARIES[activeTab]?.[lang] || PAGE_SUMMARIES[activeTab]?.en || '';
@@ -514,6 +511,9 @@ export default function VoiceAssistant() {
       setShowSummary(false);
     }, 6000);
   }, [getPageSummary, speakText]);
+
+  // Don't render if voice assistant is disabled
+  if (!settings.voiceAssistant) return null;
 
   return (
     <>

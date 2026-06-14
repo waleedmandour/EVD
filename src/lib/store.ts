@@ -723,7 +723,9 @@ export const useAppStore = create<AppState>()(
         }
         // ── Mode 03 (43): Stored DTCs ────────────────────────────────────────
         else if (modeResponse === '43') {
-          const data = clean.substring(2);
+          // Mode 03 response: 43 [count_byte] [DTC1_hi][DTC1_lo] [DTC2_hi][DTC2_lo] ...
+          // Skip mode byte (43) + count byte (2 hex chars)
+          const data = clean.substring(4);
           const dtcs: DTCEvent[] = [];
           for (let i = 0; i < data.length; i += 4) {
             if (i + 4 > data.length) break;
@@ -731,21 +733,29 @@ export const useAppStore = create<AppState>()(
             const byte2 = parseInt(data.substring(i + 2, i + 4), 16);
             if (byte1 === 0 && byte2 === 0) continue;
 
+            // First nibble encodes both type letter AND first digit (0-3)
+            // 0x0P = P0, 0x1P = P1, 0x2P = P2, 0x3P = P3
+            // 0x4P = C0, 0x5P = C1, 0x6P = C2, 0x7P = C3
+            // 0x8P = B0, 0x9P = B1, 0xAP = B2, 0xBP = B3
+            // 0xCP = U0, 0xDP = U1, 0xEP = U2, 0xFP = U3
+            const highNibble = (byte1 >> 4) & 0xF;
             const typeMap: Record<number, string> = {
               0: 'P', 1: 'P', 2: 'P', 3: 'P',
               4: 'C', 5: 'C', 6: 'C', 7: 'C',
               8: 'B', 9: 'B', 0xA: 'B', 0xB: 'B',
               0xC: 'U', 0xD: 'U', 0xE: 'U', 0xF: 'U',
             };
-            const type = typeMap[(byte1 >> 4) & 0xF] || 'P';
-            const code = `${type}${(byte1 & 0x0F)}${byte2.toString(16).toUpperCase().padStart(2, '0')}`;
+            const type = typeMap[highNibble] || 'P';
+            const firstDigit = highNibble % 4;
+            const code = `${type}${firstDigit}${(byte1 & 0x0F).toString(16).toUpperCase()}${byte2.toString(16).toUpperCase().padStart(2, '0')}`;
 
             dtcs.push({
               code,
               description: '',  // Will be looked up from dtc-codes.ts
-              severity: code.startsWith('P0') ? 'critical' : code.startsWith('P1') ? 'warning' : 'info',
+              severity: code.startsWith('P0') || code.startsWith('C0') || code.startsWith('B0') || code.startsWith('U0') ? 'critical' : code.startsWith('P1') || code.startsWith('P2') ? 'high' : 'medium',
               timestamp: Date.now(),
-              system: type === 'P' ? 'powertrain' : type === 'C' ? 'chassis' : type === 'B' ? 'body' : 'network',
+              active: true,
+              count: 1,
             });
           }
           if (dtcs.length > 0) {
@@ -754,7 +764,7 @@ export const useAppStore = create<AppState>()(
         }
         // ── Mode 07 (47): Pending DTCs ───────────────────────────────────────
         else if (modeResponse === '47') {
-          // Same format as Mode 03 — pending codes detected this drive cycle
+          // Mode 07 response: 47 [DTC1_hi][DTC1_lo] [DTC2_hi][DTC2_lo] ... (no count byte)
           const data = clean.substring(2);
           for (let i = 0; i < data.length; i += 4) {
             if (i + 4 > data.length) break;
@@ -762,21 +772,24 @@ export const useAppStore = create<AppState>()(
             const byte2 = parseInt(data.substring(i + 2, i + 4), 16);
             if (byte1 === 0 && byte2 === 0) continue;
 
+            const highNibble = (byte1 >> 4) & 0xF;
             const typeMap: Record<number, string> = {
               0: 'P', 1: 'P', 2: 'P', 3: 'P',
               4: 'C', 5: 'C', 6: 'C', 7: 'C',
               8: 'B', 9: 'B', 0xA: 'B', 0xB: 'B',
               0xC: 'U', 0xD: 'U', 0xE: 'U', 0xF: 'U',
             };
-            const type = typeMap[(byte1 >> 4) & 0xF] || 'P';
-            const code = `${type}${(byte1 & 0x0F)}${byte2.toString(16).toUpperCase().padStart(2, '0')}`;
+            const type = typeMap[highNibble] || 'P';
+            const firstDigit = highNibble % 4;
+            const code = `${type}${firstDigit}${(byte1 & 0x0F).toString(16).toUpperCase()}${byte2.toString(16).toUpperCase().padStart(2, '0')}`;
 
             state.addDTC({
               code,
               description: '',
-              severity: 'warning',  // Pending codes are less severe
+              severity: 'medium',  // Pending codes are less severe
               timestamp: Date.now(),
-              system: type === 'P' ? 'powertrain' : type === 'C' ? 'chassis' : type === 'B' ? 'body' : 'network',
+              active: false,
+              count: 1,
             });
           }
         }

@@ -90,7 +90,7 @@ export default function SettingsView() {
               <div className="w-8 h-8 rounded-lg bg-evdx-purple/10 flex items-center justify-center">
                 <Brain size={14} className="text-evdx-purple" />
               </div>
-              <div className="text-left">
+              <div className="text-start">
                 <p className="text-sm text-evdx-text">{isRTL ? 'التنبؤ بصحة البطارية' : 'Battery Health Predictor'}</p>
                 <p className="text-xs text-evdx-text-secondary">{isRTL ? 'توقعات التدهور والتوصيات' : 'Degradation forecast & tips'}</p>
               </div>
@@ -106,7 +106,7 @@ export default function SettingsView() {
               <div className="w-8 h-8 rounded-lg bg-evdx-critical/10 flex items-center justify-center">
                 <Shield size={14} className="text-evdx-critical" />
               </div>
-              <div className="text-left">
+              <div className="text-start">
                 <p className="text-sm text-evdx-text">{isRTL ? 'محلل الأعطال الذكي' : 'Smart DTC Analyzer'}</p>
                 <p className="text-xs text-evdx-text-secondary">{isRTL ? 'تحليل السبب الجذري بالذكاء الاصطناعي' : 'AI root cause analysis'}</p>
               </div>
@@ -122,7 +122,7 @@ export default function SettingsView() {
               <div className="w-8 h-8 rounded-lg bg-evdx-green/10 flex items-center justify-center">
                 <Leaf size={14} className="text-evdx-green" />
               </div>
-              <div className="text-left">
+              <div className="text-start">
                 <p className="text-sm text-evdx-text">{isRTL ? 'مدرب القيادة الاقتصادية' : 'Eco-Driving Coach'}</p>
                 <p className="text-xs text-evdx-text-secondary">{isRTL ? 'نصائح مخصصة لتحسين المدى' : 'Personalized range tips'}</p>
               </div>

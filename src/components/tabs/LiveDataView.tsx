@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAppStore } from '@/lib/store';
 import { Card, CardContent } from '@/components/ui/card';
@@ -47,22 +47,23 @@ export default function LiveDataView() {
 
   const selectedParamList = parameters.filter((p) => selectedParams.includes(p.key));
 
-  // Build chart data
-  const chartData = (() => {
+  // Build chart data — memoized to prevent infinite re-renders from Math.random()
+  const chartData = useMemo(() => {
     const selected = selectedParamList;
     if (selected.length === 0) return [];
 
     // Use the first parameter's history as the time base
     const baseHistory = selected[0].getData().history;
     if (baseHistory.length === 0) {
-      // Generate synthetic data points for demo
+      // Generate stable synthetic data points for demo (no Math.random)
       return Array.from({ length: 20 }, (_, i) => {
         const point: Record<string, number | string> = {
           time: `${i}`,
         };
         selected.forEach((param) => {
           const data = param.getData();
-          point[param.key] = data.value + (Math.random() - 0.5) * (data.value * 0.1 || 5);
+          // Stable variation using sine wave instead of random
+          point[param.key] = data.value + Math.sin(i * 0.5) * (data.value * 0.05 || 2);
         });
         return point;
       });
@@ -79,7 +80,7 @@ export default function LiveDataView() {
       });
       return point;
     });
-  })();
+  }, [selectedParamList, timeWindow, vehicleData, speedHistory, powerHistory, batteryHistory, temperatureHistory]);
 
   const exportCSV = () => {
     const headers = ['Time', ...selectedParamList.map((p) => `${p.label} (${p.unit})`)];

@@ -93,7 +93,7 @@ export async function requestBlePermissions(): Promise<PermissionResult> {
       }
     }
 
-    return { granted: true, permissions: results, missingPermissions: missing };
+    return { granted: missing.length === 0, permissions: results, missingPermissions: missing };
   } catch (error: unknown) {
     console.error('[Permissions] BLE permission error:', error);
 

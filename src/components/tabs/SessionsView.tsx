@@ -11,7 +11,7 @@ import { Map, Zap, Leaf, DollarSign, TrendingUp, Play, Square, Timer, Gauge as G
 
 export default function SessionsView() {
   const { t } = useTranslation('sessions');
-  const { tripData, ecoScore, vehicleData, connectionStatus, isLogging, setIsLogging, resetTrip } = useAppStore();
+  const { tripData, ecoScore, vehicleData, connectionStatus, isLogging, setIsLogging, resetTrip, settings } = useAppStore();
 
   const formatDuration = (seconds: number) => {
     const h = Math.floor(seconds / 3600);
@@ -22,7 +22,7 @@ export default function SessionsView() {
     return `${s}s`;
   };
 
-  const costPerKwh = 0.021; // OMR
+  const costPerKwh = settings.electricityCostPerKwh || 0.021; // Use user setting, fallback OMR
   const tripCostOmr = tripData.energyConsumed * costPerKwh;
   const tripCostUsd = tripCostOmr * 2.6;
   const iceCostPerKm = 0.05; // OMR approximate for ICE

@@ -533,6 +533,7 @@ class BLEService {
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
         this.responseResolve = null;
+        this.responseBuffer = '';  // Clear stale data from timed-out command
         resolve('');  // Timeout returns empty — don't break the polling loop
       }, timeoutMs);
 
@@ -986,8 +987,10 @@ class BLEService {
 
       // First nibble determines DTC type
       const typeMap: Record<number, string> = { 0: 'P', 1: 'P', 2: 'P', 3: 'P', 4: 'C', 5: 'C', 6: 'C', 7: 'C', 8: 'B', 9: 'B', 0xA: 'B', 0xB: 'B', 0xC: 'U', 0xD: 'U', 0xE: 'U', 0xF: 'U' };
-      const type = typeMap[(byte1 >> 4) & 0xF] || 'P';
-      const code = `${type}${(byte1 & 0x0F).toString().padStart(1, '0')}${byte2.toString(16).toUpperCase().padStart(2, '0')}`;
+      const highNibble = (byte1 >> 4) & 0xF;
+      const type = typeMap[highNibble] || 'P';
+      const firstDigit = highNibble % 4;
+      const code = `${type}${firstDigit}${(byte1 & 0x0F).toString(16).toUpperCase()}${byte2.toString(16).toUpperCase().padStart(2, '0')}`;
 
       dtcs.push(code);
     }

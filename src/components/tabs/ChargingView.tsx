@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAppStore } from '@/lib/store';
 import { CircleGauge, AnimatedNumber } from '@/components/shared/Gauges';
@@ -24,16 +24,20 @@ export default function ChargingView() {
     power: p.power,
   }));
 
-  // Generate cell voltage visualization data
-  const cellData = chargingData.cellVoltages.length > 0
-    ? chargingData.cellVoltages.map((v, i) => ({
+  // Generate cell voltage visualization data — memoized to prevent infinite re-renders
+  const cellData = useMemo(() => {
+    if (chargingData.cellVoltages.length > 0) {
+      return chargingData.cellVoltages.map((v, i) => ({
         cell: `C${i + 1}`,
         voltage: v / 1000,
-      }))
-    : Array.from({ length: 16 }, (_, i) => ({
-        cell: `C${i + 1}`,
-        voltage: 3.3 + Math.random() * 0.05,
       }));
+    }
+    // Stable fallback data instead of Math.random() in render
+    return Array.from({ length: 16 }, (_, i) => ({
+      cell: `C${i + 1}`,
+      voltage: 3.30 + (i * 0.003),  // Stable slight variation
+    }));
+  }, [chargingData.cellVoltages]);
 
   const minutes = Math.floor(chargingData.timeRemaining);
   const hours = Math.floor(minutes / 60);

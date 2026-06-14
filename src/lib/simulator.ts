@@ -534,7 +534,7 @@ export class SimulatorEngine {
       speed: Math.round(s.speed * 10) / 10,
       rpm: Math.round(rpm),
       soc: Math.round(s.soc * 10) / 10,
-      soh: 96 + Math.random() * 4,
+      soh: 97,  // Stable SOH — doesn't fluctuate every 500ms
       voltage: Math.round(voltage * 10) / 10,
       current: Math.round(current) / 10,
       power: Math.round(power * 10) / 10,

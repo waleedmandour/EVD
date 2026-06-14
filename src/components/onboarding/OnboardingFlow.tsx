@@ -157,7 +157,7 @@ export default function OnboardingFlow() {
               <Shield size={48} className="text-evdx-green mb-6" />
               <h2 className="text-xl font-bold text-evdx-text mb-2">{t('privacyTitle')}</h2>
               <p className="text-sm text-evdx-text-secondary mb-6 leading-relaxed">{t('privacyText')}</p>
-              <div className="space-y-3 text-left w-full mb-6">
+              <div className="space-y-3 text-start w-full mb-6">
                 {[t('privacyBullet1'), t('privacyBullet2'), t('privacyBullet3'), t('privacyBullet4')].map((bullet, i) => (
                   <div key={i} className="flex items-start gap-2">
                     <Check size={16} className="text-evdx-green mt-0.5 shrink-0" />
@@ -336,7 +336,7 @@ export default function OnboardingFlow() {
               <h2 className="text-xl font-bold text-evdx-text mb-2">{t('setupComplete')}</h2>
               <p className="text-sm text-evdx-text-secondary mb-8">{t('setupCompleteDescription')}</p>
 
-              <div className="space-y-3 w-full mb-8 text-left">
+              <div className="space-y-3 w-full mb-8 text-start">
                 {['dashboard', 'battery', 'diagnostics', 'charging'].map((s) => (
                   <div key={s} className="flex items-center gap-3 bg-[#1A2332] rounded-lg px-4 py-3">
                     <Check size={16} className="text-evdx-primary shrink-0" />
