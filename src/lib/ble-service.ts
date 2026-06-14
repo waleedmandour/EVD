@@ -13,7 +13,7 @@
  * - Standard SAE J1979 PID support detection (0100, 0120, 0140)
  * - DTC reading (Mode 03/07/0A) and clearing (Mode 04)
  * - VIN retrieval (Mode 09 PID 02)
- * - WiFi ELM327 support via WebSocket with full AT init
+ * - WiFi ELM327 support via fetch HTTP (with WebSocket fallback) and full AT init
  * - Proper BLE MTU handling and notification buffering
  * - Android 12+ runtime permission flow
  *
@@ -266,10 +266,14 @@ class BLEService {
   private responseResolve: ((value: string) => void) | null = null;
   private notifyCallback: ((pid: string, value: string) => void) | null = null;
   private pollingInterval: ReturnType<typeof setInterval> | null = null;
+  private pollingTimeout: ReturnType<typeof setTimeout> | null = null;
+  private isPollingActive = false;
   private initialized = false;
   private adapterInfo: AdapterInfo | null = null;
   private wifiSocket: WebSocket | null = null;
   private isWifiMode = false;
+  private wifiIp = '';
+  private wifiPort = 35000;
   private commandQueue: string[] = [];
   private isProcessingQueue = false;
 
@@ -417,65 +421,119 @@ class BLEService {
   }
 
   /**
-   * Connect to a WiFi ELM327 adapter via WebSocket.
-   * Uses the same AT command initialization as BLE.
+   * Connect to a WiFi ELM327 adapter.
+   * WiFi ELM327 adapters expose a raw TCP socket (typically port 35000), not WebSocket.
+   * Since browsers don't support raw TCP, we use fetch() to the adapter's HTTP endpoint
+   * (many adapters also respond to HTTP), or fall back to WebSocket for those that support it.
+   * For production, a native Capacitor TCP socket plugin is recommended.
    */
   async connectWifi(ip: string, port: number): Promise<boolean> {
     this.isWifiMode = true;
     this.adapterInfo = null;
+    this.wifiIp = ip;
+    this.wifiPort = port;
 
-    return new Promise((resolve, reject) => {
+    try {
+      // Test connection by sending ATZ (reset) via HTTP POST
+      // Many WiFi ELM327 adapters accept HTTP requests
+      const testResponse = await this.sendWifiHttpCommand('ATZ');
+      console.log('[WiFi] ELM327 responded:', testResponse || '(empty)');
+
+      this.connectedDeviceId = `wifi-${ip}:${port}`;
+
+      // Run same ELM327 init sequence
       try {
-        const ws = new WebSocket(`ws://${ip}:${port}`);
+        await this.initializeELM327();
+        await this.identifyAdapter();
+        await this.detectSupportedPIDs();
+        await this.readVIN();
+      } catch (initError) {
+        console.error('[WiFi] Init failed:', initError);
+        // Still connected, just init had issues
+      }
 
-        ws.onopen = async () => {
-          console.log('[WiFi] Connected to ELM327 at', `${ip}:${port}`);
-          this.wifiSocket = ws;
-          this.connectedDeviceId = `wifi-${ip}:${port}`;
+      return true;
+    } catch (httpError) {
+      console.warn('[WiFi] HTTP approach failed, trying WebSocket fallback:', httpError);
 
-          // Set up message handler
-          ws.onmessage = (event) => {
-            const data = String(event.data);
-            this.handleNotification(data);
+      // Fallback: try WebSocket (some adapters like OBDLink WiFi support WS)
+      return new Promise((resolve, reject) => {
+        try {
+          const ws = new WebSocket(`ws://${ip}:${port}`);
+
+          ws.onopen = async () => {
+            console.log('[WiFi] WebSocket connected to ELM327 at', `${ip}:${port}`);
+            this.wifiSocket = ws;
+            this.connectedDeviceId = `wifi-${ip}:${port}`;
+
+            ws.onmessage = (event) => {
+              const data = String(event.data);
+              this.handleNotification(data);
+            };
+
+            try {
+              await this.initializeELM327();
+              await this.identifyAdapter();
+              await this.detectSupportedPIDs();
+              await this.readVIN();
+              resolve(true);
+            } catch (initError) {
+              console.error('[WiFi] Init failed:', initError);
+              resolve(true);
+            }
           };
 
-          // Run same ELM327 init sequence
-          try {
-            await this.initializeELM327();
-            await this.identifyAdapter();
-            await this.detectSupportedPIDs();
-            await this.readVIN();
-            resolve(true);
-          } catch (initError) {
-            console.error('[WiFi] Init failed:', initError);
-            resolve(true); // Still connected, just init had issues
-          }
-        };
+          ws.onerror = () => {
+            this.isWifiMode = false;
+            reject(new Error('WiFi connection failed — adapter may require a native TCP socket plugin'));
+          };
 
-        ws.onerror = (error) => {
-          console.error('[WiFi] Connection error:', error);
+          ws.onclose = () => {
+            this.isWifiMode = false;
+            this.wifiSocket = null;
+          };
+
+          setTimeout(() => {
+            if (ws.readyState !== WebSocket.OPEN) {
+              ws.close();
+              reject(new Error('WiFi connection timeout'));
+            }
+          }, 10000);
+        } catch (error) {
           this.isWifiMode = false;
-          reject(new Error('WiFi connection failed'));
-        };
+          reject(error);
+        }
+      });
+    }
+  }
 
-        ws.onclose = () => {
-          console.log('[WiFi] Connection closed');
-          this.isWifiMode = false;
-          this.wifiSocket = null;
-        };
+  /**
+   * Send command to WiFi ELM327 via HTTP POST.
+   * Many WiFi OBD adapters expose an HTTP API endpoint.
+   */
+  private async sendWifiHttpCommand(command: string, timeoutMs = 3000): Promise<string> {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
-        // Timeout after 10 seconds
-        setTimeout(() => {
-          if (ws.readyState !== WebSocket.OPEN) {
-            ws.close();
-            reject(new Error('WiFi connection timeout'));
-          }
-        }, 10000);
-      } catch (error) {
-        this.isWifiMode = false;
-        reject(error);
+    try {
+      const response = await fetch(`http://${this.wifiIp}:${this.wifiPort}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: command + '\r',
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        return '';
       }
-    });
+
+      const text = await response.text();
+      return text.replace(/\s/g, '').replace(/>$/, '');
+    } catch {
+      return '';
+    } finally {
+      clearTimeout(timeout);
+    }
   }
 
   async disconnect(): Promise<void> {
@@ -558,9 +616,16 @@ class BLEService {
   }
 
   /**
-   * Send command via WiFi WebSocket.
+   * Send command via WiFi — tries HTTP first, falls back to WebSocket.
    */
   private async sendWifiCommand(command: string, timeoutMs = 3000): Promise<string> {
+    // Try HTTP approach first (works with many WiFi ELM327 adapters)
+    if (!this.wifiSocket) {
+      const httpResult = await this.sendWifiHttpCommand(command, timeoutMs);
+      if (httpResult) return httpResult;
+    }
+
+    // Fallback to WebSocket if connected via WS
     if (!this.wifiSocket || this.wifiSocket.readyState !== WebSocket.OPEN) {
       return '';
     }
@@ -568,6 +633,7 @@ class BLEService {
     return new Promise((resolve) => {
       const timeout = setTimeout(() => {
         this.responseResolve = null;
+        this.responseBuffer = '';
         resolve('');
       }, timeoutMs);
 
@@ -606,10 +672,15 @@ class BLEService {
 
     let pidIndex = 0;
     this.notifyCallback = onData;
+    this.isPollingActive = true;
 
     console.log(`[BLE] Starting polling for ${pids.length} PIDs at ${intervalMs}ms interval`);
 
-    this.pollingInterval = setInterval(async () => {
+    // Use recursive setTimeout instead of setInterval to prevent race conditions.
+    // setInterval can fire before the previous async callback completes,
+    // causing responseResolve overwrites and PID data corruption.
+    const pollNext = async () => {
+      if (!this.isPollingActive) return;
       if (!this.connectedDeviceId && !this.isWifiMode) return;
 
       try {
@@ -623,10 +694,23 @@ class BLEService {
       } catch (error) {
         console.error('[BLE] Polling error:', error);
       }
-    }, intervalMs);
+
+      // Schedule next poll only after current one completes
+      if (this.isPollingActive) {
+        this.pollingTimeout = setTimeout(pollNext, intervalMs);
+      }
+    };
+
+    // Start first poll immediately
+    pollNext();
   }
 
   stopPolling(): void {
+    this.isPollingActive = false;
+    if (this.pollingTimeout) {
+      clearTimeout(this.pollingTimeout);
+      this.pollingTimeout = null;
+    }
     if (this.pollingInterval) {
       clearInterval(this.pollingInterval);
       this.pollingInterval = null;
