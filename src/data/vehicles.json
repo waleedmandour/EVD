@@ -72,7 +72,7 @@
         "mode": "22",
         "bytes": 1,
         "formula": "A - 40",
-        "unit": "\u00b0C",
+        "unit": "°C",
         "min": -40,
         "max": 215
       },
@@ -82,7 +82,7 @@
         "mode": "22",
         "bytes": 1,
         "formula": "A - 40",
-        "unit": "\u00b0C",
+        "unit": "°C",
         "min": -40,
         "max": 215
       },
@@ -117,7 +117,13 @@
         "max": 65535
       }
     ],
-    "dtcPrefix": ["P11", "P12", "U01", "U11", "B12"],
+    "dtcPrefix": [
+      "P11",
+      "P12",
+      "U01",
+      "U11",
+      "B12"
+    ],
     "chargingSpecs": {
       "dcMax": 150,
       "acMax": 11,
@@ -209,7 +215,7 @@
         "mode": "22",
         "bytes": 1,
         "formula": "A - 40",
-        "unit": "\u00b0C",
+        "unit": "°C",
         "min": -40,
         "max": 215
       },
@@ -219,7 +225,7 @@
         "mode": "22",
         "bytes": 1,
         "formula": "A - 40",
-        "unit": "\u00b0C",
+        "unit": "°C",
         "min": -40,
         "max": 215
       },
@@ -244,7 +250,13 @@
         "max": 255
       }
     ],
-    "dtcPrefix": ["P0A", "P0B", "U00", "U01", "B10"],
+    "dtcPrefix": [
+      "P0A",
+      "P0B",
+      "U00",
+      "U01",
+      "B10"
+    ],
     "chargingSpecs": {
       "dcMax": 250,
       "acMax": 19.2,
@@ -323,7 +335,7 @@
         "mode": "22",
         "bytes": 1,
         "formula": "A - 40",
-        "unit": "\u00b0C",
+        "unit": "°C",
         "min": -40,
         "max": 215
       },
@@ -368,7 +380,12 @@
         "max": 255
       }
     ],
-    "dtcPrefix": ["P0A", "P0B", "P31", "U10"],
+    "dtcPrefix": [
+      "P0A",
+      "P0B",
+      "P31",
+      "U10"
+    ],
     "chargingSpecs": {
       "dcMax": 130,
       "acMax": 7.4,
@@ -450,7 +467,7 @@
         "mode": "22",
         "bytes": 1,
         "formula": "A - 40",
-        "unit": "\u00b0C",
+        "unit": "°C",
         "min": -40,
         "max": 215
       },
@@ -460,7 +477,7 @@
         "mode": "22",
         "bytes": 1,
         "formula": "A - 40",
-        "unit": "\u00b0C",
+        "unit": "°C",
         "min": -40,
         "max": 215
       },
@@ -470,7 +487,7 @@
         "mode": "22",
         "bytes": 1,
         "formula": "A - 40",
-        "unit": "\u00b0C",
+        "unit": "°C",
         "min": -40,
         "max": 215
       },
@@ -480,7 +497,7 @@
         "mode": "22",
         "bytes": 1,
         "formula": "A - 40",
-        "unit": "\u00b0C",
+        "unit": "°C",
         "min": -40,
         "max": 215
       },
@@ -495,7 +512,13 @@
         "max": 255
       }
     ],
-    "dtcPrefix": ["P0A", "P0B", "P0C", "U01", "B14"],
+    "dtcPrefix": [
+      "P0A",
+      "P0B",
+      "P0C",
+      "U01",
+      "B14"
+    ],
     "chargingSpecs": {
       "dcMax": 350,
       "acMax": 11,
@@ -579,7 +602,7 @@
         "mode": "22",
         "bytes": 1,
         "formula": "A - 40",
-        "unit": "\u00b0C",
+        "unit": "°C",
         "min": -40,
         "max": 215
       },
@@ -624,7 +647,13 @@
         "max": 255
       }
     ],
-    "dtcPrefix": ["P0A", "P0B", "P15", "U00", "U04"],
+    "dtcPrefix": [
+      "P0A",
+      "P0B",
+      "P15",
+      "U00",
+      "U04"
+    ],
     "chargingSpecs": {
       "dcMax": 270,
       "acMax": 22,
@@ -706,7 +735,7 @@
         "mode": "22",
         "bytes": 1,
         "formula": "A - 40",
-        "unit": "\u00b0C",
+        "unit": "°C",
         "min": -40,
         "max": 215
       },
@@ -716,7 +745,7 @@
         "mode": "22",
         "bytes": 1,
         "formula": "A - 40",
-        "unit": "\u00b0C",
+        "unit": "°C",
         "min": -40,
         "max": 215
       },
@@ -751,7 +780,13 @@
         "max": 255
       }
     ],
-    "dtcPrefix": ["P0A", "P0B", "P0C", "U00", "B14"],
+    "dtcPrefix": [
+      "P0A",
+      "P0B",
+      "P0C",
+      "U00",
+      "B14"
+    ],
     "chargingSpecs": {
       "dcMax": 200,
       "acMax": 22,
@@ -836,7 +871,7 @@
         "mode": "22",
         "bytes": 1,
         "formula": "A - 40",
-        "unit": "\u00b0C",
+        "unit": "°C",
         "min": -40,
         "max": 215
       },
@@ -846,7 +881,7 @@
         "mode": "22",
         "bytes": 1,
         "formula": "A - 40",
-        "unit": "\u00b0C",
+        "unit": "°C",
         "min": -40,
         "max": 215
       },
@@ -856,7 +891,7 @@
         "mode": "22",
         "bytes": 1,
         "formula": "A - 40",
-        "unit": "\u00b0C",
+        "unit": "°C",
         "min": -40,
         "max": 215
       },
@@ -866,7 +901,7 @@
         "mode": "22",
         "bytes": 1,
         "formula": "A - 40",
-        "unit": "\u00b0C",
+        "unit": "°C",
         "min": -40,
         "max": 215
       },
@@ -881,7 +916,13 @@
         "max": 655
       }
     ],
-    "dtcPrefix": ["P0A", "P0B", "U00", "U01", "B14"],
+    "dtcPrefix": [
+      "P0A",
+      "P0B",
+      "U00",
+      "U01",
+      "B14"
+    ],
     "chargingSpecs": {
       "dcMax": 200,
       "acMax": 22,
@@ -964,7 +1005,7 @@
         "mode": "22",
         "bytes": 1,
         "formula": "A - 40",
-        "unit": "\u00b0C",
+        "unit": "°C",
         "min": -40,
         "max": 215
       },
@@ -974,7 +1015,7 @@
         "mode": "22",
         "bytes": 1,
         "formula": "A - 40",
-        "unit": "\u00b0C",
+        "unit": "°C",
         "min": -40,
         "max": 215
       },
@@ -984,7 +1025,7 @@
         "mode": "22",
         "bytes": 1,
         "formula": "A - 40",
-        "unit": "\u00b0C",
+        "unit": "°C",
         "min": -40,
         "max": 215
       },
@@ -1009,7 +1050,13 @@
         "max": 655
       }
     ],
-    "dtcPrefix": ["P0A", "P0B", "P0E", "U00", "B10"],
+    "dtcPrefix": [
+      "P0A",
+      "P0B",
+      "P0E",
+      "U00",
+      "B10"
+    ],
     "chargingSpecs": {
       "dcMax": 350,
       "acMax": 19.2,
@@ -1089,7 +1136,7 @@
         "mode": "22",
         "bytes": 1,
         "formula": "A - 40",
-        "unit": "\u00b0C",
+        "unit": "°C",
         "min": -40,
         "max": 215
       },
@@ -1099,7 +1146,7 @@
         "mode": "22",
         "bytes": 1,
         "formula": "A - 40",
-        "unit": "\u00b0C",
+        "unit": "°C",
         "min": -40,
         "max": 215
       },
@@ -1109,7 +1156,7 @@
         "mode": "22",
         "bytes": 1,
         "formula": "A - 40",
-        "unit": "\u00b0C",
+        "unit": "°C",
         "min": -40,
         "max": 215
       },
@@ -1134,7 +1181,13 @@
         "max": 100
       }
     ],
-    "dtcPrefix": ["P0A", "P0B", "P0C", "U01", "B14"],
+    "dtcPrefix": [
+      "P0A",
+      "P0B",
+      "P0C",
+      "U01",
+      "B14"
+    ],
     "chargingSpecs": {
       "dcMax": 350,
       "acMax": 19.2,
@@ -1215,7 +1268,7 @@
         "mode": "22",
         "bytes": 1,
         "formula": "A - 40",
-        "unit": "\u00b0C",
+        "unit": "°C",
         "min": -40,
         "max": 215
       },
@@ -1225,7 +1278,7 @@
         "mode": "22",
         "bytes": 1,
         "formula": "A - 40",
-        "unit": "\u00b0C",
+        "unit": "°C",
         "min": -40,
         "max": 215
       },
@@ -1260,7 +1313,12 @@
         "max": 65535
       }
     ],
-    "dtcPrefix": ["P11", "P12", "U01", "U10"],
+    "dtcPrefix": [
+      "P11",
+      "P12",
+      "U01",
+      "U10"
+    ],
     "chargingSpecs": {
       "dcMax": 300,
       "acMax": 22,
@@ -1342,7 +1400,7 @@
         "mode": "22",
         "bytes": 1,
         "formula": "A - 40",
-        "unit": "\u00b0C",
+        "unit": "°C",
         "min": -40,
         "max": 215
       },
@@ -1372,7 +1430,7 @@
         "mode": "22",
         "bytes": 1,
         "formula": "A - 40",
-        "unit": "\u00b0C",
+        "unit": "°C",
         "min": -40,
         "max": 215
       },
@@ -1382,12 +1440,17 @@
         "mode": "22",
         "bytes": 1,
         "formula": "A - 40",
-        "unit": "\u00b0C",
+        "unit": "°C",
         "min": -40,
         "max": 215
       }
     ],
-    "dtcPrefix": ["P11", "P12", "U01", "U11"],
+    "dtcPrefix": [
+      "P11",
+      "P12",
+      "U01",
+      "U11"
+    ],
     "chargingSpecs": {
       "dcMax": 180,
       "acMax": 11,
@@ -1468,7 +1531,7 @@
         "mode": "22",
         "bytes": 1,
         "formula": "A - 40",
-        "unit": "\u00b0C",
+        "unit": "°C",
         "min": -40,
         "max": 215
       },
@@ -1478,7 +1541,7 @@
         "mode": "22",
         "bytes": 1,
         "formula": "A - 40",
-        "unit": "\u00b0C",
+        "unit": "°C",
         "min": -40,
         "max": 215
       },
@@ -1513,7 +1576,12 @@
         "max": 100
       }
     ],
-    "dtcPrefix": ["P11", "P12", "U01", "B12"],
+    "dtcPrefix": [
+      "P11",
+      "P12",
+      "U01",
+      "B12"
+    ],
     "chargingSpecs": {
       "dcMax": 150,
       "acMax": 11,
@@ -1592,7 +1660,7 @@
         "mode": "22",
         "bytes": 1,
         "formula": "A - 40",
-        "unit": "\u00b0C",
+        "unit": "°C",
         "min": -40,
         "max": 215
       },
@@ -1602,7 +1670,7 @@
         "mode": "22",
         "bytes": 1,
         "formula": "A - 40",
-        "unit": "\u00b0C",
+        "unit": "°C",
         "min": -40,
         "max": 215
       },
@@ -1637,7 +1705,12 @@
         "max": 65535
       }
     ],
-    "dtcPrefix": ["P11", "P12", "U01", "U10"],
+    "dtcPrefix": [
+      "P11",
+      "P12",
+      "U01",
+      "U10"
+    ],
     "chargingSpecs": {
       "dcMax": 120,
       "acMax": 11,
@@ -1717,7 +1790,7 @@
         "mode": "22",
         "bytes": 1,
         "formula": "A - 40",
-        "unit": "\u00b0C",
+        "unit": "°C",
         "min": -40,
         "max": 215
       },
@@ -1727,7 +1800,7 @@
         "mode": "22",
         "bytes": 1,
         "formula": "A - 40",
-        "unit": "\u00b0C",
+        "unit": "°C",
         "min": -40,
         "max": 215
       },
@@ -1737,7 +1810,7 @@
         "mode": "22",
         "bytes": 1,
         "formula": "A - 40",
-        "unit": "\u00b0C",
+        "unit": "°C",
         "min": -40,
         "max": 215
       },
@@ -1762,7 +1835,13 @@
         "max": 6553
       }
     ],
-    "dtcPrefix": ["P0A", "P0B", "P0E", "U00", "B12"],
+    "dtcPrefix": [
+      "P0A",
+      "P0B",
+      "P0E",
+      "U00",
+      "B12"
+    ],
     "chargingSpecs": {
       "dcMax": 190,
       "acMax": 11.5,
@@ -1842,7 +1921,7 @@
         "mode": "22",
         "bytes": 1,
         "formula": "A - 40",
-        "unit": "\u00b0C",
+        "unit": "°C",
         "min": -40,
         "max": 215
       },
@@ -1852,7 +1931,7 @@
         "mode": "22",
         "bytes": 1,
         "formula": "A - 40",
-        "unit": "\u00b0C",
+        "unit": "°C",
         "min": -40,
         "max": 215
       },
@@ -1862,7 +1941,7 @@
         "mode": "22",
         "bytes": 1,
         "formula": "A - 40",
-        "unit": "\u00b0C",
+        "unit": "°C",
         "min": -40,
         "max": 215
       },
@@ -1887,7 +1966,13 @@
         "max": 100
       }
     ],
-    "dtcPrefix": ["P0A", "P0B", "P0C", "U00", "B14"],
+    "dtcPrefix": [
+      "P0A",
+      "P0B",
+      "P0C",
+      "U00",
+      "B14"
+    ],
     "chargingSpecs": {
       "dcMax": 150,
       "acMax": 11,
@@ -1899,6 +1984,141 @@
       "OBC": "0x7E6"
     },
     "protocol": "CAN 11-bit"
+  },
+  {
+    "id": "geely",
+    "name": "Geely",
+    "models": [
+      "Zeekr 001",
+      "Zeekr 009",
+      "Zeekr X",
+      "Geely Galaxy E8",
+      "Geometry C",
+      "Geometry A",
+      "Zeekr 7X",
+      "Polestar 2 (Geely SEA)"
+    ],
+    "batteryChemistry": "NMC (CATL/Ningde) / LFP",
+    "obdProfile": "GEELY_SEA_PLATFORM",
+    "customPIDs": [
+      {
+        "pid": "2901",
+        "name": "BMS SOC",
+        "mode": "22",
+        "bytes": 1,
+        "formula": "A * 0.4",
+        "unit": "%",
+        "min": 0,
+        "max": 100
+      },
+      {
+        "pid": "2902",
+        "name": "Pack Voltage",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.1",
+        "unit": "V",
+        "min": 0,
+        "max": 1000
+      },
+      {
+        "pid": "2903",
+        "name": "Pack Current",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.1 - 500",
+        "unit": "A",
+        "min": -500,
+        "max": 500
+      },
+      {
+        "pid": "2904",
+        "name": "Cell Max Voltage",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.001",
+        "unit": "V",
+        "min": 0,
+        "max": 5
+      },
+      {
+        "pid": "2905",
+        "name": "Cell Min Voltage",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.001",
+        "unit": "V",
+        "min": 0,
+        "max": 5
+      },
+      {
+        "pid": "2906",
+        "name": "Battery Temp Max",
+        "mode": "22",
+        "bytes": 1,
+        "formula": "A - 40",
+        "unit": "°C",
+        "min": -40,
+        "max": 215
+      },
+      {
+        "pid": "2907",
+        "name": "Motor Temp",
+        "mode": "22",
+        "bytes": 1,
+        "formula": "A - 40",
+        "unit": "°C",
+        "min": -40,
+        "max": 215
+      },
+      {
+        "pid": "2908",
+        "name": "Charging Power",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.1",
+        "unit": "kW",
+        "min": 0,
+        "max": 6553
+      },
+      {
+        "pid": "2909",
+        "name": "Battery Capacity",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "(A << 8 | B) * 0.01",
+        "unit": "kWh",
+        "min": 0,
+        "max": 655
+      },
+      {
+        "pid": "290A",
+        "name": "Range Remaining",
+        "mode": "22",
+        "bytes": 2,
+        "formula": "A << 8 | B",
+        "unit": "km",
+        "min": 0,
+        "max": 65535
+      }
+    ],
+    "dtcPrefix": [
+      "P11",
+      "P12",
+      "P13",
+      "U01"
+    ],
+    "chargingSpecs": {
+      "dcMax": 360,
+      "acMax": 22,
+      "port": "CCS2"
+    },
+    "ecuAddresses": {
+      "BMS": "0x780",
+      "MCU": "0x782",
+      "OBC": "0x786"
+    },
+    "protocol": "CAN 29-bit"
   },
   {
     "id": "generic-obd2-ev",
@@ -1915,7 +2135,7 @@
         "mode": "01",
         "bytes": 1,
         "formula": "A - 40",
-        "unit": "\u00b0C",
+        "unit": "°C",
         "min": -40,
         "max": 215
       },
@@ -1995,7 +2215,7 @@
         "mode": "01",
         "bytes": 1,
         "formula": "A - 40",
-        "unit": "\u00b0C",
+        "unit": "°C",
         "min": -40,
         "max": 215
       },
@@ -2005,12 +2225,21 @@
         "mode": "01",
         "bytes": 1,
         "formula": "A - 40",
-        "unit": "\u00b0C",
+        "unit": "°C",
         "min": -40,
         "max": 215
       }
     ],
-    "dtcPrefix": ["P0", "P1", "U0", "U1", "B0", "B1", "C0", "C1"],
+    "dtcPrefix": [
+      "P0",
+      "P1",
+      "U0",
+      "U1",
+      "B0",
+      "B1",
+      "C0",
+      "C1"
+    ],
     "chargingSpecs": {
       "dcMax": 0,
       "acMax": 0,
@@ -2091,7 +2320,7 @@
         "mode": "22",
         "bytes": 1,
         "formula": "A - 40",
-        "unit": "\u00b0C",
+        "unit": "°C",
         "min": -40,
         "max": 215
       },
@@ -2101,7 +2330,7 @@
         "mode": "22",
         "bytes": 1,
         "formula": "A - 40",
-        "unit": "\u00b0C",
+        "unit": "°C",
         "min": -40,
         "max": 215
       },
@@ -2111,7 +2340,7 @@
         "mode": "22",
         "bytes": 1,
         "formula": "A - 40",
-        "unit": "\u00b0C",
+        "unit": "°C",
         "min": -40,
         "max": 215
       },
@@ -2136,7 +2365,13 @@
         "max": 65535
       }
     ],
-    "dtcPrefix": ["P0A", "P0B", "P0C", "U01", "B14"],
+    "dtcPrefix": [
+      "P0A",
+      "P0B",
+      "P0C",
+      "U01",
+      "B14"
+    ],
     "chargingSpecs": {
       "dcMax": 350,
       "acMax": 19.2,
@@ -2219,7 +2454,7 @@
         "mode": "22",
         "bytes": 1,
         "formula": "A - 40",
-        "unit": "\u00b0C",
+        "unit": "°C",
         "min": -40,
         "max": 215
       },
@@ -2229,7 +2464,7 @@
         "mode": "22",
         "bytes": 1,
         "formula": "A - 40",
-        "unit": "\u00b0C",
+        "unit": "°C",
         "min": -40,
         "max": 215
       },
@@ -2264,7 +2499,13 @@
         "max": 255
       }
     ],
-    "dtcPrefix": ["P0A", "P0B", "P0E", "U00", "B14"],
+    "dtcPrefix": [
+      "P0A",
+      "P0B",
+      "P0E",
+      "U00",
+      "B14"
+    ],
     "chargingSpecs": {
       "dcMax": 200,
       "acMax": 11,

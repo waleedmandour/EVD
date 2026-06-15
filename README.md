@@ -9,25 +9,25 @@
 **Author:** Dr. Waleed Mandour
 **Email:** waleedmandour@gmail.com
 **Email2:** w.abumandour@squ.edu.om
-**Version:** 1.4.0-pre-release
+**Version:** 1.5.0-pre-release
 **License:** © 2026 Dr. Waleed Mandour
 
 ---
 
 ## 📦 Download Pre-Release
 
-> **EVDx v1.4.0 Pre-Release** — Production-grade OBD-II connection, 10 adapter profiles, ELM327 protocol detection, clone detection.
+> **EVDx v1.5.0 Pre-Release** — Universal BLE device discovery, smart profile detection, all devices visible in scan.
 
-[![Download APK](https://img.shields.io/badge/Download-EVDx%20v1.4.0%20APK-blue?style=for-the-badge&logo=android)](https://github.com/waleedmandour/EVD/releases/tag/v1.4.0-pre-release)
+[![Download APK](https://img.shields.io/badge/Download-EVDx%20v1.5.0%20APK-blue?style=for-the-badge&logo=android)](https://github.com/waleedmandour/EVD/releases/tag/v1.5.0)
 
 | Asset | Description |
 |---|---|
-| 📦 [EVDx-v1.4.0.apk](https://github.com/waleedmandour/EVD/releases/download/v1.4.0-pre-release/EVDx-v1.4.0.apk) | Android APK (25 MB) |
+| 📦 [EVDx-v1.5.0.apk](https://github.com/waleedmandour/EVD/releases/download/v1.5.0/EVDx-v1.5.0.apk) | Android APK (24 MB) |
 | 📘 [User Guide (English)](https://github.com/waleedmandour/EVD/releases/download/v1.3.0-pre-release/EVDx-UserGuide-EN-v1.3.0.pdf) | Complete English guide (8 pages) |
 | 📗 [دليل المستخدم (العربية)](https://github.com/waleedmandour/EVD/releases/download/v1.3.0-pre-release/EVDx-UserGuide-AR-v1.3.0.pdf) | دليل عربي كامل (8 صفحات) |
 
 **Installation:**
-1. Download the APK from the [Releases page](https://github.com/waleedmandour/EVD/releases/tag/v1.4.0-pre-release)
+1. Download the APK from the [Releases page](https://github.com/waleedmandour/EVD/releases/tag/v1.5.0)
 2. Enable "Install from Unknown Sources" in your Android settings
 3. Open the downloaded APK and tap **Install**
 4. Launch EVDx and follow the onboarding wizard
@@ -117,7 +117,7 @@ Floating mic + summarize buttons with on-device speech recognition and enhanced 
 
 ---
 
-## 🚗 Supported Vehicles (16+ Brands, 80+ Models)
+## 🚗 Supported Vehicles (17+ Brands, 90+ Models)
 
 | Brand | Models | Chemistry | Custom PIDs | OBD Protocol |
 |---|---|---|---|---|
@@ -133,7 +133,8 @@ Floating mic + summarize buttons with on-device speech recognition and enhanced 
 | **XPeng** | G6, G9, P7, P5, G3 | NMC/LFP | 0x2210–0x22FF | CAN 29-bit |
 | **NIO** | ET5, ET7, ES6, ES8, EC6, EL7 | NMC/LFP | 0x2200–0x22FF | CAN 29-bit |
 | **MG/SAIC** | ZS EV, MG4, Marvel R | NMC/LFP | 0x2200–0x22FF | CAN 29-bit |
-| **Chery** | eQ1, eQ7, Arrizo e | LFP/NMC | 0x2200–0x22FF | CAN 29-bit |
+| **Geely** | Zeekr 001/009/X/7X, Galaxy E8, Geometry C/A, Polestar 2 (SEA) | NMC/LFP | 0x2901–0x290A | CAN 29-bit |
+| **Chery** | Omoda E5, Jaecoo 7 EV | LFP/NMC | 0x2B01–0x2B0A | CAN 29-bit |
 | **Honda** | e, Prologue | NMC | 0x22xx | CAN 11-bit |
 | **Toyota** | bZ4X, Lexus RZ, UX300e | NMC | 0x22xx | CAN 11-bit |
 | **Generic OBD-II** | Any SAE J1979 compliant EV | — | Standard PIDs | SAE J1979 |
@@ -480,6 +481,7 @@ See [LICENSE](LICENSE) for details.
 - **OBDTester.com** for ELM327 AT command reference
 - **Capacitor** by Ionic for the native bridge
 - **shadcn/ui** for the component library
+- **Multi-AI Agent Systems** — This application was built with the support of multi-AI agents including **GLM-5.1 (2026)** by Z.ai, which contributed to code development, debugging, and architecture decisions
 - The global EV community for feedback and testing
 
 ---
