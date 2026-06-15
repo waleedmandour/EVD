@@ -470,10 +470,11 @@ See [LICENSE](LICENSE) for details.
 - Email: waleedmandour@gmail.com
 - University Email: w.abumandour@squ.edu.om
 - GitHub: [@waleedmandour](https://github.com/waleedmandour)
+- Website: waleedmandour.org
 
 ---
 
-## 🙏 Acknowledgments
+## 🙏 Acknowledgments شكر واجب
 
 - **SAE International** for the J1979 OBD-II standard
 - **ELM Electronics** for the ELM327 command set and datasheet
@@ -486,7 +487,7 @@ See [LICENSE](LICENSE) for details.
 
 ---
 
-## 🕊️ Dedication
+## 🕊️ Dedication إهداء
 
 أُهدي هذا المشروع إلى مجتمع السيارات الكهربائية في العالم العربي، سواء في مصر أو الأردن أو عمان أو المغرب أو أي بلد عربي. فقد صممت هذه الأداة لتكون عوناً لكم في العناية بمركباتكم بكل سهولة. نفعنا الله وإياكم.
 
@@ -494,7 +495,7 @@ I dedicate this project to the Arab EV community, whether in Egypt, Jordan, Oman
 
 ---
 
-## 📜 Disclaimer
+## 📜 Disclaimer تنويه
 
 **English:**
 
