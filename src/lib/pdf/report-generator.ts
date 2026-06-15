@@ -146,8 +146,8 @@ export async function generateReport(options: ReportOptions): Promise<Blob> {
       ['Year', String(vehicle.year)],
       ['Battery Capacity', `${vehicle.batteryCapacity} kWh`],
       ['Max Charge Power', `${vehicle.maxChargePower} kW`],
-      ...(vehicle.vin ? [['VIN', vehicle.vin]] : []),
-      ...(vehicle.nickname ? [['Nickname', vehicle.nickname]] : []),
+      ...(vehicle.vin ? [['VIN', vehicle.vin] as [string, string]] : []),
+      ...(vehicle.nickname ? [['Nickname', vehicle.nickname] as [string, string]] : []),
     ];
 
     doc.setFontSize(9);

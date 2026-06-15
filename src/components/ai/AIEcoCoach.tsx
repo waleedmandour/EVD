@@ -10,7 +10,7 @@ import { Brain, Leaf, Gauge, Zap, Thermometer, TrendingUp, Award, Lightbulb, Car
 import { CircleGauge } from '@/components/shared/Gauges';
 
 interface CoachingTip {
-  category: 'acceleration' | 'braking' | 'speed' | 'temperature' | 'charging';
+  category: 'acceleration' | 'braking' | 'speed' | 'temperature' | 'charging' | 'efficiency';
   icon: React.ComponentType<{ size?: number; className?: string }>;
   title: string;
   description: string;

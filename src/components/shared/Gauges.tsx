@@ -79,7 +79,7 @@ export function SpeedGauge({ speed, maxSpeed = 180, size = 220 }: SpeedGaugeProp
   const needleEnd = polarToCartesian(speedAngle);
   const needleLength = radius - 20;
 
-  const tickMarks = [];
+  const tickMarks: Array<{ outer: { x: number; y: number }; inner: { x: number; y: number }; value: number; major: boolean }> = [];
   for (let i = 0; i <= maxSpeed; i += 20) {
     const angle = startAngle + (i / maxSpeed) * totalAngle;
     const outer = polarToCartesian(angle);
