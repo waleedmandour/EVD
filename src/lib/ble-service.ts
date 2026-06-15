@@ -240,6 +240,8 @@ export interface ScannedDevice {
   name: string;
   rssi: number;
   profile?: BLEAdapterProfile;
+  isOBDLike: boolean;   // True if name matches known OBD patterns
+  isUnknown: boolean;   // True if device name is empty/unavailable
 }
 
 // ─── Adapter Identification ───────────────────────────────────────────────────
@@ -324,8 +326,8 @@ class BLEService {
         // Try to match a known adapter profile
         const profile = this.matchProfile(name, deviceId);
 
-        // Filter: include devices that match known OBD patterns or have OBD-like names
-        const isOBDLike = profile ||
+        // Tag: does this match known OBD patterns?
+        const isOBDLike = !!(profile ||
           name.toLowerCase().includes('obd') ||
           name.toLowerCase().includes('elm') ||
           name.toLowerCase().includes('vlink') ||
@@ -340,16 +342,21 @@ class BLEService {
           // Match FFE0-based BLE names (common Chinese adapters)
           name.toLowerCase().includes('ble') ||
           name.toLowerCase().includes('bth') ||
-          name.toLowerCase().includes('hh');
+          name.toLowerCase().includes('hh'));
 
-        if (isOBDLike || name) {
-          devices.push({
-            deviceId,
-            name: name || `Unknown (${deviceId.substring(0, 8)})`,
-            rssi: result.rssi || -100,
-            profile,
-          });
-        }
+        const isUnknown = !name;
+
+        // Show ALL BLE devices — user chooses which is their OBD adapter.
+        // Many adapters have non-standard names (BT05, HC-08, CC41-A, JDY-23, etc.)
+        // or no name at all. The user knows their device better than our keyword list.
+        devices.push({
+          deviceId,
+          name: name || `Unknown (${deviceId.substring(0, 8)})`,
+          rssi: result.rssi || -100,
+          profile,
+          isOBDLike,
+          isUnknown,
+        });
       });
 
       // Wait for scan duration
@@ -362,7 +369,15 @@ class BLEService {
       } catch {}
     }
 
-    return devices.sort((a, b) => b.rssi - a.rssi);
+    // Sort: known OBD devices first (by signal strength), then others (by signal strength)
+    return devices.sort((a, b) => {
+      // OBD-like devices always come first
+      if (a.isOBDLike !== b.isOBDLike) return a.isOBDLike ? -1 : 1;
+      // Unknown (no name) devices go to the bottom of their group
+      if (a.isUnknown !== b.isUnknown) return a.isUnknown ? 1 : -1;
+      // Within same group, sort by signal strength (strongest first)
+      return b.rssi - a.rssi;
+    });
   }
 
   /**
@@ -380,7 +395,7 @@ class BLEService {
     try {
       await BleClient.connect(deviceId);
       this.connectedDeviceId = deviceId;
-      this.activeProfile = profile || this.detectProfile(deviceId);
+      this.activeProfile = profile || await this.detectProfile(deviceId);
       this.isWifiMode = false;
 
       console.log('[BLE] Connected to', deviceId, 'Profile:', this.activeProfile?.name || 'Unknown');
@@ -787,10 +802,32 @@ class BLEService {
 
   /**
    * Detect adapter profile when no name match was found.
-   * Default to vGate iCar Pro profile (most common FFE0/FFE1 adapter).
+   * Tries each known profile family by probing service UUIDs.
+   * Falls back to vGate iCar Pro profile (most common FFE0/FFE1 adapter).
    */
-  private detectProfile(_deviceId: string): BLEAdapterProfile {
-    return ADAPTER_PROFILES[0];  // vGate iCar Pro — most common
+  private async detectProfile(deviceId: string): Promise<BLEAdapterProfile> {
+    if (!this.connectedDeviceId) return ADAPTER_PROFILES[0];
+
+    try {
+      // Try to discover services and match against known profiles
+      for (const profile of ADAPTER_PROFILES) {
+        try {
+          // Attempt to read the service — if it exists, this profile is likely correct
+          await BleClient.read(deviceId, profile.serviceUUID, profile.writeUUID);
+          console.log('[BLE] Profile detected via service probe:', profile.name);
+          return profile;
+        } catch {
+          // Service doesn't exist on this device, try next profile
+          continue;
+        }
+      }
+    } catch (error) {
+      console.warn('[BLE] Service probing failed, using default profile:', error);
+    }
+
+    // Default to vGate iCar Pro — most common FFE0/FFE1 adapter
+    console.log('[BLE] Using default profile: vGate iCar Pro (FFE0/FFE1)');
+    return ADAPTER_PROFILES[0];
   }
 
   /**

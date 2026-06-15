@@ -275,26 +275,53 @@ export default function ConnectOverlay({ onClose }: ConnectOverlayProps) {
                     <>
                       {scannedDevices.length > 0 ? (
                         <div className="space-y-2">
-                          <p className="text-xs text-evdx-text-secondary mb-2">Found {scannedDevices.length} adapter(s):</p>
-                          {scannedDevices.map((device) => (
-                            <button
-                              key={device.deviceId}
-                              onClick={() => handleBluetoothConnect(device)}
-                              disabled={connectingToDevice !== null}
-                              className="w-full flex items-center gap-3 bg-[#0D1117] hover:bg-evdx-primary/5 border border-white/5 rounded-lg px-4 py-3 transition-colors disabled:opacity-50"
-                            >
-                              <Bluetooth size={18} className="text-evdx-primary" />
-                              <div className="flex-1 text-start">
-                                <span className="text-sm text-evdx-text block">{device.name}</span>
-                                <span className="text-xs text-evdx-text-secondary">RSSI: {device.rssi} dBm</span>
-                              </div>
-                              {connectingToDevice === device.deviceId ? (
-                                <Loader2 size={16} className="animate-spin text-evdx-primary" />
-                              ) : null}
-                              {device.profile && (
-                                <span className="text-[10px] text-evdx-green bg-evdx-green/10 px-1.5 py-0.5 rounded">{device.profile.name}</span>
+                          {scannedDevices.some(d => d.isOBDLike) && scannedDevices.some(d => !d.isOBDLike) && (
+                            <p className="text-xs text-evdx-text-secondary mb-1">OBD Adapters ({scannedDevices.filter(d => d.isOBDLike).length}) · Other Devices ({scannedDevices.filter(d => !d.isOBDLike).length})</p>
+                          )}
+                          {!scannedDevices.some(d => d.isOBDLike) && scannedDevices.length > 0 && (
+                            <p className="text-xs text-evdx-text-secondary mb-2">Found {scannedDevices.length} device(s) — select your OBD adapter:</p>
+                          )}
+                          {scannedDevices.some(d => d.isOBDLike) && !scannedDevices.some(d => !d.isOBDLike) && (
+                            <p className="text-xs text-evdx-text-secondary mb-2">Found {scannedDevices.length} OBD adapter(s):</p>
+                          )}
+                          {scannedDevices.map((device, idx) => (
+                            <React.Fragment key={device.deviceId}>
+                              {/* Section separator between OBD-like and other devices */}
+                              {idx > 0 && device.isOBDLike !== scannedDevices[idx - 1].isOBDLike && !device.isOBDLike && (
+                                <div className="flex items-center gap-2 py-1">
+                                  <div className="flex-1 h-px bg-white/10" />
+                                  <span className="text-[10px] text-evdx-text-secondary">Other BLE Devices</span>
+                                  <div className="flex-1 h-px bg-white/10" />
+                                </div>
                               )}
-                            </button>
+                              <button
+                                onClick={() => handleBluetoothConnect(device)}
+                                disabled={connectingToDevice !== null}
+                                className={`w-full flex items-center gap-3 rounded-lg px-4 py-3 transition-colors disabled:opacity-50 ${
+                                  device.isOBDLike
+                                    ? 'bg-[#0D1117] hover:bg-evdx-primary/5 border border-evdx-primary/20'
+                                    : 'bg-[#0D1117]/60 hover:bg-evdx-primary/5 border border-white/5'
+                                }`}
+                              >
+                                <Bluetooth size={18} className={device.isOBDLike ? 'text-evdx-primary' : 'text-evdx-text-secondary'} />
+                                <div className="flex-1 text-start">
+                                  <span className="text-sm text-evdx-text block">{device.name}</span>
+                                  <span className="text-xs text-evdx-text-secondary">
+                                    RSSI: {device.rssi} dBm
+                                    {device.isUnknown && ' · Name unavailable'}
+                                  </span>
+                                </div>
+                                {connectingToDevice === device.deviceId ? (
+                                  <Loader2 size={16} className="animate-spin text-evdx-primary" />
+                                ) : null}
+                                {device.profile && (
+                                  <span className="text-[10px] text-evdx-green bg-evdx-green/10 px-1.5 py-0.5 rounded">{device.profile.name}</span>
+                                )}
+                                {!device.isOBDLike && !device.isUnknown && (
+                                  <span className="text-[10px] text-evdx-text-secondary bg-white/5 px-1.5 py-0.5 rounded">BLE</span>
+                                )}
+                              </button>
+                            </React.Fragment>
                           ))}
                         </div>
                       ) : (
