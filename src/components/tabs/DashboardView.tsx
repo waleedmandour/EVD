@@ -165,7 +165,7 @@ export default function DashboardView() {
         </Card>
         <Card className="bg-[#1A2332] border-white/5">
           <CardContent className="p-3">
-            <p className="text-xs text-evdx-text-secondary mb-2">{t('powerMeter')}</p>
+            <p className="text-xs text-evdx-text-secondary mb-2">{t('gauges.powerMeter')}</p>
             <MiniChart
               data={powerHistory.map((p) => p.value)}
               width={140}

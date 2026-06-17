@@ -53,7 +53,10 @@ const ARABIC_ACRONYMS: Record<string, string> = {
 
 // ─── DTC Code Pattern ─────────────────────────────────────────────────────────
 
-const DTC_PATTERN = /\b([PBUCEC][0-9A-F]{2,5})\b/gi;
+// DTC code pattern. Standard DTC first letters are P (Powertrain),
+// B (Body), U (Network), C (Chassis). The previous pattern listed C and E
+// twice ([PBUCEC]) and included E which is non-standard — fixed.
+const DTC_PATTERN = /\b([PBUC][0-9A-F]{2,5})\b/gi;
 
 // ─── Internal Helpers ─────────────────────────────────────────────────────────
 

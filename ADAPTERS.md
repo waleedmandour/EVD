@@ -1,9 +1,9 @@
 # 📡 EVDx Supported OBD Adapters
 
-**Version:** 1.0.0  
+**Version:** 1.5.1  
 **Author:** Dr. Waleed Mandour
 
-EVDx supports a wide range of OBD-II adapters for connecting to your electric vehicle's diagnostic port.
+EVDx supports a wide range of OBD-II adapters for connecting to your electric vehicle's diagnostic port. The BLE connection service uses a serialized command queue (introduced in v1.5.1) so concurrent polling + UI requests never corrupt each other's responses.
 
 ## Optimized Adapters
 

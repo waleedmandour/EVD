@@ -8,6 +8,7 @@
  */
 
 import type { VehicleData, ChargingData, DTCEvent, TripData, EcoScore, VehicleProfile } from '../types';
+import { APP_VERSION } from '../version';
 
 // ─── Report Types ─────────────────────────────────────────────────────────────
 
@@ -431,7 +432,7 @@ export async function generateReport(options: ReportOptions): Promise<Blob> {
   );
   y += 4;
   doc.text(
-    `EVDx v1.0.0 — By Dr. Waleed Mandour — ${new Date().getFullYear()}`,
+    `EVDx v${APP_VERSION} — By Dr. Waleed Mandour — ${new Date().getFullYear()}`,
     margin,
     y,
     { maxWidth: contentWidth }

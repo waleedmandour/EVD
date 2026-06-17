@@ -108,6 +108,7 @@
     "aiDtc": "AI DTC",
     "aiCoach": "AI Coach"
   },
+  "connectionStatusLabel": "Connection Status",
   "connectionStatus": {
     "disconnected": "Disconnected",
     "connecting": "Connecting...",

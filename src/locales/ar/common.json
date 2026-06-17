@@ -108,6 +108,7 @@
     "aiDtc": "ذكاء الأعطال",
     "aiCoach": "مدرب القيادة"
   },
+  "connectionStatusLabel": "حالة الاتصال",
   "connectionStatus": {
     "disconnected": "غير متصل",
     "connecting": "جارٍ الاتصال...",

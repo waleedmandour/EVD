@@ -49,7 +49,14 @@
     "keyFobBattery": "Key Fob Battery Replacement",
     "bodyInspection": "Body & Paint Inspection",
     "acService": "A/C System Service",
-    "thermalSystem": "Thermal Management System Service"
+    "thermalSystem": "Thermal Management System Service",
+    "tire_rotation": "Tire Rotation",
+    "brake_inspection": "Brake Inspection",
+    "coolant_flush": "Coolant Flush",
+    "cabin_filter": "Cabin Air Filter",
+    "battery_health": "Battery Health Check",
+    "software_update": "Software Update",
+    "other": "Other"
   },
   "intervals": {
     "everyKm": "Every {{km}} km",

@@ -508,7 +508,11 @@ export class SimulatorEngine {
 
     // Voltage model: chemistry-dependent
     const voltage = this.computeVoltage(s.soc);
-    const current = this.getInstantPower() / (voltage || 1) * 1000; // mA approx
+    // getInstantPower returns kW, so current in Amperes = power(W) / voltage(V).
+    // The prior code multiplied by 1000 (treating kW as W incorrectly) AND
+    // divided by 10 in the rounding step, yielding a 10× too-low pack current
+    // (e.g. 12.5 A displayed when the real value should be 125 A).
+    const current = (this.getInstantPower() * 1000) / (voltage || 1); // Amperes
     const power = this.getInstantPower();
 
     // Cell voltages: simulate 96 cells with chemistry-appropriate spread
@@ -536,7 +540,7 @@ export class SimulatorEngine {
       soc: Math.round(s.soc * 10) / 10,
       soh: 97,  // Stable SOH — doesn't fluctuate every 500ms
       voltage: Math.round(voltage * 10) / 10,
-      current: Math.round(current) / 10,
+      current: Math.round(current * 10) / 10,
       power: Math.round(power * 10) / 10,
       motorTemp: Math.round(s.motorTemp * 10) / 10,
       batteryTemp: Math.round(s.batteryTemp * 10) / 10,

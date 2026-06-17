@@ -49,7 +49,14 @@
     "keyFobBattery": "استبدال بطارية المفتاح",
     "bodyInspection": "فحص الهيكل والطلاء",
     "acService": "صيانة نظام التكييف",
-    "thermalSystem": "صيانة نظام الإدارة الحرارية"
+    "thermalSystem": "صيانة نظام الإدارة الحرارية",
+    "tire_rotation": "تبديل الإطارات",
+    "brake_inspection": "فحص الكوابح",
+    "coolant_flush": "تغيير سائل التبريد",
+    "cabin_filter": "فلتر الهواء الداخلي",
+    "battery_health": "فحص صحة البطارية",
+    "software_update": "تحديث البرمجيات",
+    "other": "أخرى"
   },
   "intervals": {
     "everyKm": "كل {{km}} كم",

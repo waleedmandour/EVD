@@ -1,6 +1,6 @@
 # 🚗 EVDx Supported Vehicles Database
 
-**Version:** 1.0.0  
+**Version:** 1.5.1  
 **Author:** Dr. Waleed Mandour
 
 EVDx supports **18 electric vehicle brands** with **82+ models** worldwide. Each brand has custom OBD profiles, proprietary PIDs, and brand-specific diagnostic capabilities.

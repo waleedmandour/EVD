@@ -832,11 +832,18 @@ class BLEService {
   /**
    * Clear all stored DTCs and reset MIL.
    * Mode 04 command.
+   *
+   * A Mode 04 positive response is exactly "44" (no data bytes). We use a
+   * strict prefix match instead of `includes('44')` because the latter would
+   * false-positive on any response containing "44" anywhere (e.g. an error
+   * string like "ERROR 44" or a multi-byte response with an embedded 0x44
+   * hex byte).
    */
   async clearDTCs(): Promise<boolean> {
     try {
       const response = await this.sendCommand('04', 5000);
-      return response.includes('44');  // Mode 04 positive response
+      const clean = response.replace(/\s/g, '');
+      return clean.startsWith('44');
     } catch {
       return false;
     }
@@ -1229,7 +1236,6 @@ class BLEService {
 
     // Handle 'UNABLE TO CONNECT' — ELM327 can't find a protocol
     if (this.responseBuffer.includes('UNABLE TO CONNECT')) {
-      const response = this.responseBuffer.replace('UNABLE TO CONNECT', '').trim();
       this.responseBuffer = '';
       if (this.responseResolve) {
         this.responseResolve('UNABLE TO CONNECT');

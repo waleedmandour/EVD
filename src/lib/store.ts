@@ -144,6 +144,12 @@ interface AppState {
 
 // ─── Default Values ───────────────────────────────────────────────────────────
 
+// Module-scoped rate-limit map for session logging of OBD responses.
+// Keyed by PID label (e.g. "PID 0D") → last log timestamp. This prevents the
+// session log from flooding at the 500ms polling rate; one entry per PID per
+// 2 seconds is plenty for trip replay/debugging.
+const lastLoggedPidTs: Record<string, number> = {};
+
 const defaultVehicleData: VehicleData = {
   speed: 0,
   rpm: 0,
@@ -581,6 +587,15 @@ export const useAppStore = create<AppState>()(
        */
       parseOBDResponse: (response: string) => {
         if (!response || response === 'UNABLE TO CONNECT' || response === 'BUS ERROR' || response === 'NO DATA') {
+          // Log OBD protocol errors to the session log when logging is active,
+          // so users can see why their adapter isn't responding during a trip.
+          if (response && get().isLogging) {
+            get().addSessionLog({
+              timestamp: Date.now(),
+              level: 'warn',
+              message: `OBD: ${response}`,
+            });
+          }
           return;
         }
 
@@ -590,6 +605,27 @@ export const useAppStore = create<AppState>()(
         if (clean.length < 4) return;
 
         const modeResponse = clean.substring(0, 2).toUpperCase();
+
+        // Log raw OBD responses to the session log when logging is active.
+        // This was previously only done by the simulator (in demo mode), so
+        // real BLE/WiFi trips had empty session logs. We log here too so the
+        // "Start Trip" button actually captures data when connected to a real
+        // adapter. We sample at most one entry per 2 seconds per PID to avoid
+        // flooding the log at the 500ms polling rate.
+        if (get().isLogging) {
+          const pidLabel = modeResponse === '41' ? `PID ${clean.substring(2, 4)}` : `Mode ${modeResponse}`;
+          // Simple rate limit: keep last log timestamp per pid in a module-scoped map
+          const now = Date.now();
+          const last = lastLoggedPidTs[pidLabel] || 0;
+          if (now - last >= 2000) {
+            lastLoggedPidTs[pidLabel] = now;
+            get().addSessionLog({
+              timestamp: now,
+              level: 'info',
+              message: `OBD ${pidLabel}: ${clean.substring(0, 24)}${clean.length > 24 ? '…' : ''}`,
+            });
+          }
+        }
 
         // ── Mode 01 (41): Show current data ──────────────────────────────────
         if (modeResponse === '41') {

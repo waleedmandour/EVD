@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // ─── AnimatedNumber ──────────────────────────────────────────────────────────
@@ -15,9 +15,16 @@ interface AnimatedNumberProps {
 
 export function AnimatedNumber({ value, decimals = 0, className = '', suffix = '', prefix = '' }: AnimatedNumberProps) {
   const [displayValue, setDisplayValue] = useState(value);
+  // Track the latest displayed value in a ref so the animation closure can read
+  // the current value WITHOUT having `displayValue` in the effect deps.
+  // Putting `displayValue` in deps caused the effect to re-run on every animation
+  // frame, restarting the animation from a new "start" value each time — which
+  // meant the animation never completed smoothly and stacked requestAnimationFrame
+  // callbacks. With the ref, the effect only re-runs when `value` actually changes.
+  const displayValueRef = useRef(value);
 
   useEffect(() => {
-    const start = displayValue;
+    const start = displayValueRef.current;
     const end = value;
     const duration = 300;
     const startTime = performance.now();
@@ -26,7 +33,9 @@ export function AnimatedNumber({ value, decimals = 0, className = '', suffix = '
       const elapsed = currentTime - startTime;
       const progress = Math.min(elapsed / duration, 1);
       const eased = 1 - Math.pow(1 - progress, 3);
-      setDisplayValue(start + (end - start) * eased);
+      const next = start + (end - start) * eased;
+      displayValueRef.current = next;
+      setDisplayValue(next);
 
       if (progress < 1) {
         requestAnimationFrame(animate);
@@ -34,7 +43,7 @@ export function AnimatedNumber({ value, decimals = 0, className = '', suffix = '
     };
 
     requestAnimationFrame(animate);
-  }, [displayValue, value]);
+  }, [value]);
 
   return (
     <span className={`tabular-nums ${className}`}>

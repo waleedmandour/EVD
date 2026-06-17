@@ -14,6 +14,7 @@ import type {
   AppSettings,
 } from './types';
 import { DEFAULT_SETTINGS } from './types';
+import { APP_VERSION } from './version';
 
 // ─── Storage Keys ─────────────────────────────────────────────────────────────
 
@@ -126,7 +127,7 @@ export function exportAllData(): Record<string, unknown> {
     settings: getSettings(),
     onboardingComplete: isOnboardingComplete(),
     exportedAt: new Date().toISOString(),
-    appVersion: '1.2.0',
+    appVersion: APP_VERSION,
   };
 }
 

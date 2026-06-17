@@ -77,8 +77,8 @@ export default function DiagnosticsView() {
         clearInterval(progressTimer);
         setScanProgress(100);
 
-        // Look up descriptions from dtc-codes database
-        const { getDTCByCode } = await import('@/lib/dtc-codes');
+        // getDTCByCode is already imported at the top of this file (static import)
+        // — no need for a redundant dynamic import that adds a microtask delay.
         // Map DTCCode severity ('INFO'|'WARNING'|'CRITICAL') → DTCEvent severity
         const mapSeverity = (s: 'INFO' | 'WARNING' | 'CRITICAL' | undefined, fallback: 'low' | 'medium' | 'high' | 'critical'): 'low' | 'medium' | 'high' | 'critical' => {
           if (s === 'CRITICAL') return 'critical';
@@ -116,7 +116,17 @@ export default function DiagnosticsView() {
       return;
     }
 
-    // Demo mode fallback — animate progress so the user can see the UI flow
+    // Demo mode fallback — animate progress AND inject a sample DTC so the
+    // diagnostic UI is explorable without a real vehicle. The previous
+    // implementation only animated the progress bar and never populated any
+    // codes, leaving "No Faults Found" forever (unless the user happened to
+    // have previously injected faults).
+    const { simulator } = await import('@/lib/simulator');
+    const demoCodes = ['P0A80', 'P0C79'];
+    for (const code of demoCodes) {
+      simulator.injectFault(code);
+    }
+
     const interval = setInterval(() => {
       setScanProgress((prev) => {
         if (prev >= 100) {

@@ -1,0 +1,159 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ─── 1. TypeScript type-check ──────────────────────────────────────────────
+  typecheck:
+    name: TypeScript · tsc --noEmit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Type-check
+        run: bun x tsc --noEmit
+
+  # ─── 2. Next.js production build (static export) ───────────────────────────
+  build-web:
+    name: Next.js · static export
+    runs-on: ubuntu-latest
+    needs: typecheck
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build static export
+        run: bun run build:static
+
+      - name: Upload static export
+        uses: actions/upload-artifact@v4
+        with:
+          name: evdx-web-export
+          path: out/
+          retention-days: 7
+
+  # ─── 3. OBD-II protocol simulation test ────────────────────────────────────
+  # This is the closest equivalent to a hardware OBD-II simulation that can
+  # run in CI. It exercises the exact byte-level parsing logic that the
+  # production app uses (PID decode, DTC parse, VIN multi-frame, command queue
+  # serialization). If this test fails, the app will misread real vehicle data.
+  obd-protocol-test:
+    name: OBD-II · protocol simulation (26 tests)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Run protocol simulation test
+        run: node scripts/obd-protocol-sim.test.mjs
+
+  # ─── 4. Android APK build (release) ────────────────────────────────────────
+  # Only runs on tag pushes (v*) and main pushes after the web pipeline passes.
+  # Produces a signed release APK artifact for sideloading.
+  build-apk:
+    name: Android · release APK
+    runs-on: ubuntu-latest
+    needs: [typecheck, build-web, obd-protocol-test]
+    if: github.event_name == 'push' && (startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main')
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Setup JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: |
+            tools
+            platform-tools
+            platforms;android-36
+            build-tools;36.0.0
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build static export
+        run: bun run build:static
+
+      - name: Sync Capacitor
+        run: bun x cap sync android
+
+      - name: Generate release keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.EVDX_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::warning::EVDX_KEYSTORE_BASE64 secret not set — falling back to debug signing for this CI build."
+            # Create a stub keystore.properties that the build.gradle release block
+            # will pick up if present. Otherwise gradle falls back to debug signing.
+            keytool -genkey -v -keystore evdx.keystore \
+              -alias evdx -keyalg RSA -keysize 2048 -validity 10000 \
+              -storepass evdx123 -keypass evdx123 \
+              -dname "CN=CI Build, OU=EVDx, O=GitHub Actions, L=CI, ST=CI, C=OM"
+          else
+            echo "$KEYSTORE_BASE64" | base64 -d > evdx.keystore
+          fi
+
+      - name: Build release APK
+        run: |
+          cd android
+          chmod +x ./gradlew
+          ./gradlew assembleRelease --no-daemon
+
+      - name: Rename APK with version
+        run: |
+          APK=android/app/build/outputs/apk/release/app-release.apk
+          VERSION=$(grep -E '^\s*versionName' android/app/build.gradle | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
+          cp "$APK" "evdx-v${VERSION}-ci.apk"
+          echo "APK_PATH=evdx-v${VERSION}-ci.apk" >> $GITHUB_ENV
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: evdx-apk
+          path: ${{ env.APK_PATH }}
+          retention-days: 30
+
+      - name: Verify APK metadata
+        run: |
+          SDK_HOME=$ANDROID_SDK_ROOT
+          AAPT=$(find $SDK_HOME -name aapt -type f | head -1)
+          $AAPT dump badging evdx-v*-ci.apk | head -5

@@ -68,7 +68,7 @@ export default function DeviceView() {
               )}
             </div>
             <div>
-              <p className="text-sm text-evdx-text-secondary">{t('connectionStatus')}</p>
+              <p className="text-sm text-evdx-text-secondary">{t('connectionStatusLabel')}</p>
               <p className={`text-lg font-bold ${isConnected ? 'text-evdx-green' : 'text-evdx-critical'}`}>
                 {t(`connectionStatus.${connectionStatus}`)}
               </p>

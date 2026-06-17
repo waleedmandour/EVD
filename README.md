@@ -16,23 +16,41 @@
 
 ## 📦 Download Latest Release
 
-> **EVDx v1.5.1** — Universal BLE device discovery, smart profile detection, all devices visible in scan. Build infrastructure upgraded with JDK 21 + Android SDK 36.
+> **EVDx v1.5.1** — Critical BLE/OBD-II fixes: command queue race condition resolved, multi-frame VIN parsing corrected, real diagnostic scan now actually queries the vehicle ECU (Modes 03/07/0A), DTC clear sends Mode 04 to the vehicle, disconnect no longer leaks pending commands, release builds now use a proper keystore.
 
-[![Download APK](https://img.shields.io/badge/Download-EVDx%20v1.5.1%20APK-blue?style=for-the-badge&logo=android)](https://github.com/waleedmandour/EVD/releases/tag/v1.5.1)
+[![Download APK](https://img.shields.io/badge/Download-EVDx%20v1.5.1--pre%20APK-blue?style=for-the-badge&logo=android)](https://github.com/waleedmandour/EVD/releases/tag/v1.5.1-pre)
 
 | Asset | Description |
 |---|---|
-| 📦 [EVDx-v1.5.1.apk](https://github.com/waleedmandour/EVD/releases/download/v1.5.1/EVDx-v1.5.1.apk) | Android APK (25 MB) |
-| 📘 [User Guide (English)](https://github.com/waleedmandour/EVD/releases/download/v1.3.0-pre-release/EVDx-UserGuide-EN-v1.3.0.pdf) | Complete English guide (8 pages) |
-| 📗 [دليل المستخدم (العربية)](https://github.com/waleedmandour/EVD/releases/download/v1.3.0-pre-release/EVDx-UserGuide-AR-v1.3.0.pdf) | دليل عربي كامل (8 صفحات) |
+| 📦 [evdx-v1.5.1-pre-release.apk](https://github.com/waleedmandour/EVD/releases/download/v1.5.1-pre/evdx-v1.5.1-pre-release.apk) | Android APK (25 MB, versionCode 8, targetSdk 36) |
+| 📘 [User Guide (English)](https://github.com/waleedmandour/EVD/releases/download/v1.5.1-pre/EVDx-UserGuide-EN-v1.5.1.pdf) | Complete English guide |
+| 📗 [دليل المستخدم (العربية)](https://github.com/waleedmandour/EVD/releases/download/v1.5.1-pre/EVDx-UserGuide-AR-v1.5.1.pdf) | دليل عربي كامل |
+| 📝 [Changelog v1.5.1](CHANGELOG-v1.5.1.md) | Full list of fixes in this release |
 
 **Installation:**
-1. Download the APK from the [Releases page](https://github.com/waleedmandour/EVD/releases/tag/v1.5.1)
+1. Download the APK from the [Releases page](https://github.com/waleedmandour/EVD/releases/tag/v1.5.1-pre)
 2. Enable "Install from Unknown Sources" in your Android settings
 3. Open the downloaded APK and tap **Install**
 4. Launch EVDx and follow the onboarding wizard
 
 **System Requirements:** Android 7.0 (API 24) or later, Bluetooth LE recommended
+
+### 🔧 What's New in v1.5.1
+
+| Area | Fix |
+|---|---|
+| **BLE command queue** | Concurrent `sendCommand` calls previously overwrote the single `responseResolve` callback, causing silent data corruption during polling + UI requests. Replaced with a proper FIFO command queue that serializes commands. |
+| **VIN multi-frame parsing** | Frame counter bytes (01/02/03) in Mode 09 PID 02 responses were being decoded as ASCII digits and corrupting the VIN. Each `49 02 NN` frame header is now detected and its 2-hex counter is skipped. |
+| **Real diagnostic scan** | "Run Full Scan" in DiagnosticsView only animated a progress bar — it now actually issues Mode 03 (stored) + Mode 07 (pending) + Mode 0A (permanent) DTC reads via `bleService.readDTCs()` and merges results with descriptions from `dtc-codes.ts`. |
+| **Real DTC clear** | "Clear Codes" only cleared local UI state — it now also sends Mode 04 to the vehicle ECU via `bleService.clearDTCs()`. |
+| **Disconnect cleanup** | Pending `sendCommand` promises are now rejected via `flushQueue()` on disconnect, so callers don't hang for the full timeout. |
+| **Release signing** | Release builds now use `evdx.keystore` (with safe fallback to debug signing) instead of always using the debug key. |
+| **APK filename** | `build-apk.sh` now derives the APK output name from `versionName` in `build.gradle` (was hardcoded to `v1.0.0`). |
+| **CI workflow** | Added `.github/workflows/ci.yml` that runs `tsc --noEmit`, the Next.js build, the OBD-II protocol simulation test, and the Android release APK build on every push/PR. |
+| **Type safety** | `tsconfig.json` now excludes unrelated `examples/`, `skills/`, `android/` template folders from type checking. |
+| **Keystore hygiene** | `.gitignore` now excludes `*.keystore`, `*.jks`, `keystore.properties` so private signing keys never get committed. |
+
+See [CHANGELOG-v1.5.1.md](CHANGELOG-v1.5.1.md) for full details and [scripts/obd-protocol-sim.test.mjs](scripts/obd-protocol-sim.test.mjs) for the verification suite (26 tests covering PID decoding, DTC parsing, VIN multi-frame regression, command queue serialization regression).
 
 ---
 
@@ -167,7 +185,7 @@ ATD  → Set defaults          ATZ  → Hardware reset
 ATE0 → Echo off              ATL0 → Linefeeds off
 ATS0 → Spaces off            ATH0 → Headers off
 ATAT1→ Adaptive timing       ATSP0→ Auto protocol detect
-ATST64→ 100ms timeout        ATI  → Identify device
+ATST64→ 400ms timeout        ATI  → Identify device
 AT@1 → Device description   AT@2 → Device identifier
 ATDP → Describe protocol    0100 → Validate vehicle comm
 ```
@@ -286,9 +304,10 @@ Generate professional reports on-device (no cloud, no server):
 
 ### Prerequisites
 
-- **Node.js** 18+ and npm/bun
-- **Android Studio** (for APK build)
-- **Java JDK** 17+
+- **Node.js** 18+ and npm/bun (Bun recommended — `bun.lock` is the canonical lockfile)
+- **Java JDK 21** (required by Android Gradle Plugin 8.13+; JDK 17 will fail with `Toolchain does not provide the required capabilities: [JAVA_COMPILER]`)
+- **Android SDK** with `platforms;android-36` and `build-tools;36.0.0`
+- **Android Studio** (optional, only if you want to open the project in the IDE)
 
 ### Development (Web/PWA)
 
@@ -298,10 +317,10 @@ git clone https://github.com/waleedmandour/EVD.git
 cd EVD
 
 # Install dependencies
-npm install
+bun install   # or: npm install
 
 # Start development server
-npm run dev
+bun run dev   # or: npm run dev
 
 # Open in browser at http://localhost:3000
 ```
@@ -309,29 +328,48 @@ npm run dev
 ### Build Android APK
 
 ```bash
-# Quick build using the build script
+# Quick build using the build script (handles keystore + cap sync + gradle)
 chmod +x build-apk.sh
 ./build-apk.sh
 
 # Or manually:
-npm run build          # Build Next.js static export
-npx cap sync android   # Sync web assets to Android
+bun run build          # Build Next.js static export
+bun x cap sync android # Sync web assets to Android
 cd android
 ./gradlew assembleRelease  # Build release APK
 
 # APK output: android/app/build/outputs/apk/release/app-release.apk
 ```
 
+The first `build-apk.sh` run generates `evdx.keystore` (RSA 2048, 10000-day validity) in the repo root. This keystore is automatically excluded from git via `.gitignore`. Subsequent builds reuse it so APK upgrades install cleanly over previous versions.
+
 ### Available Scripts
 
 | Script | Description |
 |---|---|
-| `npm run dev` | Start Next.js dev server on port 3000 |
-| `npm run build` | Build Next.js static export |
-| `npm run lint` | Run ESLint |
-| `npm run cap:sync` | Sync web assets to Android |
-| `npm run cap:open:android` | Open Android project in Android Studio |
-| `npm run apk:build` | Build release APK |
+| `bun run dev` | Start Next.js dev server on port 3000 |
+| `bun run build` | Build Next.js static export |
+| `bun run lint` | Run ESLint |
+| `bun run cap:sync` | Sync web assets to Android |
+| `bun run cap:open:android` | Open Android project in Android Studio |
+| `bun run apk:build` | Build release APK |
+| `node scripts/obd-protocol-sim.test.mjs` | Run OBD-II protocol simulation test (26 tests) |
+
+### Continuous Integration
+
+The `.github/workflows/ci.yml` workflow runs on every push to `main` and on every PR:
+
+1. **TypeScript type-check** — `bun x tsc --noEmit`
+2. **Next.js production build** — static export, uploaded as artifact
+3. **OBD-II protocol simulation test** — 26 byte-level parsing tests (PID decode, DTC parse, VIN multi-frame regression, command queue serialization regression)
+4. **Android release APK build** — only on `main` pushes and `v*` tags; APK uploaded as artifact
+
+To sign APKs in CI with your own keystore (instead of the CI-generated fallback), add a `EVDX_KEYSTORE_BASE64` repository secret containing the base64-encoded keystore bytes:
+
+```bash
+base64 -w0 evdx.keystore > keystore.b64
+# Paste the contents of keystore.b64 into the GitHub Actions secret
+```
 
 ---
 
@@ -339,16 +377,20 @@ cd android
 
 ```
 EVD/
+├── .github/workflows/
+│   └── ci.yml                       # CI: type-check + web build + protocol test + APK build
 ├── android/                          # Capacitor Android project
 │   ├── app/
 │   │   ├── src/main/
-│   │   │   ├── AndroidManifest.xml   # No INTERNET permission
+│   │   │   ├── AndroidManifest.xml   # BLE/WiFi/Voice permissions, no cloud
 │   │   │   ├── java/.../MainActivity.java
 │   │   │   └── res/
 │   │   │       ├── xml/network_security_config.xml
 │   │   │       └── values/strings.xml
-│   │   └── build.gradle
+│   │   └── build.gradle              # versionCode 8, versionName 1.5.1
 │   └── gradle/
+├── scripts/
+│   └── obd-protocol-sim.test.mjs    # 26-test OBD-II byte-level parser regression suite
 ├── src/
 │   ├── app/
 │   │   ├── layout.tsx               # Root layout with metadata
@@ -359,7 +401,7 @@ EVD/
 │   │   │   ├── DashboardView.tsx
 │   │   │   ├── BatteryView.tsx
 │   │   │   ├── ChargingView.tsx
-│   │   │   ├── DiagnosticsView.tsx
+│   │   │   ├── DiagnosticsView.tsx  # Real DTC scan via bleService.readDTCs()
 │   │   │   ├── LiveDataView.tsx
 │   │   │   ├── SessionsView.tsx
 │   │   │   ├── MaintenanceView.tsx
@@ -378,10 +420,11 @@ EVD/
 │   │   ├── I18nProvider.tsx
 │   │   └── ui/                      # 35+ shadcn/ui components
 │   ├── lib/
-│   │   ├── store.ts                 # Zustand store (full state management)
+│   │   ├── store.ts                 # Zustand store (full state management + OBD parser)
 │   │   ├── types.ts                 # TypeScript type definitions
 │   │   ├── i18n.ts                  # i18next configuration
-│   │   ├── db.ts                    # On-device persistence layer
+│   │   ├── ble-service.ts           # BLE OBD service (command queue + ELM327 init)
+│   │   ├── permissions.ts           # Android runtime permission flow
 │   │   ├── dtc-codes.ts             # 500+ DTC code database
 │   │   ├── simulator.ts             # Multi-brand driving/charging simulator
 │   │   ├── speech.ts                # Enhanced speech formatter for natural TTS
@@ -402,6 +445,7 @@ EVD/
 ├── next.config.ts                   # Next.js static export config
 ├── tailwind.config.ts               # Tailwind CSS configuration
 ├── build-apk.sh                     # One-command APK build script
+├── CHANGELOG-v1.5.1.md              # Detailed v1.5.1 changelog
 ├── PRIVACY.md                       # Privacy policy (EN/AR)
 ├── VEHICLES.md                      # Vehicle database documentation
 ├── ADAPTERS.md                      # Adapter compatibility list
