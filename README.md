@@ -9,32 +9,30 @@
 **Author:** Dr. Waleed Mandour
 **Email:** waleedmandour@gmail.com
 **Email2:** w.abumandour@squ.edu.om
-**Version:** 1.5.0-pre-release
+**Version:** 1.5.1
 **License:** © 2026 Dr. Waleed Mandour
 
 ---
 
-## 📦 Download Pre-Release
+## 📦 Download Latest Release
 
-> **EVDx v1.5.0 Pre-Release** — Universal BLE device discovery, smart profile detection, all devices visible in scan.
+> **EVDx v1.5.1** — Universal BLE device discovery, smart profile detection, all devices visible in scan. Build infrastructure upgraded with JDK 21 + Android SDK 36.
 
-[![Download APK](https://img.shields.io/badge/Download-EVDx%20v1.5.0%20APK-blue?style=for-the-badge&logo=android)](https://github.com/waleedmandour/EVD/releases/tag/v1.5.0)
+[![Download APK](https://img.shields.io/badge/Download-EVDx%20v1.5.1%20APK-blue?style=for-the-badge&logo=android)](https://github.com/waleedmandour/EVD/releases/tag/v1.5.1)
 
 | Asset | Description |
 |---|---|
-| 📦 [EVDx-v1.5.0.apk](https://github.com/waleedmandour/EVD/releases/download/v1.5.0/EVDx-v1.5.0.apk) | Android APK (24 MB) |
+| 📦 [EVDx-v1.5.1.apk](https://github.com/waleedmandour/EVD/releases/download/v1.5.1/EVDx-v1.5.1.apk) | Android APK (25 MB) |
 | 📘 [User Guide (English)](https://github.com/waleedmandour/EVD/releases/download/v1.3.0-pre-release/EVDx-UserGuide-EN-v1.3.0.pdf) | Complete English guide (8 pages) |
 | 📗 [دليل المستخدم (العربية)](https://github.com/waleedmandour/EVD/releases/download/v1.3.0-pre-release/EVDx-UserGuide-AR-v1.3.0.pdf) | دليل عربي كامل (8 صفحات) |
 
 **Installation:**
-1. Download the APK from the [Releases page](https://github.com/waleedmandour/EVD/releases/tag/v1.5.0)
+1. Download the APK from the [Releases page](https://github.com/waleedmandour/EVD/releases/tag/v1.5.1)
 2. Enable "Install from Unknown Sources" in your Android settings
 3. Open the downloaded APK and tap **Install**
 4. Launch EVDx and follow the onboarding wizard
 
 **System Requirements:** Android 7.0 (API 24) or later, Bluetooth LE recommended
-
-> ⚠️ This is a **pre-release build** for testing purposes. Not intended for production diagnostics.
 
 ---
 
