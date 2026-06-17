@@ -61,7 +61,13 @@ cd ..
 
 # Copy APK to download directory
 APK_PATH="android/app/build/outputs/apk/release/app-release.apk"
-OUTPUT_NAME="evdx-v1.0.0-release.apk"
+# Derive output name from the actual versionName in build.gradle so the
+# APK filename always matches the version reported by Android's package manager.
+VERSION=$(grep -E '^\s*versionName' android/app/build.gradle | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
+if [ -z "$VERSION" ]; then
+  VERSION="unknown"
+fi
+OUTPUT_NAME="evdx-v${VERSION}-release.apk"
 if [ -f "$APK_PATH" ]; then
   mkdir -p download
   cp "$APK_PATH" "download/$OUTPUT_NAME"

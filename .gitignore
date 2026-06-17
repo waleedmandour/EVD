@@ -48,3 +48,8 @@ db/*.db
 
 # Worklog
 worklog.md
+
+# Signing keystores — NEVER commit (private signing keys)
+*.keystore
+*.jks
+keystore.properties

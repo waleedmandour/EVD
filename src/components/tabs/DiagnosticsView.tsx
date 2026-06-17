@@ -15,10 +15,11 @@ import { generateReport, downloadBlob, getReportFilename } from '@/lib/pdf/repor
 
 export default function DiagnosticsView() {
   const { t } = useTranslation('diagnostics');
-  const { dtcs, milOn, monitorStatus, setDTCs, clearDTCs, setMilOn, connectionStatus, vehicleData, chargingData, tripData, ecoScore, activeVehicle, settings } = useAppStore();
+  const { dtcs, milOn, monitorStatus, setDTCs, clearDTCs, setMilOn, connectionStatus, connectionMode, vehicleData, chargingData, tripData, ecoScore, activeVehicle, settings } = useAppStore();
   const [scanning, setScanning] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
   const [generatingPDF, setGeneratingPDF] = useState(false);
+  const [scanError, setScanError] = useState<string | null>(null);
 
   const handleGenerateReport = async () => {
     setGeneratingPDF(true);
@@ -41,17 +42,86 @@ export default function DiagnosticsView() {
     }
   };
 
-  const handleScan = () => {
+  /**
+   * Run a real OBD-II diagnostic scan.
+   *
+   * For BLE/WiFi connections we issue Mode 03 (stored DTCs), Mode 07 (pending
+   * DTCs), and Mode 0A (permanent DTCs) via bleService.readDTCs(), then merge
+   * the results into the store. For demo mode (no live adapter), we fall back
+   * to a progress-bar animation so the user can still explore the UI.
+   *
+   * The previous implementation only animated the progress bar — it never
+   * actually queried the vehicle, so the diagnostic scan button was
+   * effectively non-functional for real OBD-II use.
+   */
+  const handleScan = async () => {
     if (connectionStatus !== 'connected') return;
     setScanning(true);
     setScanProgress(0);
+    setScanError(null);
 
+    const isRealAdapter = connectionMode === 'bluetooth' || connectionMode === 'wifi';
+
+    if (isRealAdapter) {
+      try {
+        const { bleService } = await import('@/lib/ble-service');
+        // Animate progress while queries run
+        const progressTimer = setInterval(() => {
+          setScanProgress((p) => Math.min(p + 8, 90));
+        }, 120);
+
+        const storedDTCs = await bleService.readDTCs('03');
+        const pendingDTCs = await bleService.readDTCs('07');
+        const permanentDTCs = await bleService.readDTCs('0A');
+
+        clearInterval(progressTimer);
+        setScanProgress(100);
+
+        // Look up descriptions from dtc-codes database
+        const { getDTCByCode } = await import('@/lib/dtc-codes');
+        // Map DTCCode severity ('INFO'|'WARNING'|'CRITICAL') → DTCEvent severity
+        const mapSeverity = (s: 'INFO' | 'WARNING' | 'CRITICAL' | undefined, fallback: 'low' | 'medium' | 'high' | 'critical'): 'low' | 'medium' | 'high' | 'critical' => {
+          if (s === 'CRITICAL') return 'critical';
+          if (s === 'WARNING') return 'high';
+          if (s === 'INFO') return 'low';
+          return fallback;
+        };
+        const buildEvent = (code: string, active: boolean, fallbackSeverity: 'low' | 'medium' | 'high' | 'critical') => {
+          const info = getDTCByCode(code);
+          return {
+            code,
+            description: info?.description || `${code} — Unlisted diagnostic trouble code`,
+            severity: mapSeverity(info?.severity, fallbackSeverity),
+            timestamp: Date.now(),
+            active,
+            count: 1,
+          };
+        };
+
+        const events = [
+          ...storedDTCs.map((c) => buildEvent(c, true,
+            c.startsWith('P0') || c.startsWith('C0') || c.startsWith('B0') || c.startsWith('U0') ? 'critical' : 'high')),
+          ...pendingDTCs.map((c) => buildEvent(c, false, 'medium')),
+          ...permanentDTCs.map((c) => buildEvent(c, true, 'high')),
+        ];
+
+        setDTCs(events);
+        setMilOn(events.some((e) => e.active && (e.severity === 'critical' || e.severity === 'high')));
+      } catch (err) {
+        console.error('DTC scan failed:', err);
+        setScanError(err instanceof Error ? err.message : 'Scan failed — check adapter connection.');
+      } finally {
+        setScanning(false);
+      }
+      return;
+    }
+
+    // Demo mode fallback — animate progress so the user can see the UI flow
     const interval = setInterval(() => {
       setScanProgress((prev) => {
         if (prev >= 100) {
           clearInterval(interval);
           setScanning(false);
-          // Simulate finding some DTCs in demo mode
           return 100;
         }
         return prev + 5;
@@ -59,7 +129,25 @@ export default function DiagnosticsView() {
     }, 100);
   };
 
-  const handleClearCodes = () => {
+  /**
+   * Clear DTCs from the vehicle's ECU (Mode 04) AND from local state.
+   * The previous implementation only cleared local state, so on the next
+   * scan the same codes would reappear because they were never erased
+   * from the vehicle.
+   */
+  const handleClearCodes = async () => {
+    const isRealAdapter = connectionMode === 'bluetooth' || connectionMode === 'wifi';
+    if (isRealAdapter) {
+      try {
+        const { bleService } = await import('@/lib/ble-service');
+        const ok = await bleService.clearDTCs();
+        if (!ok) {
+          console.warn('[DTC] Vehicle did not return Mode 04 positive response — codes may not have been cleared.');
+        }
+      } catch (err) {
+        console.error('Clear DTCs failed:', err);
+      }
+    }
     clearDTCs();
   };
 
@@ -139,6 +227,13 @@ export default function DiagnosticsView() {
             className="h-full bg-evdx-primary rounded-full transition-all duration-200"
             style={{ width: `${scanProgress}%` }}
           />
+        </div>
+      )}
+
+      {scanError && (
+        <div className="flex items-start gap-2 bg-evdx-critical/10 border border-evdx-critical/20 rounded-lg p-3">
+          <AlertTriangle size={16} className="text-evdx-critical shrink-0 mt-0.5" />
+          <p className="text-xs text-evdx-critical">{scanError}</p>
         </div>
       )}
 

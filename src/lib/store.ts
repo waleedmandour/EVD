@@ -798,10 +798,27 @@ export const useAppStore = create<AppState>()(
           const pid = clean.substring(2, 4).toUpperCase();
           // PID 02 – VIN
           if (pid === '02') {
-            const vinHex = clean.substring(6);  // Skip mode+pid+framecount
+            // Multi-frame safe VIN parsing: each "49 02 NN" frame has a 2-hex-digit
+            // sequence counter (NN) immediately after the PID. The previous code
+            // started at offset 6 (skipping one counter) but didn't handle
+            // subsequent frames, so multi-frame VIN responses were corrupted by
+            // embedded counter digits ('1','2','3') that survived the VIN filter.
+            const vinBytes: number[] = [];
+            let cursor = 0;
+            while (cursor < clean.length) {
+              const frameStart = clean.indexOf('4902', cursor);
+              if (frameStart === -1) break;
+              const dataStart = frameStart + 6;  // skip "4902" + 2-char counter
+              let nextFrame = clean.indexOf('4902', dataStart);
+              if (nextFrame === -1) nextFrame = clean.length;
+              for (let i = dataStart; i + 2 <= nextFrame; i += 2) {
+                const byte = parseInt(clean.substring(i, i + 2), 16);
+                if (!isNaN(byte)) vinBytes.push(byte);
+              }
+              cursor = nextFrame;
+            }
             let vin = '';
-            for (let i = 0; i < vinHex.length; i += 2) {
-              const byte = parseInt(vinHex.substring(i, i + 2), 16);
+            for (const byte of vinBytes) {
               if (byte >= 0x20 && byte <= 0x7E) {
                 vin += String.fromCharCode(byte);
               }

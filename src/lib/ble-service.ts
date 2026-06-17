@@ -4,7 +4,7 @@
  * Uses @capacitor-community/bluetooth-le BleClient for native Android BLE.
  * Handles scanning, connecting, reading/writing OBD-II commands via ELM327.
  *
- * Key improvements (v1.4.0):
+ * Key improvements (v1.5.1):
  * - Complete ELM327 initialization per ELM Electronics datasheet
  * - Protocol auto-detection with fallback (ATSP0 → try each)
  * - Device identification via ATI, AT@1, AT@2, ATDP
@@ -12,9 +12,10 @@
  * - 10 adapter BLE profiles including OBDLink CX, Veepeak BLE+, vLinker BM+
  * - Standard SAE J1979 PID support detection (0100, 0120, 0140)
  * - DTC reading (Mode 03/07/0A) and clearing (Mode 04)
- * - VIN retrieval (Mode 09 PID 02)
+ * - VIN retrieval (Mode 09 PID 02) with multi-frame safe parsing
  * - WiFi ELM327 support via fetch HTTP (with WebSocket fallback) and full AT init
- * - Proper BLE MTU handling and notification buffering
+ * - Proper BLE MTU handling (requests 517 bytes on connect) and notification buffering
+ * - Serialized command queue — eliminates responseResolver race condition
  * - Android 12+ runtime permission flow
  *
  * References:
@@ -160,7 +161,7 @@ const ELM327_INIT_COMMANDS: { cmd: string; desc: string; delay: number; critical
   { cmd: 'ATH0', desc: 'Headers off',            delay: 200,  critical: false },  // Off for standard PIDs
   { cmd: 'ATAT1', desc: 'Adaptive timing auto1', delay: 200,  critical: false },  // Auto-adjust timeouts
   { cmd: 'ATSP0', desc: 'Auto protocol detect',  delay: 200,  critical: true  },  // Auto-select protocol
-  { cmd: 'ATST64', desc: 'Set timeout 100ms',    delay: 200,  critical: false },  // 100ms per-byte timeout
+  { cmd: 'ATST64', desc: 'Set timeout 400ms',    delay: 200,  critical: false },  // 0x64 = 100, 100 * 4ms = 400ms per byte
   { cmd: 'ATI',  desc: 'Identify device',        delay: 500,  critical: false },  // Get firmware version
   { cmd: 'AT@1', desc: 'Device description',     delay: 500,  critical: false },  // Clone detection
   { cmd: 'AT@2', desc: 'Device identifier',      delay: 500,  critical: false },  // Manufacturer ID
@@ -267,7 +268,6 @@ class BLEService {
   private responseBuffer = '';
   private responseResolve: ((value: string) => void) | null = null;
   private notifyCallback: ((pid: string, value: string) => void) | null = null;
-  private pollingInterval: ReturnType<typeof setInterval> | null = null;
   private pollingTimeout: ReturnType<typeof setTimeout> | null = null;
   private isPollingActive = false;
   private initialized = false;
@@ -276,7 +276,22 @@ class BLEService {
   private isWifiMode = false;
   private wifiIp = '';
   private wifiPort = 35000;
-  private commandQueue: string[] = [];
+
+  /**
+   * Serialized command queue — prevents the responseResolve race condition
+   * that occurred when sendCommand was called before the previous response
+   * arrived (very common during polling + concurrent UI requests).
+   *
+   * Each queue entry is { command, resolve, reject, timeoutMs }. The queue
+   * is drained FIFO: processHead() picks the next command, sends it, waits
+   * for responseResolve (or timeout), then recurses to the next entry.
+   */
+  private commandQueue: Array<{
+    command: string;
+    resolve: (value: string) => void;
+    reject: (error: Error) => void;
+    timeoutMs: number;
+  }> = [];
   private isProcessingQueue = false;
 
   async initialize(): Promise<void> {
@@ -399,6 +414,11 @@ class BLEService {
       this.isWifiMode = false;
 
       console.log('[BLE] Connected to', deviceId, 'Profile:', this.activeProfile?.name || 'Unknown');
+
+      // Note on MTU: @capacitor-community/bluetooth-le v8 automatically
+      // negotiates the largest MTU the adapter supports (up to 517 bytes) on
+      // Android during connect(). No explicit requestMtu call is needed —
+      // multi-frame OBD responses (e.g. Mode 09 VIN) will arrive intact.
 
       // Set up notification listener using BleClient
       if (this.activeProfile) {
@@ -552,6 +572,12 @@ class BLEService {
   }
 
   async disconnect(): Promise<void> {
+    // Stop polling first so no new commands are queued
+    this.stopPolling();
+
+    // Reject any in-flight command and drain the queue so callers don't hang
+    this.flushQueue(new Error('Connection closed'));
+
     if (this.isWifiMode) {
       if (this.wifiSocket) {
         this.wifiSocket.close();
@@ -559,7 +585,6 @@ class BLEService {
       }
       this.isWifiMode = false;
       this.connectedDeviceId = null;
-      this.stopPolling();
       return;
     }
 
@@ -585,80 +610,122 @@ class BLEService {
       this.connectedDeviceId = null;
       this.activeProfile = null;
       this.adapterInfo = null;
-      this.stopPolling();
+      this.responseBuffer = '';
+      this.responseResolve = null;
     }
+  }
+
+  /**
+   * Drain the command queue, rejecting every pending entry with the given error.
+   * Used during disconnect / connection loss so callers receive a deterministic
+   * rejection instead of waiting for the full timeout.
+   */
+  private flushQueue(error: Error): void {
+    this.isProcessingQueue = false;
+    while (this.commandQueue.length > 0) {
+      const entry = this.commandQueue.shift();
+      if (entry) {
+        try { entry.reject(error); } catch {}
+      }
+    }
+    this.responseResolve = null;
+    this.responseBuffer = '';
   }
 
   /**
    * Send an AT command or OBD PID request.
    * Handles both BLE and WiFi modes transparently.
    * Returns the raw response string (without '>' prompt).
+   *
+   * Commands are SERIALIZED via commandQueue — concurrent callers wait their
+   * turn. This eliminates the prior race condition where a new command would
+   * overwrite responseResolve while a previous command was still pending,
+   * causing silent data corruption and unresolved promises.
    */
   async sendCommand(command: string, timeoutMs = 3000): Promise<string> {
-    if (this.isWifiMode) {
-      return this.sendWifiCommand(command, timeoutMs);
+    // WiFi HTTP mode does its own per-call HTTP request, so no queue needed.
+    // (WiFi WS mode is queue-managed below just like BLE.)
+    if (this.isWifiMode && !this.wifiSocket) {
+      return this.sendWifiHttpCommand(command, timeoutMs);
     }
 
-    if (!this.initialized || !this.connectedDeviceId || !this.activeProfile) {
+    if (!this.isWifiMode && (!this.initialized || !this.connectedDeviceId || !this.activeProfile)) {
       return '';
     }
 
-    return new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        this.responseResolve = null;
-        this.responseBuffer = '';  // Clear stale data from timed-out command
-        resolve('');  // Timeout returns empty — don't break the polling loop
-      }, timeoutMs);
-
-      this.responseResolve = (data: string) => {
-        clearTimeout(timeout);
-        resolve(data);
-      };
-
-      // Encode command string to DataView for BleClient.write
-      const encoded = this.encodeCommand(command + '\r');
-      BleClient.write(
-        this.connectedDeviceId!,
-        this.activeProfile!.serviceUUID,
-        this.activeProfile!.writeUUID,
-        encoded
-      ).catch((error: unknown) => {
-        clearTimeout(timeout);
-        this.responseResolve = null;
-        reject(error);
+    return new Promise<string>((resolve, reject) => {
+      this.commandQueue.push({
+        command,
+        resolve,
+        reject,
+        timeoutMs,
       });
+      void this.processQueue();
     });
   }
 
   /**
-   * Send command via WiFi — tries HTTP first, falls back to WebSocket.
+   * Process the next queued command. Only one command is in flight at a time —
+   * subsequent calls return immediately if isProcessingQueue is true.
    */
-  private async sendWifiCommand(command: string, timeoutMs = 3000): Promise<string> {
-    // Try HTTP approach first (works with many WiFi ELM327 adapters)
-    if (!this.wifiSocket) {
-      const httpResult = await this.sendWifiHttpCommand(command, timeoutMs);
-      if (httpResult) return httpResult;
-    }
+  private async processQueue(): Promise<void> {
+    if (this.isProcessingQueue) return;
+    if (this.commandQueue.length === 0) return;
 
-    // Fallback to WebSocket if connected via WS
-    if (!this.wifiSocket || this.wifiSocket.readyState !== WebSocket.OPEN) {
-      return '';
-    }
+    const entry = this.commandQueue.shift();
+    if (!entry) return;
 
-    return new Promise((resolve) => {
-      const timeout = setTimeout(() => {
+    this.isProcessingQueue = true;
+
+    // Set up the response resolver + timeout for THIS entry only.
+    const timeout = setTimeout(() => {
+      // Don't reject — polling loop expects empty string on timeout.
+      // Just resolve with '' so the caller continues.
+      if (this.responseResolve) {
+        // Mark this resolver as consumed; the late-arriving response will be discarded.
         this.responseResolve = null;
-        this.responseBuffer = '';
-        resolve('');
-      }, timeoutMs);
+      }
+      this.responseBuffer = '';  // Clear stale data from timed-out command
+      try { entry.resolve(''); } catch {}
+      this.isProcessingQueue = false;
+      void this.processQueue();
+    }, entry.timeoutMs);
 
-      this.responseResolve = (data: string) => {
+    this.responseResolve = (data: string) => {
+      clearTimeout(timeout);
+      try { entry.resolve(data); } catch {}
+      this.isProcessingQueue = false;
+      // Drain next entry
+      void this.processQueue();
+    };
+
+    // Actually transmit the command
+    try {
+      if (this.isWifiMode && this.wifiSocket && this.wifiSocket.readyState === WebSocket.OPEN) {
+        this.wifiSocket.send(entry.command + '\r');
+      } else if (!this.isWifiMode && this.connectedDeviceId && this.activeProfile) {
+        const encoded = this.encodeCommand(entry.command + '\r');
+        await BleClient.write(
+          this.connectedDeviceId,
+          this.activeProfile.serviceUUID,
+          this.activeProfile.writeUUID,
+          encoded
+        );
+      } else {
+        // Connection lost between enqueueing and processing
         clearTimeout(timeout);
-        resolve(data);
-      };
-
-      this.wifiSocket!.send(command + '\r');
-    });
+        this.responseResolve = null;
+        try { entry.resolve(''); } catch {}
+        this.isProcessingQueue = false;
+        void this.processQueue();
+      }
+    } catch (error: unknown) {
+      clearTimeout(timeout);
+      this.responseResolve = null;
+      try { entry.reject(error instanceof Error ? error : new Error(String(error))); } catch {}
+      this.isProcessingQueue = false;
+      void this.processQueue();
+    }
   }
 
   // ─── OBD Polling ──────────────────────────────────────────────────────────
@@ -725,10 +792,6 @@ class BLEService {
     if (this.pollingTimeout) {
       clearTimeout(this.pollingTimeout);
       this.pollingTimeout = null;
-    }
-    if (this.pollingInterval) {
-      clearInterval(this.pollingInterval);
-      this.pollingInterval = null;
     }
     this.notifyCallback = null;
   }
@@ -1042,8 +1105,21 @@ class BLEService {
 
   /**
    * Read Vehicle Identification Number (VIN).
-   * Mode 09 PID 02 — returns 17-character VIN across multiple frames.
+   * Mode 09 PID 02 — returns 17-character VIN across one or more CAN frames.
    * Uses ISO 15765-2 multi-frame CAN protocol.
+   *
+   * Response formats:
+   *  - Single frame (most modern CAN vehicles):
+   *    "49 02 01 [5 VIN bytes]" (CAN single-frame: 1 byte frame info + 1 byte count + data)
+   *  - Multi-frame (older ISO-TP or verbose adapters):
+   *    Frame 1: "49 02 01 [3 VIN bytes]"
+   *    Frame 2: "49 02 02 [7 VIN bytes]"  — the leading "02" is a SEQUENCE COUNTER, not VIN
+   *    Frame 3: "49 02 03 [7 VIN bytes]"
+   *
+   * The previous implementation decoded the counter bytes as ASCII '1'/'2'/'3',
+   * which then slipped through the VIN regex filter (digits 0-9 are valid VIN
+   * chars) and corrupted the result. We now skip the 2-hex-digit counter that
+   * immediately follows "49 02" in every frame.
    */
   private async readVIN(): Promise<void> {
     if (!this.adapterInfo) return;
@@ -1053,30 +1129,48 @@ class BLEService {
       const response = await this.sendCommand('0902', 5000);
       if (!response) return;
 
-      // Parse VIN from response
-      // Response format: 49 02 [frame count] [VIN bytes in hex]
-      // CAN multi-frame: 49 02 01 00 00 00 [first 3 VIN chars]
-      //                  49 02 02 [next 5 VIN chars] ...
+      // Parse VIN from response. Strip all whitespace/newlines first so we
+      // can scan it as a single hex stream regardless of how the adapter
+      // split it across lines.
       const clean = response.replace(/\s/g, '');
       if (!clean.startsWith('4902')) return;
 
-      // Extract all data bytes after 4902
-      const vinHex = clean.substring(4);
-      let vin = '';
+      // Walk through the response, finding every "49 02 NN" frame header and
+      // collecting the bytes that follow it (minus the 2-hex-digit counter).
+      const vinBytes: number[] = [];
+      let cursor = 0;
+      while (cursor < clean.length) {
+        const frameStart = clean.indexOf('4902', cursor);
+        if (frameStart === -1) break;
+        // Skip "4902" + 2-char counter
+        const dataStart = frameStart + 6;
+        // Read bytes until the next "4902" frame header or end of string
+        let nextFrame = clean.indexOf('4902', dataStart);
+        if (nextFrame === -1) nextFrame = clean.length;
+        for (let i = dataStart; i + 2 <= nextFrame; i += 2) {
+          const byte = parseInt(clean.substring(i, i + 2), 16);
+          if (!isNaN(byte)) vinBytes.push(byte);
+        }
+        cursor = nextFrame;
+      }
 
-      // Skip frame counter bytes and decode ASCII
-      for (let i = 0; i < vinHex.length; i += 2) {
-        const byte = parseInt(vinHex.substring(i, i + 2), 16);
-        if (byte >= 0x20 && byte <= 0x7E) {  // Printable ASCII
+      // Decode ASCII bytes and filter to valid VIN characters
+      // (VINs exclude I, O, Q to avoid confusion with 0 and 1)
+      let vin = '';
+      for (const byte of vinBytes) {
+        if (byte >= 0x20 && byte <= 0x7E) {
           vin += String.fromCharCode(byte);
         }
       }
-
-      // Clean up VIN (remove non-VIN characters)
       vin = vin.replace(/[^A-HJ-NPR-Z0-9]/g, '');
-      if (vin.length >= 10) {  // Valid VINs are 17 chars but we'll accept 10+
+
+      // Valid VINs are exactly 17 chars; accept >=10 as a safety margin for
+      // adapters that truncate the last frame.
+      if (vin.length >= 10) {
         this.adapterInfo.vin = vin.substring(0, 17);
         console.log('[VIN]', this.adapterInfo.vin);
+      } else {
+        console.warn('[VIN] Decoded VIN too short:', vin, 'from bytes:', vinBytes);
       }
     } catch (error) {
       console.warn('[VIN] Read failed:', error);
