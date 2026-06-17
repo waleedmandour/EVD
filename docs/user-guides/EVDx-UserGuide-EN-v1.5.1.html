@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>EVDx User Guide v1.5.1 (English)</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+@page {
+    size: 720px 1020px;
+    margin: 0;
+}
+:root {
+    --c-bg: #0D1117;
+    --c-surface: #1A2332;
+    --c-text: #E8EAF6;
+    --c-text-secondary: #78909C;
+    --c-primary: #00D2FF;
+    --c-green: #00E676;
+    --c-warning: #FFB300;
+    --c-critical: #FF3D00;
+    --c-purple: #7B2FBE;
+}
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 720px;
+    background: var(--c-bg);
+    color: var(--c-text);
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+}
+@media screen {
+    html {
+        height: auto;
+        display: flex;
+        justify-content: center;
+        background: #222;
+    }
+    body {
+        margin: 20px auto;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    }
+}
+
+/* ─── Cover Page ────────────────────────────────────────────── */
+.cover {
+    width: 720px;
+    height: 1020px;
+    box-sizing: border-box;
+    padding: 60px;
+    background: linear-gradient(135deg, #0D1117 0%, #1A2332 100%);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+    break-after: page;
+}
+.cover::before {
+    content: '';
+    position: absolute;
+    top: -100px;
+    right: -100px;
+    width: 400px;
+    height: 400px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(0, 210, 255, 0.15) 0%, transparent 70%);
+}
+.cover::after {
+    content: '';
+    position: absolute;
+    bottom: -150px;
+    left: -150px;
+    width: 500px;
+    height: 500px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(123, 47, 190, 0.10) 0%, transparent 70%);
+}
+.cover-tag {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 3px;
+    color: var(--c-primary);
+    text-transform: uppercase;
+    margin-bottom: 24px;
+    position: relative;
+    z-index: 2;
+}
+.cover-title {
+    font-size: 72px;
+    font-weight: 800;
+    line-height: 1.05;
+    color: var(--c-text);
+    margin: 0 0 16px 0;
+    position: relative;
+    z-index: 2;
+}
+.cover-subtitle {
+    font-size: 22px;
+    font-weight: 400;
+    color: var(--c-text-secondary);
+    margin: 0 0 40px 0;
+    line-height: 1.4;
+    position: relative;
+    z-index: 2;
+}
+.cover-features {
+    position: relative;
+    z-index: 2;
+    margin-top: 30px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+}
+.cover-feature {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(0, 210, 255, 0.15);
+    border-radius: 10px;
+    padding: 14px 16px;
+}
+.cover-feature-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--c-primary);
+    margin-bottom: 4px;
+}
+.cover-feature-desc {
+    font-size: 11px;
+    color: var(--c-text-secondary);
+    line-height: 1.4;
+}
+.cover-footer {
+    position: absolute;
+    bottom: 40px;
+    left: 60px;
+    right: 60px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 11px;
+    color: var(--c-text-secondary);
+    z-index: 2;
+}
+.cover-version {
+    background: var(--c-primary);
+    color: var(--c-bg);
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 11px;
+}
+
+/* ─── Main Content ──────────────────────────────────────────── */
+.main-content {
+    padding: 50px 55px 40px 55px;
+}
+
+/* Chapter headers */
+.chapter-header {
+    break-after: avoid;
+    break-inside: avoid;
+    margin-top: 24px;
+    margin-bottom: 14px;
+}
+.chapter-header:first-child { margin-top: 0; }
+.chapter-tag {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--c-primary);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+}
+.chapter-title {
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--c-text);
+    margin: 0 0 8px 0;
+    line-height: 1.2;
+}
+.divider {
+    width: 50px;
+    height: 3px;
+    background: var(--c-primary);
+    border-radius: 2px;
+    margin-bottom: 14px;
+}
+
+/* Body text */
+.body-text {
+    margin: 0 0 12px 0;
+    color: var(--c-text);
+    font-size: 14px;
+    line-height: 1.65;
+}
+.body-text strong {
+    color: var(--c-primary);
+    font-weight: 600;
+}
+
+/* Callout boxes */
+.callout {
+    break-inside: avoid;
+    background: var(--c-surface);
+    border-left: 3px solid var(--c-primary);
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin: 12px 0;
+}
+.callout-warning {
+    border-left-color: var(--c-warning);
+}
+.callout-critical {
+    border-left-color: var(--c-critical);
+}
+.callout-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--c-primary);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+.callout-warning .callout-title { color: var(--c-warning); }
+.callout-critical .callout-title { color: var(--c-critical); }
+.callout-body {
+    font-size: 13px;
+    color: var(--c-text);
+    line-height: 1.55;
+    margin: 0;
+}
+
+/* Cards */
+.card {
+    break-inside: avoid;
+    background: var(--c-surface);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 10px;
+    padding: 16px 18px;
+    margin-bottom: 12px;
+}
+.card-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+.card-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: rgba(0, 210, 255, 0.12);
+    color: var(--c-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+.card-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--c-text);
+}
+.card-body {
+    font-size: 13px;
+    color: var(--c-text-secondary);
+    line-height: 1.55;
+    margin: 0;
+}
+.card-body strong {
+    color: var(--c-text);
+}
+
+/* Tables */
+.table {
+    break-inside: avoid;
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12px 0;
+    font-size: 12px;
+}
+.table th {
+    background: var(--c-surface);
+    color: var(--c-primary);
+    text-align: left;
+    padding: 10px 12px;
+    font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid var(--c-primary);
+}
+.table td {
+    padding: 10px 12px;
+    color: var(--c-text);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    line-height: 1.5;
+}
+.table td strong { color: var(--c-primary); }
+.table tr:last-child td { border-bottom: none; }
+
+/* Code blocks */
+.code {
+    break-inside: avoid;
+    background: var(--c-bg);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin: 10px 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--c-green);
+    line-height: 1.5;
+    overflow-x: auto;
+}
+.code-label {
+    font-size: 10px;
+    color: var(--c-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    font-family: 'Inter', sans-serif;
+}
+
+/* Steps */
+.steps {
+    margin: 12px 0;
+    padding: 0;
+    list-style: none;
+}
+.steps li {
+    break-inside: avoid;
+    padding-left: 36px;
+    position: relative;
+    margin-bottom: 10px;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--c-text);
+}
+.steps li::before {
+    content: counter(step-counter);
+    counter-increment: step-counter;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 24px;
+    height: 24px;
+    background: var(--c-primary);
+    color: var(--c-bg);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+}
+.steps { counter-reset: step-counter; }
+
+/* Feature grid */
+.feature-grid {
+    break-inside: avoid;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin: 12px 0;
+}
+.feature-item {
+    background: var(--c-surface);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 8px;
+    padding: 12px 14px;
+}
+.feature-item-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--c-primary);
+    margin-bottom: 4px;
+}
+.feature-item-desc {
+    font-size: 11px;
+    color: var(--c-text-secondary);
+    line-height: 1.5;
+    margin: 0;
+}
+
+/* ─── Ending Page ───────────────────────────────────────────── */
+.ending {
+    width: 720px;
+    height: 1020px;
+    box-sizing: border-box;
+    padding: 60px;
+    background: linear-gradient(135deg, #1A2332 0%, #0D1117 100%);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    break-before: page;
+}
+.ending::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 600px;
+    height: 600px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(0, 210, 255, 0.08) 0%, transparent 70%);
+}
+.ending-title {
+    font-size: 36px;
+    font-weight: 700;
+    color: var(--c-text);
+    margin: 0 0 16px 0;
+    position: relative;
+    z-index: 2;
+}
+.ending-text {
+    font-size: 15px;
+    color: var(--c-text-secondary);
+    line-height: 1.7;
+    max-width: 480px;
+    margin: 0 0 30px 0;
+    position: relative;
+    z-index: 2;
+}
+.ending-contact {
+    background: var(--c-surface);
+    border: 1px solid rgba(0, 210, 255, 0.2);
+    border-radius: 12px;
+    padding: 20px 28px;
+    position: relative;
+    z-index: 2;
+    margin-top: 10px;
+}
+.ending-contact-label {
+    font-size: 10px;
+    color: var(--c-primary);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 6px;
+}
+.ending-contact-value {
+    font-size: 14px;
+    color: var(--c-text);
+    font-weight: 500;
+}
+.ending-footer {
+    position: absolute;
+    bottom: 40px;
+    left: 60px;
+    right: 60px;
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--c-text-secondary);
+    z-index: 2;
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════ COVER ═══════════════ -->
+<div class="cover">
+    <div class="cover-tag">User Guide · English</div>
+    <h1 class="cover-title">EVDx</h1>
+    <p class="cover-subtitle">Universal EV Diagnostics Pro<br>v1.5.1 — Complete setup, connection, and diagnostic workflow</p>
+
+    <div class="cover-features">
+        <div class="cover-feature">
+            <div class="cover-feature-title">BLE OBD-II</div>
+            <div class="cover-feature-desc">10 adapter profiles, ELM327 init, command queue</div>
+        </div>
+        <div class="cover-feature">
+            <div class="cover-feature-title">DTC Scanning</div>
+            <div class="cover-feature-desc">Modes 03/07/0A read, Mode 04 clear, 500+ code DB</div>
+        </div>
+        <div class="cover-feature">
+            <div class="cover-feature-title">Bilingual</div>
+            <div class="cover-feature-desc">Full English + Arabic with RTL layout</div>
+        </div>
+        <div class="cover-feature">
+            <div class="cover-feature-title">Privacy-First</div>
+            <div class="cover-feature-desc">100% on-device, zero cloud, zero telemetry</div>
+        </div>
+    </div>
+
+    <div class="cover-footer">
+        <span>Dr. Waleed Mandour · waleedmandour@gmail.com</span>
+        <span class="cover-version">v1.5.1</span>
+    </div>
+</div>
+
+<!-- ═══════════════ MAIN CONTENT ═══════════════ -->
+<div class="main-content">
+
+<!-- Chapter 1 -->
+<div class="chapter-header">
+    <div class="chapter-tag">Chapter 1</div>
+    <h2 class="chapter-title">Getting Started</h2>
+    <div class="divider"></div>
+</div>
+
+<p class="body-text">
+    EVDx is a <strong>privacy-first electric vehicle diagnostic app</strong> for Android 7.0+ that turns your phone into a professional-grade OBD-II scan tool. Connect a Bluetooth LE or WiFi ELM327 adapter, and EVDx reads live telemetry, scans diagnostic trouble codes, tracks charging sessions, and generates PDF reports — all without sending a single byte to the cloud.
+</p>
+<p class="body-text">
+    Version 1.5.1 ships critical fixes to the BLE command pipeline, real diagnostic scan logic, and the disconnect flow. If you are upgrading from v1.4.x or earlier, your existing vehicle profiles and maintenance history are preserved automatically.
+</p>
+
+<div class="callout">
+    <div class="callout-title">System Requirements</div>
+    <p class="callout-body">Android 7.0 (API 24) or later. Bluetooth LE recommended (most modern adapters). 25 MB free storage. No internet connection required — the app works fully offline once installed.</p>
+</div>
+
+<div class="chapter-header">
+    <div class="chapter-tag">Chapter 1 · 1</div>
+    <h2 class="chapter-title">Installation</h2>
+    <div class="divider"></div>
+</div>
+
+<ol class="steps">
+    <li>Download the APK from the <strong>v1.5.1-pre release page</strong> on GitHub. The file is named <code>evdx-v1.5.1-pre-release.apk</code> and is approximately 25 MB.</li>
+    <li>On your Android phone, open <strong>Settings → Security</strong> (or <strong>Privacy</strong> on newer Android versions) and enable <strong>"Install unknown apps"</strong> for your browser or file manager.</li>
+    <li>Open the downloaded APK file from your notifications or file manager and tap <strong>Install</strong>. The install takes about 10 seconds.</li>
+    <li>Tap <strong>Open</strong> when the install completes. The EVDx onboarding wizard starts automatically.</li>
+</ol>
+
+<div class="callout callout-warning">
+    <div class="callout-title">Upgrading from an earlier version?</div>
+    <p class="callout-body">If you have v1.4.x or v1.5.0 installed, the v1.5.1 APK will install over it without losing your vehicle profiles, maintenance history, or settings. The new release uses the same application ID (<code>com.waleedmandour.evdx</code>) but a new versionCode (8), so Android recognises it as an update.</p>
+</div>
+
+<!-- Chapter 2 -->
+<div class="chapter-header">
+    <div class="chapter-tag">Chapter 2</div>
+    <h2 class="chapter-title">Onboarding Wizard</h2>
+    <div class="divider"></div>
+</div>
+
+<p class="body-text">
+    The first time you launch EVDx, a 5-step onboarding wizard walks you through the initial setup. Each step is skippable, but completing all five gives you the best experience.
+</p>
+
+<div class="feature-grid">
+    <div class="feature-item">
+        <div class="feature-item-title">1. Splash</div>
+        <p class="feature-item-desc">App introduction and version display.</p>
+    </div>
+    <div class="feature-item">
+        <div class="feature-item-title">2. Language</div>
+        <p class="feature-item-desc">Choose English or Arabic. Changes immediately.</p>
+    </div>
+    <div class="feature-item">
+        <div class="feature-item-title">3. Privacy Consent</div>
+        <p class="feature-item-desc">Confirm you understand no data leaves the device.</p>
+    </div>
+    <div class="feature-item">
+        <div class="feature-item-title">4. Vehicle Setup</div>
+        <p class="feature-item-desc">Pick brand, model, battery capacity.</p>
+    </div>
+    <div class="feature-item">
+        <div class="feature-item-title">5. Adapter / Demo</div>
+        <p class="feature-item-desc">Pair OBD adapter or try demo mode.</p>
+    </div>
+    <div class="feature-item">
+        <div class="feature-item-title">Done</div>
+        <p class="feature-item-desc">Dashboard opens — start driving or scanning.</p>
+    </div>
+</div>
+
+<!-- Chapter 3 -->
+<div class="chapter-header">
+    <div class="chapter-tag">Chapter 3</div>
+    <h2 class="chapter-title">Connecting an OBD-II Adapter</h2>
+    <div class="divider"></div>
+</div>
+
+<p class="body-text">
+    EVDx supports <strong>three connection modes</strong>: Bluetooth LE (recommended), WiFi ELM327, and Demo (simulated data for trying the app without an adapter). Tap the <strong>Connect</strong> button at the top of any screen to open the connection overlay.
+</p>
+
+<div class="chapter-header">
+    <div class="chapter-tag">Chapter 3 · 1</div>
+    <h2 class="chapter-title">Bluetooth LE Connection</h2>
+    <div class="divider"></div>
+</div>
+
+<p class="body-text">
+    Most modern OBD-II adapters use Bluetooth LE. EVDx auto-detects 10 adapter profiles and shows every BLE device in range — including unknown names — so you can pick yours even if it isn't on the official list.
+</p>
+
+<ol class="steps">
+    <li>Plug your OBD-II adapter into the vehicle's diagnostic port (under the dashboard, driver side). The adapter's LED should light up.</li>
+    <li>In EVDx, tap <strong>Connect → Bluetooth OBD</strong>. Scanning starts automatically and runs for 8 seconds.</li>
+    <li>On Android 12+, you'll be prompted to grant <strong>BLUETOOTH_CONNECT</strong> and <strong>BLUETOOTH_SCAN</strong> permissions. On Android 11 and below, you'll be asked for <strong>ACCESS_FINE_LOCATION</strong> (required for BLE scan results).</li>
+    <li>When the scan finishes, OBD-like devices are listed at the top (sorted by signal strength). Tap yours to connect.</li>
+    <li>EVDx runs the full ELM327 initialization sequence, queries adapter identification (firmware, chipset, protocol), detects supported PIDs, and reads the VIN. This takes 5-10 seconds.</li>
+</ol>
+
+<div class="callout">
+    <div class="callout-title">What's new in v1.5.1</div>
+    <p class="callout-body">The BLE service now uses a <strong>serialized command queue</strong>. Previously, concurrent commands (polling + UI requests) could overwrite each other's response callback, causing silent data corruption. The queue ensures commands are processed strictly in order — your live data and DTC scans will be accurate.</p>
+</div>
+
+<div class="chapter-header">
+    <div class="chapter-tag">Chapter 3 · 2</div>
+    <h2 class="chapter-title">WiFi ELM327 Connection</h2>
+    <div class="divider"></div>
+</div>
+
+<p class="body-text">
+    Some adapters (notably OBDLink WiFi and certain ELM327 WiFi clones) expose a TCP socket instead of BLE. EVDx can talk to them over local HTTP.
+</p>
+
+<ol class="steps">
+    <li>Connect your phone to the adapter's WiFi network (usually named <code>OBDII</code>, <code>WiFi_OBDII</code>, or similar — check your adapter's manual).</li>
+    <li>In EVDx, tap <strong>Connect → WiFi OBD</strong>.</li>
+    <li>Enter the adapter's IP address (default <code>192.168.0.10</code>) and port (default <code>35000</code>).</li>
+    <li>Tap <strong>Connect</strong>. The same ELM327 initialization sequence runs as for BLE.</li>
+</ol>
+
+<div class="callout callout-warning">
+    <div class="callout-title">WiFi caveat</div>
+    <p class="callout-body">WiFi ELM327 adapters expose a raw TCP socket, not HTTP. EVDx uses an HTTP fallback that works with many adapters but not all. If WiFi mode fails to connect, try BLE — most adapters sold today support both.</p>
+</div>
+
+<div class="chapter-header">
+    <div class="chapter-tag">Chapter 3 · 3</div>
+    <h2 class="chapter-title">Demo Mode</h2>
+    <div class="divider"></div>
+</div>
+
+<p class="body-text">
+    Demo mode runs the built-in multi-brand driving/charging simulator. It produces realistic EV telemetry for BYD (LFP), Tesla (NCA), Nissan (NMC), Hyundai/Kia (NCM), VW Group (NMC), or a generic profile. Use it to explore the app before buying an adapter, or to train staff without occupying a vehicle.
+</p>
+<p class="body-text">
+    To start demo mode: <strong>Connect → Demo</strong>, pick a brand and model, then tap <strong>Start Demo Mode</strong>. The simulator immediately starts pushing live data to the dashboard. In v1.5.1, running the diagnostic scan in demo mode also injects two sample DTCs (<code>P0A80</code> hybrid battery deterioration, <code>P0C79</code> drive motor inverter performance) so you can explore the diagnostic UI without a real vehicle.
+</p>
+
+<!-- Chapter 4 -->
+<div class="chapter-header">
+    <div class="chapter-tag">Chapter 4</div>
+    <h2 class="chapter-title">Running a Diagnostic Scan</h2>
+    <div class="divider"></div>
+</div>
+
+<p class="body-text">
+    Once connected (BLE, WiFi, or Demo), open the <strong>Diagnostics</strong> tab and tap <strong>Run Full Scan</strong>. EVDx queries the vehicle's ECU for three categories of diagnostic trouble codes:
+</p>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>Mode</th>
+            <th>Type</th>
+            <th>What it returns</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><strong>03</strong></td>
+            <td>Stored DTCs</td>
+            <td>Active fault codes currently stored in the ECU</td>
+        </tr>
+        <tr>
+            <td><strong>07</strong></td>
+            <td>Pending DTCs</td>
+            <td>Faults detected but not yet confirmed (may clear themselves)</td>
+        </tr>
+        <tr>
+            <td><strong>0A</strong></td>
+            <td>Permanent DTCs</td>
+            <td>Cleared codes that the ECU still tracks per EPA regulation</td>
+        </tr>
+    </tbody>
+</table>
+
+<p class="body-text">
+    Each code is enriched with a description, severity (low / medium / high / critical), common causes, and recommended actions from the built-in 500+ DTC database. Tap any code to expand the details.
+</p>
+
+<div class="callout callout-critical">
+    <div class="callout-title">What was fixed in v1.5.1</div>
+    <p class="callout-body">In v1.4.x and v1.5.0, the "Run Full Scan" button <strong>only animated a progress bar</strong> — it never actually queried the vehicle. This is now fixed: the button issues real Mode 03/07/0A reads via <code>bleService.readDTCs()</code> and merges the results with descriptions from the DTC database. The "Clear Codes" button also now sends a real Mode 04 command to the ECU (previously it only cleared local UI state, so the codes would reappear on the next scan).</p>
+</div>
+
+<div class="chapter-header">
+    <div class="chapter-tag">Chapter 4 · 1</div>
+    <h2 class="chapter-title">Clearing Codes</h2>
+    <div class="divider"></div>
+</div>
+
+<p class="body-text">
+    To clear codes from the vehicle's ECU: tap <strong>Clear Codes</strong> in the Diagnostics tab, then confirm in the dialog. EVDx sends a Mode 04 command, waits for the positive response, and clears the local DTC list. The MIL (check engine light) should also turn off if all critical codes were cleared.
+</p>
+
+<div class="callout callout-warning">
+    <div class="callout-title">Mode 04 strict match</div>
+    <p class="callout-body">v1.5.1 also fixes a false-positive bug in the clear-DTC success check. The previous code used <code>response.includes('44')</code> which would match any response containing the substring "44" anywhere — including multi-byte OBD responses with embedded 0x44 bytes. The fix uses a strict prefix match on the whitespace-stripped response, so success is only reported when the ECU actually returns the Mode 04 positive response.</p>
+</div>
+
+<!-- Chapter 5 -->
+<div class="chapter-header">
+    <div class="chapter-tag">Chapter 5</div>
+    <h2 class="chapter-title">Live Data & Polling</h2>
+    <div class="divider"></div>
+</div>
+
+<p class="body-text">
+    While connected, EVDx polls the vehicle's ECU at 500ms intervals for standard SAE J1979 Mode 01 PIDs. The polling list is filtered to only PIDs the vehicle actually supports (detected via the 0100/0120/0140/... bitfield query during connect).
+</p>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>PID</th>
+            <th>Name</th>
+            <th>Formula</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr><td><strong>0D</strong></td><td>Vehicle Speed</td><td>A km/h</td></tr>
+        <tr><td><strong>0C</strong></td><td>Motor RPM</td><td>(A×256+B)/4</td></tr>
+        <tr><td><strong>05</strong></td><td>Coolant / Motor Temp</td><td>A−40 °C</td></tr>
+        <tr><td><strong>0F</strong></td><td>Intake Air / Inverter Temp</td><td>A−40 °C</td></tr>
+        <tr><td><strong>42</strong></td><td>Control Module Voltage</td><td>(A×256+B)/1000 V</td></tr>
+        <tr><td><strong>46</strong></td><td>Ambient Air Temp</td><td>A−40 °C</td></tr>
+        <tr><td><strong>2F</strong></td><td>Fuel Level (SOC proxy)</td><td>A×100/255 %</td></tr>
+        <tr><td><strong>61</strong></td><td>Driver Demand Torque</td><td>A−125 %</td></tr>
+        <tr><td><strong>62</strong></td><td>Actual Motor Torque</td><td>A−125 %</td></tr>
+        <tr><td><strong>A6</strong></td><td>Odometer</td><td>(A×16777216+B×65536+C×256+D)/10 km</td></tr>
+    </tbody>
+</table>
+
+<p class="body-text">
+    Live data flows to the <strong>Dashboard</strong>, <strong>Battery</strong>, <strong>Charging</strong>, and <strong>Live Data</strong> tabs. The Live Data tab lets you graph up to 6 parameters simultaneously and export the window as CSV.
+</p>
+
+<!-- Chapter 6 -->
+<div class="chapter-header">
+    <div class="chapter-tag">Chapter 6</div>
+    <h2 class="chapter-title">Session Logging</h2>
+    <div class="divider"></div>
+</div>
+
+<p class="body-text">
+    The <strong>Sessions</strong> tab lets you record a trip for later review. Tap <strong>Start Trip</strong> before driving and <strong>Stop Trip</strong> when finished. EVDx captures: distance, average speed, max speed, energy consumed, energy recovered via regen, trip duration, start/end SOC, and an eco-score breakdown.
+</p>
+
+<div class="callout callout-critical">
+    <div class="callout-title">What was fixed in v1.5.1</div>
+    <p class="callout-body">In previous versions, the session log only captured data in <strong>demo mode</strong> — when connected to a real BLE/WiFi adapter, the "Start Trip" button did nothing because the simulator (which writes the log) was stopped. v1.5.1 fixes this: the OBD response parser now writes sampled entries to the session log whenever logging is active, with a 2-second-per-PID rate limit to prevent flooding at the 500ms polling rate. OBD protocol errors (NO DATA, UNABLE TO CONNECT, BUS ERROR) are also logged so you can diagnose adapter issues during a trip.</p>
+</div>
+
+<!-- Chapter 7 -->
+<div class="chapter-header">
+    <div class="chapter-tag">Chapter 7</div>
+    <h2 class="chapter-title">Voice Assistant</h2>
+    <div class="divider"></div>
+</div>
+
+<p class="body-text">
+    EVDx includes a bilingual voice assistant with on-device speech recognition and text-to-speech. Tap the floating microphone icon (bottom right) to start speaking, or tap the sparkles icon to have the current page summarized aloud.
+</p>
+
+<p class="body-text">
+    The assistant recognises <strong>90+ command phrases</strong> across Modern Standard Arabic, Gulf Arabic, Egyptian Arabic, and English. Navigation commands ("dashboard", "battery", "diagnostics") switch tabs. Data queries ("battery level", "range", "motor temp") read the current value aloud with severity-aware prosody.
+</p>
+
+<div class="feature-grid">
+    <div class="feature-item">
+        <div class="feature-item-title">"battery"</div>
+        <p class="feature-item-desc">Reads current SOC and SOH.</p>
+    </div>
+    <div class="feature-item">
+        <div class="feature-item-title">"scan faults"</div>
+        <p class="feature-item-desc">Switches to Diagnostics tab.</p>
+    </div>
+    <div class="feature-item">
+        <div class="feature-item-title">"summarize"</div>
+        <p class="feature-item-desc">Reads a summary of the current page.</p>
+    </div>
+    <div class="feature-item">
+        <div class="feature-item-title">"حالة البطارية"</div>
+        <p class="feature-item-desc">Arabic for "battery status".</p>
+    </div>
+</div>
+
+<!-- Chapter 8 -->
+<div class="chapter-header">
+    <div class="chapter-tag">Chapter 8</div>
+    <h2 class="chapter-title">PDF Reports</h2>
+    <div class="divider"></div>
+</div>
+
+<p class="body-text">
+    EVDx can generate three types of PDF report entirely on-device using jsPDF:
+</p>
+
+<div class="card">
+    <div class="card-header">
+        <div class="card-icon">B</div>
+        <div class="card-title">Battery Health Report</div>
+    </div>
+    <p class="card-body">SOC, SOH, cell voltage analysis, thermal management status, capacity charts, and care recommendations. Generated from the Battery tab.</p>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <div class="card-icon">D</div>
+        <div class="card-title">Diagnostic Scan Report</div>
+    </div>
+    <p class="card-body">Full DTC list with descriptions, severities, causes, and recommended actions. Includes monitor readiness status. Generated from the Diagnostics tab after a scan.</p>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <div class="card-icon">T</div>
+        <div class="card-title">Trip Summary Report</div>
+    </div>
+    <p class="card-body">Distance, energy consumption, eco-score breakdown, cost analysis (OMR/USD). Generated from the Sessions tab after stopping a trip.</p>
+</div>
+
+<!-- Chapter 9 -->
+<div class="chapter-header">
+    <div class="chapter-tag">Chapter 9</div>
+    <h2 class="chapter-title">Maintenance Tracking</h2>
+    <div class="divider"></div>
+</div>
+
+<p class="body-text">
+    The <strong>Maintenance</strong> tab lets you log service records: tire rotation, brake inspection, coolant flush, cabin filter, battery health, software update, or other. Each entry captures date, odometer, cost (OMR), notes, and next-due odometer. The full history is sortable and exportable.
+</p>
+
+<div class="callout">
+    <div class="callout-title">What was fixed in v1.5.1</div>
+    <p class="callout-body">Service type labels were previously displaying as raw keys (e.g. <code>items.tire_rotation</code>) because the locale files only had camelCase keys (e.g. <code>items.tireRotation</code>). v1.5.1 adds the 7 snake_case keys to both English and Arabic locale files, so service types now display correctly as "Tire Rotation", "Brake Inspection", etc.</p>
+</div>
+
+<!-- Chapter 10 -->
+<div class="chapter-header">
+    <div class="chapter-tag">Chapter 10</div>
+    <h2 class="chapter-title">Privacy & Data</h2>
+    <div class="divider"></div>
+</div>
+
+<p class="body-text">
+    EVDx is built with a <strong>privacy-first architecture</strong>. The AndroidManifest declares no INTERNET permission for cloud traffic — the only network access is for local WiFi ELM327 adapter connections on 192.168.x.x. There are no analytics SDKs, no crash reporting, no user accounts, and no server-side data storage.
+</p>
+
+<p class="body-text">
+    All vehicle data, session logs, maintenance records, and settings are stored on-device using Zustand's persist middleware (backed by localStorage). To export everything as JSON: <strong>Settings → Data Export</strong>. To delete all data: <strong>Settings → Delete All Data</strong>.
+</p>
+
+<div class="callout">
+    <div class="callout-title">Verifying the privacy claim</div>
+    <p class="callout-body">You can verify EVDx makes no outbound network connections by running it in Android Studio's Network Inspector, or by using a firewall app like NetGuard to block all traffic for EVDx — the app will continue to work identically. The source code is open at <code>github.com/waleedmandour/EVD</code>.</p>
+</div>
+
+<!-- Chapter 11 -->
+<div class="chapter-header">
+    <div class="chapter-tag">Chapter 11</div>
+    <h2 class="chapter-title">Troubleshooting</h2>
+    <div class="divider"></div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <div class="card-icon">!</div>
+        <div class="card-title">No adapters found in Bluetooth scan</div>
+    </div>
+    <p class="card-body">Ensure your adapter is plugged in and powered (LED on). Move within 2 meters of the adapter. On Android 11 and below, grant <strong>ACCESS_FINE_LOCATION</strong> (required for BLE scan results). Restart Bluetooth. Tap <strong>Scan Again</strong>.</p>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <div class="card-icon">!</div>
+        <div class="card-title">"UNABLE TO CONNECT" during initialization</div>
+    </div>
+    <p class="card-body">The ELM327 cannot establish a protocol with the ECU. This usually means the vehicle's ignition is off — turn it to ON (or start the engine). For EVs, the vehicle must be in READY mode. Some adapters need a few seconds after plugging in; wait 10 seconds and try again.</p>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <div class="card-icon">!</div>
+        <div class="card-title">"NO DATA" responses</div>
+    </div>
+    <p class="card-body">The ELM327 is connected but the ECU didn't respond to a specific PID. This is normal — not all PIDs are supported on all vehicles. EVDx's polling loop automatically filters to supported PIDs, so you should only see this for one-off queries (like VIN). If every response is NO DATA, the protocol may be wrong — try ATSP0 (auto-detect, the default).</p>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <div class="card-icon">!</div>
+        <div class="card-title">VIN shows extra digits or wrong characters</div>
+    </div>
+    <p class="card-body">This was a bug in v1.4.x and v1.5.0 where multi-frame VIN responses were parsed incorrectly — frame counter bytes (01, 02, 03) were being decoded as ASCII digits and polluting the VIN. <strong>v1.5.1 fixes this.</strong> If you still see issues, your adapter may be returning malformed multi-frame responses; try a different adapter or report the issue on GitHub.</p>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <div class="card-icon">!</div>
+        <div class="card-title">Demo mode shows 12.5 A pack current instead of 125 A</div>
+    </div>
+    <p class="card-body">This was a 10× calculation bug in the simulator — the previous formula multiplied kW by 1000 (treating kW as W) AND divided by 10 in the rounding step, so 125 A displayed as 12.5 A. <strong>v1.5.1 fixes this.</strong> Demo mode now shows realistic pack currents.</p>
+</div>
+
+</div>
+
+<!-- ═══════════════ ENDING ═══════════════ -->
+<div class="ending">
+    <h2 class="ending-title">Built for the global EV community</h2>
+    <p class="ending-text">
+        EVDx is an independent, self-funded project by Dr. Waleed Mandour. The source code, releases, and documentation are all available on GitHub. Feedback, bug reports, and contributions are welcome.
+    </p>
+    <div class="ending-contact">
+        <div class="ending-contact-label">Author</div>
+        <div class="ending-contact-value">Dr. Waleed Mandour</div>
+        <div class="ending-contact-label" style="margin-top: 12px;">Contact</div>
+        <div class="ending-contact-value">waleedmandour@gmail.com</div>
+        <div class="ending-contact-label" style="margin-top: 12px;">Repository</div>
+        <div class="ending-contact-value">github.com/waleedmandour/EVD</div>
+    </div>
+    <div class="ending-footer">
+        <span>EVDx v1.5.1 · User Guide (English)</span>
+        <span>© 2026 Dr. Waleed Mandour</span>
+    </div>
+</div>
+
+</body>
+</html>
