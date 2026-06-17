@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { useAppStore } from '@/lib/store';
 import { Button } from '@/components/ui/button';
-import { Shield, Car, Bluetooth, Check, ChevronRight, ChevronLeft, Globe, Zap } from 'lucide-react';
+import { Shield, Car, Bluetooth, Check, ChevronRight, ChevronLeft, Globe, Zap, Loader2, AlertCircle } from 'lucide-react';
 import vehiclesData from '@/data/vehicles.json';
 
 const STEPS = ['splash', 'language', 'privacy', 'vehicle', 'adapter', 'done'] as const;
@@ -19,6 +19,8 @@ export default function OnboardingFlow() {
   const [selectedModel, setSelectedModel] = useState('');
   const [batteryCapacity, setBatteryCapacity] = useState(60);
   const [connecting, setConnecting] = useState(false);
+  const [connectError, setConnectError] = useState('');
+  const [scannedDevices, setScannedDevices] = useState<import('@/lib/ble-service').ScannedDevice[]>([]);
 
   const currentStep = STEPS[step];
   const isRTL = settings.language === 'ar';
@@ -67,6 +69,96 @@ export default function OnboardingFlow() {
       setConnecting(false);
       handleNext();
     }, 1500);
+  };
+
+  /**
+   * Real adapter connection flow from onboarding.
+   *
+   * Previously this button was a fake 2-second timer — it set `connecting=true`,
+   * waited 2s, set `connecting=false`, and called `handleNext()` without ever
+   * requesting permissions or scanning. The user reached the main app with no
+   * permissions granted and no adapter paired, and had to manually open the
+   * Connect overlay to do it all again.
+   *
+   * Now this:
+   *  1. Requests BLE permissions (Android 12+: BLUETOOTH_CONNECT + BLUETOOTH_SCAN)
+   *  2. Initializes the BLE service
+   *  3. Scans for 8 seconds
+   *  4. If devices found: shows the list inline so the user can pick one
+   *  5. On pick: connects, runs ELM327 init, starts polling
+   *  6. On success: advances to the "done" step
+   *  7. On failure (no devices, no permissions, scan error): shows the error
+   *     inline and offers a "Skip — connect later" button so the user can
+   *     still complete onboarding without an adapter.
+   */
+  const handleAdapterConnect = async () => {
+    setConnecting(true);
+    setConnectError('');
+    setScannedDevices([]);
+
+    try {
+      const { requestBlePermissions } = await import('@/lib/permissions');
+      const permResult = await requestBlePermissions();
+      if (!permResult.granted) {
+        setConnectError(t('permissionsRequired', { missing: permResult.missingPermissions.join(', ') }));
+        setConnecting(false);
+        return;
+      }
+
+      const { bleService } = await import('@/lib/ble-service');
+      await bleService.initialize();
+      const devices = await bleService.scan(8000);
+      setScannedDevices(devices);
+
+      if (devices.length === 0) {
+        setConnectError(t('noAdaptersFound'));
+      }
+      // If devices found, the inline list (rendered below) lets the user pick.
+      // Don't auto-advance — wait for selection.
+    } catch (error: any) {
+      console.error('Onboarding scan error:', error);
+      setConnectError(error?.message || t('scanFailed'));
+    } finally {
+      setConnecting(false);
+    }
+  };
+
+  const handleAdapterPick = async (device: import('@/lib/ble-service').ScannedDevice) => {
+    setConnecting(true);
+    setConnectError('');
+    try {
+      const { bleService } = await import('@/lib/ble-service');
+      const connected = await bleService.connect(device.deviceId, device.profile);
+      if (connected) {
+        const adapterInfo = bleService.getAdapterInfo();
+        useAppStore.getState().updateDeviceInfo({
+          name: device.name,
+          type: 'bluetooth',
+          adapterId: device.deviceId,
+          signalStrength: device.rssi,
+          quality: device.rssi > -50 ? 'excellent' : device.rssi > -70 ? 'good' : device.rssi > -85 ? 'fair' : 'poor',
+          firmware: adapterInfo?.firmware || '',
+          chipset: adapterInfo?.chipset || '',
+          protocol: adapterInfo?.protocol || '',
+          isClone: adapterInfo?.isClone || false,
+          voltage: adapterInfo?.voltage || 0,
+          vin: adapterInfo?.vin || '',
+        });
+        useAppStore.getState().setConnectionMode('bluetooth');
+        useAppStore.getState().setConnectionStatus('connected');
+        bleService.startPolling((pid, value) => {
+          useAppStore.getState().parseOBDResponse(value);
+        });
+        handleNext();
+      } else {
+        setConnectError(t('connectFailed'));
+      }
+    } catch (error: any) {
+      console.error('Onboarding connect error:', error);
+      setConnectError(error?.message || t('connectFailed'));
+    } finally {
+      setConnecting(false);
+    }
   };
 
   const handleFinish = () => {
@@ -235,8 +327,20 @@ export default function OnboardingFlow() {
                   <label className="text-sm text-evdx-text-secondary mb-1 block">{t('batterySize')}</label>
                   <input
                     type="number"
+                    min={1}
+                    max={1000}
                     value={batteryCapacity}
-                    onChange={(e) => setBatteryCapacity(Number(e.target.value))}
+                    onChange={(e) => {
+                      const n = Number(e.target.value);
+                      // Reject NaN, negative, and absurdly large values.
+                      // The previous implementation accepted anything including
+                      // 0, negative, and 100000 — which would then break the
+                      // simulator's SOC drain calculation (division by zero
+                      // or ridiculous range values).
+                      if (!isNaN(n) && n >= 0 && n <= 1000) {
+                        setBatteryCapacity(n);
+                      }
+                    }}
                     className="w-full bg-[#1A2332] border border-white/10 rounded-xl px-4 py-3 text-evdx-text text-sm focus:outline-none focus:border-evdx-primary"
                     placeholder={t('batterySizeHint')}
                   />
@@ -277,19 +381,49 @@ export default function OnboardingFlow() {
               <p className="text-sm text-evdx-text-secondary mb-8">{t('adapterSetupDescription')}</p>
 
               <div className="space-y-3 w-full mb-6">
+                {connectError && (
+                  <div className="flex items-start gap-2 bg-evdx-critical/10 border border-evdx-critical/20 rounded-lg p-3 text-start">
+                    <AlertCircle size={16} className="text-evdx-critical shrink-0 mt-0.5" />
+                    <p className="text-xs text-evdx-critical">{connectError}</p>
+                  </div>
+                )}
+
+                {scannedDevices.length > 0 && (
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    <p className="text-xs text-evdx-text-secondary mb-2 text-start">{t('foundDevicesSelect', { count: scannedDevices.length, ns: 'common' })}</p>
+                    {scannedDevices.map((device) => (
+                      <button
+                        key={device.deviceId}
+                        onClick={() => handleAdapterPick(device)}
+                        disabled={connecting}
+                        className={`w-full flex items-center gap-3 rounded-lg px-4 py-3 transition-colors disabled:opacity-50 text-start ${
+                          device.isOBDLike
+                            ? 'bg-[#0D1117] hover:bg-evdx-primary/5 border border-evdx-primary/20'
+                            : 'bg-[#0D1117]/60 hover:bg-evdx-primary/5 border border-white/5'
+                        }`}
+                      >
+                        <Bluetooth size={18} className={device.isOBDLike ? 'text-evdx-primary' : 'text-evdx-text-secondary'} />
+                        <div className="flex-1">
+                          <span className="text-sm text-evdx-text block">{device.name}</span>
+                          <span className="text-xs text-evdx-text-secondary">RSSI: {device.rssi} dBm</span>
+                        </div>
+                        {connecting && <Loader2 size={16} className="animate-spin text-evdx-primary" />}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
                 <Button
-                  onClick={() => {
-                    setConnecting(true);
-                    setTimeout(() => {
-                      setConnecting(false);
-                      handleNext();
-                    }, 2000);
-                  }}
+                  onClick={handleAdapterConnect}
                   disabled={connecting}
                   className="w-full bg-[#1A2332] hover:bg-[#1A2332]/80 border border-white/10 text-evdx-text h-14 rounded-xl text-base"
                 >
-                  <Bluetooth size={20} className="mr-2" />
-                  {connecting ? t('scanningForAdapters') : t('connectAdapter')}
+                  {connecting ? (
+                    <Loader2 size={20} className="animate-spin mr-2" />
+                  ) : (
+                    <Bluetooth size={20} className="mr-2" />
+                  )}
+                  {connecting ? t('scanning', { ns: 'common' }) : t('connectAdapter')}
                 </Button>
 
                 <div className="text-center text-sm text-evdx-text-secondary">— {t('or')} —</div>
@@ -303,6 +437,16 @@ export default function OnboardingFlow() {
                   {connecting ? t('connectionTest') : t('tryDemo')}
                 </Button>
                 <p className="text-xs text-evdx-text-secondary/60">{t('demoDataNote')}</p>
+
+                {/* Skip button — lets the user complete onboarding without an adapter.
+                    They can connect later via the main app's Connect button. */}
+                <Button
+                  onClick={handleNext}
+                  variant="ghost"
+                  className="w-full text-evdx-text-secondary hover:text-evdx-text h-10 text-xs"
+                >
+                  {t('skipConnectLater')}
+                </Button>
               </div>
 
               <Button

@@ -62,8 +62,14 @@ const PAGE_SUMMARIES: Record<string, Record<string, string>> = {
 };
 
 export default function VoiceAssistant() {
-  const { t } = useTranslation('voice');
-  const { voiceListening, setVoiceListening, settings, setActiveTab, vehicleData, dtcs, activeTab, chargingData, tripData, ecoScore } = useAppStore();
+  const { t, i18n } = useTranslation('voice');
+  const {
+    voiceListening, setVoiceListening, settings, updateSettings,
+    setActiveTab, vehicleData, updateVehicleData,
+    dtcs, clearDTCs, setMilOn,
+    activeTab, chargingData, tripData, ecoScore,
+    connectionMode, connectionStatus, connectDemo, disconnect,
+  } = useAppStore();
   const [showFeedback, setShowFeedback] = useState(false);
   const [feedbackText, setFeedbackText] = useState('');
   const [lastTranscript, setLastTranscript] = useState('');
@@ -114,7 +120,7 @@ export default function VoiceAssistant() {
     return baseSummary + dynamicPart;
   }, [activeTab, lang, vehicleData, dtcs, chargingData, tripData, ecoScore]);
 
-  const processCommand = useCallback((transcript: string) => {
+  const processCommand = useCallback(async (transcript: string) => {
     const cmd = transcript.toLowerCase().trim();
     let response = '';
 
@@ -175,6 +181,20 @@ export default function VoiceAssistant() {
     // Gulf: امسح الرموز, مسح الأعطال
     // Egyptian: امسح الأعطال, مسح الكودات, نمسح الأعطال
     } else if (cmd.includes('clear code') || cmd.includes('مسح الرموز') || cmd.includes('مسح الرمز') || cmd.includes('مسح الأعطال') || cmd.includes('امسح الرموز') || cmd.includes('إزالة الأعطال') || cmd.includes('مسح الكودات') || cmd.includes('نمسح الأعطال') || cmd.includes('امسح الأعطال')) {
+      // Actually clear codes: send Mode 04 to the vehicle ECU (if connected
+      // via BLE/WiFi) AND clear local state. The previous implementation
+      // only spoke a confirmation without doing anything.
+      const isRealAdapter = connectionMode === 'bluetooth' || connectionMode === 'wifi';
+      if (isRealAdapter) {
+        try {
+          const { bleService } = await import('@/lib/ble-service');
+          await bleService.clearDTCs();
+        } catch (err) {
+          console.warn('[Voice] clearDTCs failed:', err);
+        }
+      }
+      clearDTCs();
+      setMilOn(false);
       response = lang === 'ar' ? 'تم مسح جميع الرموز التشخيصية' : 'All diagnostic codes have been cleared';
 
     // ─── Dashboard ─────────────────────────────────────────────────
@@ -227,16 +247,26 @@ export default function VoiceAssistant() {
 
     // ─── Language Switch ───────────────────────────────────────────
     } else if (cmd.includes('switch to arabic') || cmd.includes('عربي') || cmd.includes('العربية') || cmd.includes('التبديل إلى العربية') || cmd.includes('لغة عربية') || cmd.includes('غيّر اللغة') || cmd.includes('غير اللغة')) {
-      response = lang === 'ar' ? 'تم تغيير اللغة إلى العربية' : 'Language changed to Arabic';
+      // Actually switch the language. The previous implementation only spoke
+      // a confirmation without calling updateSettings or i18n.changeLanguage.
+      updateSettings({ language: 'ar' });
+      i18n.changeLanguage('ar');
+      response = 'تم تغيير اللغة إلى العربية';
 
     } else if (cmd.includes('switch to english') || cmd.includes('إنجليزي') || cmd.includes('الإنجليزية') || cmd.includes('التبديل إلى الإنجليزية') || cmd.includes('لغة إنجليزية') || cmd.includes('english')) {
-      response = lang === 'ar' ? 'تم تغيير اللغة إلى الإنجليزية' : 'Language changed to English';
+      updateSettings({ language: 'en' });
+      i18n.changeLanguage('en');
+      response = 'Language changed to English';
 
     // ─── Voice Control ─────────────────────────────────────────────
     // MSA: إيقاف الصوت
     // Gulf: أوقف الصوت, اصمت
     // Egyptian: خلاص, يلا باي, بس كده, اقفل الصوت
     } else if (cmd.includes('turn off voice') || cmd.includes('إيقاف الصوت') || cmd.includes('أوقف الصوت') || cmd.includes('اصمت') || cmd.includes('اسكت') || cmd.includes('خلاص') || cmd.includes('بس كده') || cmd.includes('اقفل الصوت') || cmd.includes('سكّت')) {
+      // Actually disable the voice assistant. The previous implementation
+      // only spoke "Voice turned off" — but the assistant stayed enabled
+      // and would respond to the next "tap to activate".
+      updateSettings({ voiceAssistant: false });
       response = lang === 'ar' ? 'تم إيقاف الصوت' : 'Voice turned off';
 
     // ─── Alerts ────────────────────────────────────────────────────
@@ -244,9 +274,11 @@ export default function VoiceAssistant() {
     // Gulf: فعّل التنبيهات, شغّل التنبيهات
     // Egyptian: فعّل التنبيهات, شغّل التنبيهات, طفي التنبيهات
     } else if (cmd.includes('enable alert') || cmd.includes('تفعيل التنبيهات') || cmd.includes('فعّل التنبيهات') || cmd.includes('شغّل التنبيهات') || cmd.includes('فعّل التنبيه') || cmd.includes('شغّل التنبيه') || cmd.includes('فعّل الإشعارات')) {
+      updateSettings({ notifications: true });
       response = lang === 'ar' ? 'تم تفعيل التنبيهات' : 'Alerts enabled';
 
     } else if (cmd.includes('mute alert') || cmd.includes('كتم') || cmd.includes('كتم التنبيهات') || cmd.includes('أكتم التنبيهات') || cmd.includes('اكتم') || cmd.includes('أسكت التنبيهات') || cmd.includes('طفي التنبيهات') || cmd.includes('اطفي التنبيهات') || cmd.includes('سكت التنبيهات') || cmd.includes('أوقف التنبيهات')) {
+      updateSettings({ notifications: false });
       response = lang === 'ar' ? 'تم كتم التنبيهات' : 'Alerts muted';
 
     // ─── Drive Modes ───────────────────────────────────────────────
@@ -254,12 +286,15 @@ export default function VoiceAssistant() {
     // Gulf: نمط اقتصادي, توفير, سبورت
     // Egyptian: مود اقتصادي, مود رياضي, ايكو, سبورت
     } else if (cmd.includes('eco') || cmd.includes('اقتصادي') || cmd.includes('الوضع الاقتصادي') || cmd.includes('نمط اقتصادي') || cmd.includes('توفير') || cmd.includes('مود اقتصادي') || cmd.includes('ايكو') || cmd.includes('إيكو')) {
+      updateVehicleData({ mode: 'eco' });
       response = lang === 'ar' ? 'تم ضبط نمط القيادة على الاقتصادي' : 'Drive mode set to Eco';
 
     } else if (cmd.includes('sport') || cmd.includes('رياضي') || cmd.includes('الوضع الرياضي') || cmd.includes('نمط رياضي') || cmd.includes('سبورت') || cmd.includes('مود رياضي')) {
+      updateVehicleData({ mode: 'sport' });
       response = lang === 'ar' ? 'تم ضبط نمط القيادة على الرياضي' : 'Drive mode set to Sport';
 
     } else if (cmd.includes('normal mode') || cmd.includes('عادي') || cmd.includes('الوضع العادي') || cmd.includes('نمط عادي') || cmd.includes('مود عادي') || cmd.includes('نورمال')) {
+      updateVehicleData({ mode: 'normal' });
       response = lang === 'ar' ? 'تم ضبط نمط القيادة على العادي' : 'Drive mode set to Normal';
 
     // ─── Export Report ─────────────────────────────────────────────
@@ -267,16 +302,45 @@ export default function VoiceAssistant() {
     // Gulf: اصدر تقرير, اطلع تقرير
     // Egyptian: اصدر تقرير, عمل ريبورت, طلع ريبورت
     } else if (cmd.includes('export') || cmd.includes('report') || cmd.includes('تصدير') || cmd.includes('تصدير التقرير') || cmd.includes('تقرير') || cmd.includes('اصدر تقرير') || cmd.includes('اطلع تقرير') || cmd.includes('عمل ريبورت') || cmd.includes('طلع ريبورت') || cmd.includes('ريبورت')) {
+      // Actually generate a PDF report. The previous implementation only
+      // spoke "Exporting report..." without doing anything.
       response = lang === 'ar' ? 'جارٍ تصدير التقرير' : 'Exporting report...';
+      try {
+        const { generateReport, downloadBlob, getReportFilename } = await import('@/lib/pdf/report-generator');
+        const reportType = activeTab === 'battery' ? 'battery_health'
+          : activeTab === 'diagnostics' ? 'diagnostic_scan'
+          : activeTab === 'sessions' ? 'trip_summary'
+          : 'full_vehicle';
+        const blob = await generateReport({
+          type: reportType,
+          vehicle: useAppStore.getState().activeVehicle,
+          vehicleData,
+          chargingData,
+          dtcs,
+          tripData,
+          ecoScore,
+          language: lang,
+        });
+        downloadBlob(blob, getReportFilename(reportType, useAppStore.getState().activeVehicle));
+      } catch (err) {
+        console.error('[Voice] PDF export failed:', err);
+        response = lang === 'ar' ? 'فشل تصدير التقرير' : 'Report export failed';
+      }
 
     // ─── Demo Mode ─────────────────────────────────────────────────
     // MSA: بدء وضع العرض, وضع العرض
     // Gulf: وضع العرض, تجريبي
     // Egyptian: عرض تجريبي, ديمو, تشغيل ديمو
     } else if (cmd.includes('start demo') || cmd.includes('بدء العرض') || cmd.includes('وضع العرض') || cmd.includes('بدء وضع العرض') || cmd.includes('تجريبي') || cmd.includes('عرض تجريبي') || cmd.includes('ديمو') || cmd.includes('تشغيل ديمو') || cmd.includes('شغّل الديمو')) {
+      connectDemo();
       response = lang === 'ar' ? 'تم بدء وضع العرض' : 'Demo mode started';
 
     } else if (cmd.includes('stop demo') || cmd.includes('إيقاف العرض') || cmd.includes('إيقاف وضع العرض') || cmd.includes('أوقف العرض') || cmd.includes('أوقف الديمو') || cmd.includes('قفل الديمو') || cmd.includes('اطفي الديمو')) {
+      // Only disconnect if currently in demo mode — don't kill a real
+      // BLE/WiFi connection by accident.
+      if (connectionMode === 'demo') {
+        disconnect();
+      }
       response = lang === 'ar' ? 'تم إيقاف وضع العرض' : 'Demo mode stopped';
 
     // ─── Adapter Connection ────────────────────────────────────────
@@ -284,9 +348,23 @@ export default function VoiceAssistant() {
     // Gulf: وصّل, وصل المحول, اتصل بالمحول
     // Egyptian: وصل المحول, ربط, اربط المحول
     } else if (cmd.includes('connect adapter') || cmd.includes('اتصال') || cmd.includes('اتصال بالمحوّل') || cmd.includes('وصّل') || cmd.includes('وصل المحول') || cmd.includes('اتصل بالمحول') || cmd.includes('اربط') || cmd.includes('اربط المحول') || cmd.includes('ربط المحول') || cmd.includes('اشبك') || cmd.includes('شبّك المحول')) {
-      response = lang === 'ar' ? 'جارٍ الاتصال بمحوّل المركبة' : 'Connecting to vehicle adapter...';
+      // We can't run a full BLE scan + connect from voice (it needs UI for
+      // the user to pick a device). Instead, if autoConnect is enabled and
+      // a previously-paired adapter is in range, we can kick off the
+      // store's connectBluetooth action. Otherwise, switch to the device
+      // tab and prompt the user to tap Connect.
+      if (settings.autoConnect) {
+        useAppStore.getState().connectBluetooth();
+        response = lang === 'ar' ? 'جارٍ الاتصال بمحوّل المركبة' : 'Connecting to vehicle adapter...';
+      } else {
+        setActiveTab('device');
+        response = lang === 'ar'
+          ? 'يرجى الضغط على زر التوصيل في صفحة الجهاز'
+          : 'Please tap the Connect button on the Device page';
+      }
 
     } else if (cmd.includes('disconnect adapter') || cmd.includes('قطع اتصال') || cmd.includes('اقطع الاتصال') || cmd.includes('قطع اتصال المحوّل') || cmd.includes('افصل') || cmd.includes('افصل المحول') || cmd.includes('فكّ الربط') || cmd.includes('فك الربط') || cmd.includes('اطلع المحول') || cmd.includes('اقفل المحول')) {
+      disconnect();
       response = lang === 'ar' ? 'تم قطع الاتصال بمحوّل المركبة' : 'Disconnected from vehicle adapter';
 
     // ─── Read Aloud / Stop Reading ─────────────────────────────────
@@ -358,7 +436,7 @@ export default function VoiceAssistant() {
 
     // Speak the response via TTS
     speakText(response);
-  }, [lang, vehicleData, dtcs, setActiveTab, getPageSummary]);
+  }, [lang, vehicleData, dtcs, setActiveTab, getPageSummary, updateSettings, i18n, updateVehicleData, clearDTCs, setMilOn, connectDemo, disconnect, connectionMode, activeTab, chargingData, tripData, ecoScore, settings.autoConnect]);
 
   const speakText = useCallback(async (text: string) => {
     if (!Capacitor.isNativePlatform()) return;

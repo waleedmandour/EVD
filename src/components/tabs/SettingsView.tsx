@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAppStore } from '@/lib/store';
 import { Card, CardContent } from '@/components/ui/card';
@@ -18,9 +18,19 @@ import { Globe, Volume2, Moon, Shield, Trash2, Download, Info, ChevronRight, The
 export default function SettingsView() {
   const { t, i18n } = useTranslation('settings');
   const { settings, updateSettings, disconnect, setActiveTab } = useAppStore();
-  const [lowBattery, setLowBattery] = useState(String(20));
-  const [highTemp, setHighTemp] = useState(String(80));
-  const [lowRange, setLowRange] = useState(String(50));
+
+  // Bind alert threshold inputs directly to settings.alertThresholds so changes
+  // persist immediately. The previous implementation used local useState with
+  // hardcoded defaults ("20", "80", "50") that were never read from or written
+  // back to settings — values were lost on tab change or app restart.
+  const updateThreshold = (key: 'lowBattery' | 'highTemp' | 'lowRange', value: string) => {
+    const num = parseInt(value, 10);
+    if (!isNaN(num) && num >= 0) {
+      updateSettings({
+        alertThresholds: { ...settings.alertThresholds, [key]: num },
+      });
+    }
+  };
 
   const handleLanguageToggle = () => {
     const newLang = settings.language === 'en' ? 'ar' : 'en';
@@ -161,8 +171,10 @@ export default function SettingsView() {
               <p className="text-xs text-evdx-text-secondary">{t('quietHoursDescription')}</p>
             </div>
             <Switch
-              checked={settings.notifications}
-              onCheckedChange={(checked) => updateSettings({ notifications: checked })}
+              checked={settings.quietHours.enabled}
+              onCheckedChange={(checked) =>
+                updateSettings({ quietHours: { ...settings.quietHours, enabled: checked } })
+              }
             />
           </div>
         </CardContent>
@@ -184,8 +196,10 @@ export default function SettingsView() {
               </div>
               <Input
                 type="number"
-                value={lowBattery}
-                onChange={(e) => setLowBattery(e.target.value)}
+                min={0}
+                max={100}
+                value={String(settings.alertThresholds.lowBattery)}
+                onChange={(e) => updateThreshold('lowBattery', e.target.value)}
                 className="w-20 bg-[#0D1117] border-white/10 text-evdx-text text-sm h-8"
               />
             </div>
@@ -197,8 +211,10 @@ export default function SettingsView() {
               </div>
               <Input
                 type="number"
-                value={highTemp}
-                onChange={(e) => setHighTemp(e.target.value)}
+                min={0}
+                max={150}
+                value={String(settings.alertThresholds.highTemp)}
+                onChange={(e) => updateThreshold('highTemp', e.target.value)}
                 className="w-20 bg-[#0D1117] border-white/10 text-evdx-text text-sm h-8"
               />
             </div>
@@ -210,8 +226,10 @@ export default function SettingsView() {
               </div>
               <Input
                 type="number"
-                value={lowRange}
-                onChange={(e) => setLowRange(e.target.value)}
+                min={0}
+                max={1000}
+                value={String(settings.alertThresholds.lowRange)}
+                onChange={(e) => updateThreshold('lowRange', e.target.value)}
                 className="w-20 bg-[#0D1117] border-white/10 text-evdx-text text-sm h-8"
               />
             </div>

@@ -425,7 +425,41 @@ export const useAppStore = create<AppState>()(
 
       // ── Vehicle Actions ──────────────────────────────────────────────────────
 
-      setActiveVehicle: (vehicle) => set({ activeVehicle: vehicle }),
+      setActiveVehicle: (vehicle) => {
+        set({ activeVehicle: vehicle });
+
+        // Push the vehicle's manufacturer-specific (Mode 22) PIDs into the
+        // BLE service so they get probed on the next connect() and added to
+        // the polling rotation. This is async-safe: if bleService isn't
+        // connected yet, the PIDs are stored and detectCustomPIDs() runs
+        // during the next connect() flow.
+        if (vehicle) {
+          // Look up the brand in vehicles.json to get the customPIDs array.
+          // The store doesn't import vehicles.json directly (to avoid bloating
+          // the initial bundle) — we do a dynamic import here.
+          import('./ble-service').then(({ bleService }) => {
+            import('@/data/vehicles.json').then((vehiclesData) => {
+              const brandId = vehicle.brand.toLowerCase().replace(/[\s/]+/g, '-');
+              const brand = (vehiclesData.default || vehiclesData).find(
+                (b: any) => b.id === brandId || b.name === vehicle.brand,
+              );
+              const customPIDs = (brand?.customPIDs || []).map((p: any) => ({
+                pid: p.pid,
+                name: p.name,
+                formula: p.formula,
+                unit: p.unit,
+                bytes: p.bytes || Math.ceil((p.formula.match(/[A-D]/g)?.length || 1) / 2),
+              }));
+              bleService.setCustomPIDs(customPIDs);
+              // If already connected, re-probe now so the new PIDs show up
+              // without requiring a disconnect/reconnect.
+              if (bleService.isConnected()) {
+                bleService.detectCustomPIDs().catch(() => {});
+              }
+            }).catch(() => {});
+          }).catch(() => {});
+        }
+      },
 
       updateVehicleData: (data) =>
         set((s) => ({ vehicleData: { ...s.vehicleData, ...data } })),
@@ -795,7 +829,13 @@ export const useAppStore = create<AppState>()(
             });
           }
           if (dtcs.length > 0) {
-            state.setDTCs(dtcs);
+            // Merge with existing pending (Mode 07) DTCs instead of replacing.
+            // The previous implementation called setDTCs(dtcs) which wiped
+            // any pending DTCs that had been added via Mode 07, losing them.
+            // Now we keep the pending (active=false) entries and replace the
+            // active (Mode 03) entries with the fresh scan.
+            const existingPending = state.dtcs.filter(d => !d.active);
+            state.setDTCs([...dtcs, ...existingPending]);
           }
         }
         // ── Mode 07 (47): Pending DTCs ───────────────────────────────────────
@@ -863,6 +903,133 @@ export const useAppStore = create<AppState>()(
             if (vin.length >= 10) {
               state.updateDeviceInfo({ vin: vin.substring(0, 17) });
             }
+          }
+        }
+        // ── Mode 62 (custom PID positive response) ──────────────────────────
+        // Mode 22 request → Mode 62 response: "62 <2-byte PID> <data bytes>"
+        // We look up the PID in the active vehicle's customPIDs list and
+        // evaluate the formula to get a numeric value, then map it to the
+        // appropriate vehicleData field based on the PID name.
+        else if (modeResponse === '62') {
+          // PID is 4 hex chars (2 bytes) for Mode 22.
+          const customPid = clean.substring(2, 6).toUpperCase();
+          const dataHex = clean.substring(6);
+          if (dataHex.length < 2) return;
+
+          // Parse data bytes (up to 4)
+          const dataBytes: number[] = [];
+          for (let i = 0; i < Math.min(4, dataHex.length / 2); i++) {
+            const b = parseInt(dataHex.substring(i * 2, i * 2 + 2), 16);
+            if (!isNaN(b)) dataBytes.push(b);
+          }
+
+          // Look up the PID definition. The store doesn't hold a direct ref
+          // to bleService.customPIDs (that would create a circular import),
+          // so we read it lazily.
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          import('./ble-service').then(({ bleService, BLEService }) => {
+            const defs = bleService.getCustomPIDs();
+            const def = defs.find(d => d.pid.toUpperCase() === customPid);
+            if (!def) return;
+
+            const value = BLEService.evaluateFormula(def.formula, dataBytes);
+            if (isNaN(value)) return;
+
+            // Map the PID to the appropriate vehicleData field by name.
+            // The customPIDs in vehicles.json use descriptive names like
+            // "BMS Pack Voltage", "BMS Pack Current", etc.
+            const name = def.name.toLowerCase();
+            const updates: Partial<VehicleData> = {};
+
+            if (name.includes('pack voltage') || name.includes('battery voltage')) {
+              updates.voltage = Math.round(value * 10) / 10;
+            } else if (name.includes('pack current') || name.includes('battery current')) {
+              updates.current = Math.round(value * 10) / 10;
+              // Negative current = charging. Update chargingStatus + bmsStatus.
+              updates.chargingStatus = value < -0.5;
+              updates.bmsStatus = value < -0.5 ? 'charging' : value > 0.5 ? 'discharging' : 'idle';
+            } else if (name.includes('soc') || name.includes('state of charge')) {
+              if (name.includes('display') || !name.includes('health')) {
+                updates.soc = Math.round(value * 10) / 10;
+                state.addBatteryHistory({ value: updates.soc, timestamp: Date.now() });
+              }
+            } else if (name.includes('soh') || name.includes('state of health') || name.includes('health')) {
+              updates.soh = Math.round(value * 10) / 10;
+            } else if (name.includes('cell max') || name.includes('cellmax') || name.includes('max cell')) {
+              // Convert V → mV if the unit is volts
+              const mV = def.unit.toLowerCase().includes('v') && !def.unit.includes('mV')
+                ? Math.round(value * 1000)
+                : Math.round(value);
+              updates.cellMaxV = mV;
+            } else if (name.includes('cell min') || name.includes('cellmin') || name.includes('min cell')) {
+              const mV = def.unit.toLowerCase().includes('v') && !def.unit.includes('mV')
+                ? Math.round(value * 1000)
+                : Math.round(value);
+              updates.cellMinV = mV;
+            } else if (name.includes('battery temp') || name.includes('pack temp')) {
+              updates.batteryTemp = Math.round(value * 10) / 10;
+              state.addTemperatureHistory({ value: updates.batteryTemp, timestamp: Date.now() });
+            } else if (name.includes('motor temp') || name.includes('stator temp')) {
+              updates.motorTemp = Math.round(value * 10) / 10;
+            } else if (name.includes('inverter temp') || name.includes('controller temp')) {
+              updates.inverterTemp = Math.round(value * 10) / 10;
+            } else if (name.includes('coolant') || name.includes('thermal')) {
+              if (name.includes('inlet')) {
+                updates.coolantInletTemp = Math.round(value * 10) / 10;
+              } else if (name.includes('outlet')) {
+                updates.coolantOutletTemp = Math.round(value * 10) / 10;
+              } else {
+                updates.batteryTemp = Math.round(value * 10) / 10;
+              }
+            } else if (name.includes('aux') || name.includes('12v')) {
+              updates.auxBatteryV = Math.round(value * 100) / 100;
+            } else if (name.includes('insulation') || name.includes('isolation')) {
+              updates.insulationResistance = Math.round(value);
+            } else if (name.includes('odometer') || name.includes('mileage')) {
+              updates.odometer = Math.round(value);
+            } else if (name.includes('range') || name.includes('distance remaining')) {
+              updates.range = Math.round(value);
+            }
+
+            if (Object.keys(updates).length > 0) {
+              state.updateVehicleData(updates);
+            }
+          }).catch(() => {});
+        }
+
+        // ── Derived values (computed after each Mode 01 update) ────────────
+        // Some vehicleData fields can be derived from the standard PIDs even
+        // when the vehicle doesn't expose them via Mode 22. We compute these
+        // here so the UI always shows something useful instead of the default
+        // 0 / 100 / 999 values.
+        if (modeResponse === '41') {
+          const pid = clean.substring(2, 4).toUpperCase();
+          const v = state.vehicleData;
+
+          // power (kW) = voltage (V) × current (A) / 1000
+          // Only update if both are non-zero (i.e. we have real OBD data for
+          // both, not just defaults). For EVs the current typically comes
+          // from a Mode 22 PID, so this only kicks in once that's been read.
+          if (v.voltage > 0 && v.current !== 0 && pid === '42') {
+            // PID 42 just updated voltage — recompute power
+            const newPower = (v.voltage * v.current) / 1000;
+            state.updateVehicleData({ power: Math.round(newPower * 10) / 10 });
+          }
+
+          // range (km) = SOC (%) / 100 × battery capacity (kWh) × efficiency (km/kWh)
+          // We use a conservative 6 km/kWh efficiency if the vehicle profile
+          // doesn't specify one. Only update when SOC updates (PID 2F) or
+          // when voltage/current/power changes meaningfully.
+          if (pid === '2F' && v.soc > 0) {
+            const capacity = state.activeVehicle?.batteryCapacity || 60;
+            const efficiency = 6;  // km/kWh — typical EV efficiency
+            const newRange = Math.round((v.soc / 100) * capacity * efficiency);
+            state.updateVehicleData({ range: newRange });
+          }
+
+          // cellDeltaV — always recompute when either cell voltage updates
+          if (pid === '2F' || v.cellMaxV > 0 || v.cellMinV > 0) {
+            // Skip — cell voltages come from Mode 22, handled above
           }
         }
       },

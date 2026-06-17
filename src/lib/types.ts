@@ -228,6 +228,18 @@ export type DistanceUnit = 'km' | 'miles';
 export type Language = 'en' | 'ar';
 export type ThemeMode = 'light' | 'dark' | 'system';
 
+export interface AlertThresholds {
+  lowBattery: number;       // % SOC below which to alert
+  highTemp: number;         // °C above which to alert
+  lowRange: number;         // km below which to alert
+}
+
+export interface QuietHours {
+  enabled: boolean;
+  startHour: number;        // 0-23 (hour of day, local time)
+  endHour: number;          // 0-23
+}
+
 export interface AppSettings {
   temperatureUnit: TemperatureUnit;
   distanceUnit: DistanceUnit;
@@ -247,6 +259,8 @@ export interface AppSettings {
   wifiPort: number;
   currency: 'OMR' | 'USD';
   electricityCostPerKwh: number;
+  alertThresholds: AlertThresholds;
+  quietHours: QuietHours;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -268,4 +282,14 @@ export const DEFAULT_SETTINGS: AppSettings = {
   wifiPort: 35000,
   currency: 'OMR',
   electricityCostPerKwh: 0.021, // OMR per kWh (approximate Oman rate)
+  alertThresholds: {
+    lowBattery: 20,
+    highTemp: 80,
+    lowRange: 50,
+  },
+  quietHours: {
+    enabled: false,
+    startHour: 22,
+    endHour: 7,
+  },
 };

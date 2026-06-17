@@ -398,6 +398,106 @@ test('Command queue — concurrent sends must NOT interleave responses', () => {
   });
 });
 
+// ─── 12. Mode 22 (custom PID) formula evaluation ────────────────────────────
+test('Mode 22 — BYD BMS Pack Voltage formula (2101)', () => {
+  // BYD PID 2101 formula: (A << 8 | B) * 0.1, unit V
+  // Response: 62 2101 0E 74 → A=0x0E=14, B=0x74=116 → (14<<8 | 116) * 0.1 = 3700 * 0.1 = 370.0 V
+  const formula = '(A << 8 | B) * 0.1';
+  const dataBytes = [0x0E, 0x74];
+  const result = evalFormula(formula, dataBytes);
+  assert.strictEqual(result, 370.0);
+});
+
+test('Mode 22 — BYD BMS Pack Current formula (2102)', () => {
+  // BYD PID 2102 formula: (A << 8 | B) * 0.1 - 500, unit A
+  // Response for -100 A: (A << 8 | B) * 0.1 - 500 = -100 → (A << 8 | B) = 4000 → A=0x0F, B=0xA0
+  const formula = '(A << 8 | B) * 0.1 - 500';
+  const dataBytes = [0x0F, 0xA0];
+  const result = evalFormula(formula, dataBytes);
+  assert.ok(Math.abs(result - (-100)) < 0.01, `Expected -100, got ${result}`);
+});
+
+test('Mode 22 — BYD BMS SOC formula (2103)', () => {
+  // BYD PID 2103 formula: A * 0.4, unit %
+  // Response for 75%: A * 0.4 = 75 → A = 187.5 → round to 188 = 0xBC → 75.2%
+  const formula = 'A * 0.4';
+  const dataBytes = [0xBC];
+  const result = evalFormula(formula, dataBytes);
+  assert.ok(Math.abs(result - 75.2) < 0.01, `Expected ~75.2, got ${result}`);
+});
+
+test('Mode 22 — Tesla Pack Current formula (2111)', () => {
+  // Tesla PID 2111 formula: (A << 8 | B) * 0.1 - 819.2, unit A
+  // For -50 A: (A << 8 | B) * 0.1 - 819.2 = -50 → (A<<8|B) = 7692 → A=0x1E, B=0x0C
+  const formula = '(A << 8 | B) * 0.1 - 819.2';
+  const dataBytes = [0x1E, 0x0C];
+  const result = evalFormula(formula, dataBytes);
+  assert.ok(Math.abs(result - (-50)) < 0.1, `Expected ~-50, got ${result}`);
+});
+
+test('Mode 22 — Nissan Battery Pack Voltage (5B9A)', () => {
+  // Nissan PID 5B9A formula: (A << 8 | B) * 0.5, unit V
+  // For 360 V: (A << 8 | B) * 0.5 = 360 → (A<<8|B) = 720 → A=0x02, B=0xD0
+  const formula = '(A << 8 | B) * 0.5';
+  const dataBytes = [0x02, 0xD0];
+  const result = evalFormula(formula, dataBytes);
+  assert.strictEqual(result, 360);
+});
+
+test('Mode 22 — formula rejection (unsafe characters)', () => {
+  // Formulas with property access, function calls, etc. must be rejected.
+  const unsafe1 = 'A.constructor';  // property access
+  const unsafe2 = 'alert(1)';       // function call
+  const unsafe3 = 'window.A';       // global access
+  const safe = '(A << 8 | B) * 0.1';
+
+  assert.ok(isNaN(evalFormula(unsafe1, [1, 2])), 'Property access must be rejected');
+  assert.ok(isNaN(evalFormula(unsafe2, [1, 2])), 'Function call must be rejected');
+  assert.ok(isNaN(evalFormula(unsafe3, [1, 2])), 'Global access must be rejected');
+  assert.ok(!isNaN(evalFormula(safe, [0x0E, 0x74])), 'Safe formula must evaluate');
+});
+
+// Formula evaluator (mirrors BLEService.evaluateFormula)
+function evalFormula(formula, dataBytes) {
+  if (!dataBytes || dataBytes.length === 0) return NaN;
+  const safe = /^[ABCD\s\d+\-*/()<>|&^.,]*$/;
+  if (!safe.test(formula)) return NaN;
+  try {
+    const fn = new Function('A', 'B', 'C', 'D', `"use strict"; return (${formula});`);
+    const result = fn(dataBytes[0] || 0, dataBytes[1] || 0, dataBytes[2] || 0, dataBytes[3] || 0);
+    return typeof result === 'number' ? result : NaN;
+  } catch {
+    return NaN;
+  }
+}
+
+// ─── 13. Mode 22 response parsing ───────────────────────────────────────────
+test('Mode 62 — response parsing extracts correct PID and data bytes', () => {
+  // Response: "62 2101 0E 74" → mode=62, pid=2101, data=[0x0E, 0x74]
+  const response = '62 2101 0E 74';
+  const clean = response.replace(/\s/g, '');
+  assert.ok(clean.startsWith('62'));
+  const customPid = clean.substring(2, 6).toUpperCase();
+  const dataHex = clean.substring(6);
+  assert.strictEqual(customPid, '2101');
+  assert.strictEqual(dataHex, '0E74');
+  const dataBytes = [];
+  for (let i = 0; i < Math.min(4, dataHex.length / 2); i++) {
+    dataBytes.push(parseInt(dataHex.substring(i * 2, i * 2 + 2), 16));
+  }
+  assert.deepStrictEqual(dataBytes, [0x0E, 0x74]);
+});
+
+test('Mode 62 — 4-byte PID (Nissan 5B9A) parses correctly', () => {
+  const response = '625B9A02D0';
+  const clean = response.replace(/\s/g, '');
+  assert.ok(clean.startsWith('62'));
+  const customPid = clean.substring(2, 6).toUpperCase();
+  assert.strictEqual(customPid, '5B9A');
+  const dataHex = clean.substring(6);
+  assert.strictEqual(dataHex, '02D0');
+});
+
 // ─── Summary ─────────────────────────────────────────────────────────────────
 
 await new Promise((resolve) => {

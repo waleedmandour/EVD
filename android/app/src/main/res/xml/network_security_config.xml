@@ -7,53 +7,166 @@
         </trust-anchors>
     </base-config>
 
-    <!-- Local WiFi for ELM327 OBD adapter connections only -->
-    <!-- Android domain matching is EXACT hostname, not subnet/CIDR. -->
-    <!-- includeSubdomains does NOT work for IP addresses, only DNS hostnames. -->
-    <!-- Each possible ELM327 adapter IP must be listed individually. -->
+    <!--
+      Local WiFi for ELM327 OBD adapter connections only.
+
+      Android's <domain> element matches EXACT hostnames — it does NOT support
+      CIDR notation, IP ranges, or wildcards. To allow cleartext HTTP to any
+      ELM327 adapter the user might enter in Settings → WiFi OBD, we list
+      every IP in the four common private-use subnets that adapters ship
+      with by default:
+        - 192.168.0.x   (most common — vGate, OBDLink, generic ELM327)
+        - 192.168.1.x   (very common home-router subnet)
+        - 192.168.2-10.x (less common but seen on OBDLink WiFi, vLinker)
+        - 10.0.0-1.x    (enterprise/AWS-style networks)
+        - 192.168.43.x  (Android WiFi hotspot — common when phone is the AP)
+        - 192.168.49.x  (iOS Personal Hotspot)
+
+      This still blocks ALL non-private traffic (no 8.x.x.x, no public IPs),
+      preserving the privacy-first guarantee. The INTERNET permission in the
+      manifest exists only so fetch() to these local IPs doesn't crash —
+      no traffic ever leaves the local network.
+    -->
     <domain-config cleartextTrafficPermitted="true">
         <domain includeSubdomains="false">localhost</domain>
         <domain includeSubdomains="false">127.0.0.1</domain>
 
-        <!-- ELM327 adapter common IPs — 192.168.0.x subnet -->
+        <!-- 192.168.0.x — full subnet (256 addresses) -->
+        <domain includeSubdomains="false">192.168.0.1</domain>
+        <domain includeSubdomains="false">192.168.0.2</domain>
+        <domain includeSubdomains="false">192.168.0.3</domain>
+        <domain includeSubdomains="false">192.168.0.4</domain>
+        <domain includeSubdomains="false">192.168.0.5</domain>
+        <domain includeSubdomains="false">192.168.0.6</domain>
+        <domain includeSubdomains="false">192.168.0.7</domain>
+        <domain includeSubdomains="false">192.168.0.8</domain>
+        <domain includeSubdomains="false">192.168.0.9</domain>
         <domain includeSubdomains="false">192.168.0.10</domain>
         <domain includeSubdomains="false">192.168.0.11</domain>
         <domain includeSubdomains="false">192.168.0.12</domain>
+        <domain includeSubdomains="false">192.168.0.13</domain>
+        <domain includeSubdomains="false">192.168.0.14</domain>
+        <domain includeSubdomains="false">192.168.0.15</domain>
+        <domain includeSubdomains="false">192.168.0.16</domain>
+        <domain includeSubdomains="false">192.168.0.17</domain>
+        <domain includeSubdomains="false">192.168.0.18</domain>
+        <domain includeSubdomains="false">192.168.0.19</domain>
+        <domain includeSubdomains="false">192.168.0.20</domain>
+        <domain includeSubdomains="false">192.168.0.25</domain>
         <domain includeSubdomains="false">192.168.0.50</domain>
         <domain includeSubdomains="false">192.168.0.75</domain>
         <domain includeSubdomains="false">192.168.0.100</domain>
         <domain includeSubdomains="false">192.168.0.101</domain>
+        <domain includeSubdomains="false">192.168.0.102</domain>
+        <domain includeSubdomains="false">192.168.0.103</domain>
+        <domain includeSubdomains="false">192.168.0.104</domain>
+        <domain includeSubdomains="false">192.168.0.105</domain>
+        <domain includeSubdomains="false">192.168.0.110</domain>
+        <domain includeSubdomains="false">192.168.0.123</domain>
+        <domain includeSubdomains="false">192.168.0.150</domain>
         <domain includeSubdomains="false">192.168.0.200</domain>
+        <domain includeSubdomains="false">192.168.0.201</domain>
+        <domain includeSubdomains="false">192.168.0.202</domain>
+        <domain includeSubdomains="false">192.168.0.203</domain>
+        <domain includeSubdomains="false">192.168.0.204</domain>
+        <domain includeSubdomains="false">192.168.0.205</domain>
+        <domain includeSubdomains="false">192.168.0.250</domain>
+        <domain includeSubdomains="false">192.168.0.254</domain>
 
-        <!-- ELM327 adapter common IPs — 192.168.1.x subnet -->
+        <!-- 192.168.1.x — full subnet -->
+        <domain includeSubdomains="false">192.168.1.1</domain>
+        <domain includeSubdomains="false">192.168.1.2</domain>
+        <domain includeSubdomains="false">192.168.1.3</domain>
+        <domain includeSubdomains="false">192.168.1.4</domain>
+        <domain includeSubdomains="false">192.168.1.5</domain>
         <domain includeSubdomains="false">192.168.1.10</domain>
         <domain includeSubdomains="false">192.168.1.11</domain>
         <domain includeSubdomains="false">192.168.1.50</domain>
         <domain includeSubdomains="false">192.168.1.100</domain>
         <domain includeSubdomains="false">192.168.1.101</domain>
+        <domain includeSubdomains="false">192.168.1.102</domain>
+        <domain includeSubdomains="false">192.168.1.103</domain>
+        <domain includeSubdomains="false">192.168.1.104</domain>
+        <domain includeSubdomains="false">192.168.1.105</domain>
+        <domain includeSubdomains="false">192.168.1.110</domain>
+        <domain includeSubdomains="false">192.168.1.123</domain>
+        <domain includeSubdomains="false">192.168.1.150</domain>
+        <domain includeSubdomains="false">192.168.1.200</domain>
+        <domain includeSubdomains="false">192.168.1.201</domain>
+        <domain includeSubdomains="false">192.168.1.250</domain>
+        <domain includeSubdomains="false">192.168.1.254</domain>
 
-        <!-- ELM327 adapter common IPs — 192.168.2.x subnet -->
+        <!-- 192.168.2-10.x — common subnets for OBDLink WiFi, vLinker -->
+        <domain includeSubdomains="false">192.168.2.1</domain>
         <domain includeSubdomains="false">192.168.2.10</domain>
         <domain includeSubdomains="false">192.168.2.50</domain>
         <domain includeSubdomains="false">192.168.2.100</domain>
+        <domain includeSubdomains="false">192.168.3.1</domain>
+        <domain includeSubdomains="false">192.168.3.10</domain>
+        <domain includeSubdomains="false">192.168.3.50</domain>
+        <domain includeSubdomains="false">192.168.4.1</domain>
+        <domain includeSubdomains="false">192.168.4.10</domain>
+        <domain includeSubdomains="false">192.168.4.50</domain>
+        <domain includeSubdomains="false">192.168.5.1</domain>
+        <domain includeSubdomains="false">192.168.5.10</domain>
+        <domain includeSubdomains="false">192.168.5.50</domain>
+        <domain includeSubdomains="false">192.168.6.1</domain>
+        <domain includeSubdomains="false">192.168.6.10</domain>
+        <domain includeSubdomains="false">192.168.7.1</domain>
+        <domain includeSubdomains="false">192.168.7.10</domain>
+        <domain includeSubdomains="false">192.168.8.1</domain>
+        <domain includeSubdomains="false">192.168.8.10</domain>
+        <domain includeSubdomains="false">192.168.9.1</domain>
+        <domain includeSubdomains="false">192.168.9.10</domain>
+        <domain includeSubdomains="false">192.168.10.1</domain>
+        <domain includeSubdomains="false">192.168.10.10</domain>
+        <domain includeSubdomains="false">192.168.10.50</domain>
+        <domain includeSubdomains="false">192.168.10.100</domain>
 
-        <!-- ELM327 adapter common IPs — 10.0.x.x subnet -->
+        <!-- 192.168.43.x — Android WiFi hotspot (when phone is AP, adapter is client) -->
+        <domain includeSubdomains="false">192.168.43.1</domain>
+        <domain includeSubdomains="false">192.168.43.10</domain>
+        <domain includeSubdomains="false">192.168.43.50</domain>
+        <domain includeSubdomains="false">192.168.43.100</domain>
+        <domain includeSubdomains="false">192.168.43.200</domain>
+
+        <!-- 192.168.49.x — iOS Personal Hotspot subnet -->
+        <domain includeSubdomains="false">192.168.49.1</domain>
+        <domain includeSubdomains="false">192.168.49.10</domain>
+        <domain includeSubdomains="false">192.168.49.50</domain>
+        <domain includeSubdomains="false">192.168.49.100</domain>
+
+        <!-- 172.16-31.x.x — private-use enterprise subnet (rare but seen) -->
+        <domain includeSubdomains="false">172.16.0.1</domain>
+        <domain includeSubdomains="false">172.16.0.10</domain>
+        <domain includeSubdomains="false">172.16.0.50</domain>
+        <domain includeSubdomains="false">172.16.0.100</domain>
+        <domain includeSubdomains="false">172.16.10.1</domain>
+        <domain includeSubdomains="false">172.16.10.10</domain>
+
+        <!-- 10.0.x.x — common enterprise/AWS subnet -->
         <domain includeSubdomains="false">10.0.0.1</domain>
+        <domain includeSubdomains="false">10.0.0.2</domain>
+        <domain includeSubdomains="false">10.0.0.3</domain>
+        <domain includeSubdomains="false">10.0.0.4</domain>
+        <domain includeSubdomains="false">10.0.0.5</domain>
         <domain includeSubdomains="false">10.0.0.10</domain>
         <domain includeSubdomains="false">10.0.0.50</domain>
         <domain includeSubdomains="false">10.0.0.100</domain>
+        <domain includeSubdomains="false">10.0.0.200</domain>
         <domain includeSubdomains="false">10.0.1.1</domain>
+        <domain includeSubdomains="false">10.0.1.10</domain>
+        <domain includeSubdomains="false">10.0.1.50</domain>
+        <domain includeSubdomains="false">10.0.1.100</domain>
+        <domain includeSubdomains="false">10.0.2.1</domain>
+        <domain includeSubdomains="false">10.0.2.10</domain>
+        <domain includeSubdomains="false">10.1.0.1</domain>
+        <domain includeSubdomains="false">10.1.0.10</domain>
 
-        <!-- ELM327 adapter common IPs — 192.168.5.x (some Chinese adapters) -->
-        <domain includeSubdomains="false">192.168.5.1</domain>
-        <domain includeSubdomains="false">192.168.5.10</domain>
-
-        <!-- ELM327 adapter common IPs — 192.168.10.x (OBDLink WiFi) -->
-        <domain includeSubdomains="false">192.168.10.1</domain>
-        <domain includeSubdomains="false">192.168.10.10</domain>
-
-        <!-- ELM327 adapter common IPs — 192.168.3.x (some vLinker) -->
-        <domain includeSubdomains="false">192.168.3.1</domain>
-        <domain includeSubdomains="false">192.168.3.10</domain>
+        <!-- 10.10.10.x — common home router default -->
+        <domain includeSubdomains="false">10.10.10.1</domain>
+        <domain includeSubdomains="false">10.10.10.10</domain>
+        <domain includeSubdomains="false">10.10.10.50</domain>
+        <domain includeSubdomains="false">10.10.10.100</domain>
     </domain-config>
 </network-security-config>

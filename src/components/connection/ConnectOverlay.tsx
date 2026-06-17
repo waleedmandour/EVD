@@ -41,7 +41,7 @@ export default function ConnectOverlay({ onClose }: ConnectOverlayProps) {
 
       if (!permResult.granted) {
         const missingStr = permResult.missingPermissions.join(', ');
-        setPermissionError(`Permissions required: ${missingStr}. Please grant them in Settings.`);
+        setPermissionError(t('permissionsRequired', { missing: missingStr }));
         setScanning(false);
         return;
       }
@@ -53,19 +53,26 @@ export default function ConnectOverlay({ onClose }: ConnectOverlayProps) {
       setScannedDevices(devices);
 
       if (devices.length === 0) {
-        setPermissionError('No OBD adapters found. Make sure your adapter is powered on and nearby.');
+        setPermissionError(t('noAdaptersFound'));
       }
     } catch (error: any) {
       console.error('Scan error:', error);
-      setPermissionError(error?.message || 'Failed to scan. Please check Bluetooth is enabled.');
+      setPermissionError(error?.message || t('scanFailed'));
     } finally {
       setScanning(false);
     }
-  }, []);
+  }, [t]);
 
   const handleBluetoothConnect = useCallback(async (device: ScannedDevice) => {
     setConnectingToDevice(device.deviceId);
     setPermissionError('');
+    // Set the store to 'connecting' so the WiFi/Bluetooth buttons disable
+    // and a spinner shows. The previous implementation jumped straight from
+    // 'disconnected' to 'connected' without ever showing the connecting state,
+    // so users could tap Connect multiple times and spawn concurrent
+    // bleService.connect() calls.
+    setConnectionMode('bluetooth');
+    setConnectionStatus('connecting');
 
     try {
       const { bleService } = await import('@/lib/ble-service');
@@ -90,8 +97,6 @@ export default function ConnectOverlay({ onClose }: ConnectOverlayProps) {
           vin: adapterInfo?.vin || '',
         });
 
-        // Set connection in store
-        setConnectionMode('bluetooth');
         setConnectionStatus('connected');
 
         // Start OBD polling with store's parser
@@ -101,23 +106,45 @@ export default function ConnectOverlay({ onClose }: ConnectOverlayProps) {
 
         onClose();
       } else {
-        setPermissionError('Failed to connect to adapter.');
+        setConnectionStatus('error');
+        setPermissionError(t('connectFailed'));
       }
     } catch (error: any) {
       console.error('BLE connect error:', error);
-      setPermissionError(error?.message || 'Connection failed. Try again.');
+      setConnectionStatus('error');
+      setPermissionError(error?.message || t('connectFailed'));
     } finally {
       setConnectingToDevice(null);
     }
-  }, [updateDeviceInfo, setConnectionMode, setConnectionStatus, onClose]);
+  }, [updateDeviceInfo, setConnectionMode, setConnectionStatus, onClose, t]);
 
   const handleWifiConnect = async () => {
     setPermissionError('');
-    updateSettings({ wifiIp, wifiPort: Number(wifiPort) });
+
+    // Validate port — the previous implementation accepted any string
+    // including "abc", "99999", "-5", and "" via Number(wifiPort).
+    const portNum = Number(wifiPort);
+    if (!Number.isInteger(portNum) || portNum < 1 || portNum > 65535) {
+      setPermissionError(t('invalidPort'));
+      return;
+    }
+    // Basic IP/hostname validation. We allow dotted-quad IPv4 and DNS names.
+    // This is intentionally permissive — we don't want to block legitimate
+    // adapter hostnames like "obdlink.local".
+    const ipOk = /^(\d{1,3}\.){3}\d{1,3}$/.test(wifiIp);
+    const hostOk = /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/.test(wifiIp);
+    if (!ipOk && !hostOk) {
+      setPermissionError(t('invalidIp'));
+      return;
+    }
+
+    updateSettings({ wifiIp, wifiPort: portNum });
+    setConnectionMode('wifi');
+    setConnectionStatus('connecting');
 
     try {
       const { bleService } = await import('@/lib/ble-service');
-      const connected = await bleService.connectWifi(wifiIp, Number(wifiPort));
+      const connected = await bleService.connectWifi(wifiIp, portNum);
 
       if (connected) {
         // Get adapter identification info
@@ -136,7 +163,6 @@ export default function ConnectOverlay({ onClose }: ConnectOverlayProps) {
           quality: 'good',
         });
 
-        setConnectionMode('wifi');
         setConnectionStatus('connected');
 
         // Start OBD polling
@@ -146,11 +172,13 @@ export default function ConnectOverlay({ onClose }: ConnectOverlayProps) {
 
         onClose();
       } else {
-        setPermissionError('Failed to connect to WiFi ELM327. Check IP and port.');
+        setConnectionStatus('error');
+        setPermissionError(t('wifiConnectFailed'));
       }
     } catch (error: any) {
       console.error('WiFi connect error:', error);
-      setPermissionError(error?.message || 'WiFi connection failed. Check IP and port.');
+      setConnectionStatus('error');
+      setPermissionError(error?.message || t('wifiConnectFailed'));
     }
   };
 
@@ -213,8 +241,8 @@ export default function ConnectOverlay({ onClose }: ConnectOverlayProps) {
                       <Bluetooth size={24} className="text-evdx-primary" />
                     </div>
                     <div className="text-start">
-                      <p className="text-evdx-text font-medium">Bluetooth OBD</p>
-                      <p className="text-xs text-evdx-text-secondary">Scan & connect BLE adapter</p>
+                      <p className="text-evdx-text font-medium">{t('bluetoothObd')}</p>
+                      <p className="text-xs text-evdx-text-secondary">{t('bluetoothObdDesc')}</p>
                     </div>
                   </button>
 
@@ -226,8 +254,8 @@ export default function ConnectOverlay({ onClose }: ConnectOverlayProps) {
                       <Wifi size={24} className="text-evdx-purple" />
                     </div>
                     <div className="text-start">
-                      <p className="text-evdx-text font-medium">WiFi OBD</p>
-                      <p className="text-xs text-evdx-text-secondary">Connect via WiFi ELM327</p>
+                      <p className="text-evdx-text font-medium">{t('wifiObd')}</p>
+                      <p className="text-xs text-evdx-text-secondary">{t('wifiObdDesc')}</p>
                     </div>
                   </button>
 
@@ -240,7 +268,7 @@ export default function ConnectOverlay({ onClose }: ConnectOverlayProps) {
                     </div>
                     <div className="text-start">
                       <p className="text-evdx-text font-medium">{t('demo')}</p>
-                      <p className="text-xs text-evdx-text-secondary">Try with simulated data</p>
+                      <p className="text-xs text-evdx-text-secondary">{t('demoDesc')}</p>
                     </div>
                   </button>
                 </motion.div>
@@ -255,7 +283,7 @@ export default function ConnectOverlay({ onClose }: ConnectOverlayProps) {
                   className="space-y-4"
                 >
                   <button onClick={() => { setMode('select'); setScannedDevices([]); }} className="text-sm text-evdx-primary hover:underline">
-                    ← Back
+                    ← {t('back')}
                   </button>
 
                   {permissionError && (
@@ -268,21 +296,21 @@ export default function ConnectOverlay({ onClose }: ConnectOverlayProps) {
                   {scanning ? (
                     <div className="flex flex-col items-center py-8">
                       <Loader2 size={32} className="animate-spin text-evdx-primary mb-4" />
-                      <p className="text-evdx-text-secondary text-sm">Scanning for OBD adapters...</p>
-                      <p className="text-evdx-text-secondary text-xs mt-1">Ensure your adapter is powered on</p>
+                      <p className="text-evdx-text-secondary text-sm">{t('scanningForAdapters')}</p>
+                      <p className="text-evdx-text-secondary text-xs mt-1">{t('ensureAdapterPowered')}</p>
                     </div>
                   ) : (
                     <>
                       {scannedDevices.length > 0 ? (
                         <div className="space-y-2">
                           {scannedDevices.some(d => d.isOBDLike) && scannedDevices.some(d => !d.isOBDLike) && (
-                            <p className="text-xs text-evdx-text-secondary mb-1">OBD Adapters ({scannedDevices.filter(d => d.isOBDLike).length}) · Other Devices ({scannedDevices.filter(d => !d.isOBDLike).length})</p>
+                            <p className="text-xs text-evdx-text-secondary mb-1">{t('obdAdaptersCount', { count: scannedDevices.filter(d => d.isOBDLike).length })} · {t('otherDevicesCount', { count: scannedDevices.filter(d => !d.isOBDLike).length })}</p>
                           )}
                           {!scannedDevices.some(d => d.isOBDLike) && scannedDevices.length > 0 && (
-                            <p className="text-xs text-evdx-text-secondary mb-2">Found {scannedDevices.length} device(s) — select your OBD adapter:</p>
+                            <p className="text-xs text-evdx-text-secondary mb-2">{t('foundDevicesSelect', { count: scannedDevices.length })}</p>
                           )}
                           {scannedDevices.some(d => d.isOBDLike) && !scannedDevices.some(d => !d.isOBDLike) && (
-                            <p className="text-xs text-evdx-text-secondary mb-2">Found {scannedDevices.length} OBD adapter(s):</p>
+                            <p className="text-xs text-evdx-text-secondary mb-2">{t('foundObdAdapters', { count: scannedDevices.length })}</p>
                           )}
                           {scannedDevices.map((device, idx) => (
                             <React.Fragment key={device.deviceId}>
@@ -290,7 +318,7 @@ export default function ConnectOverlay({ onClose }: ConnectOverlayProps) {
                               {idx > 0 && device.isOBDLike !== scannedDevices[idx - 1].isOBDLike && !device.isOBDLike && (
                                 <div className="flex items-center gap-2 py-1">
                                   <div className="flex-1 h-px bg-white/10" />
-                                  <span className="text-[10px] text-evdx-text-secondary">Other BLE Devices</span>
+                                  <span className="text-[10px] text-evdx-text-secondary">{t('otherBleDevices')}</span>
                                   <div className="flex-1 h-px bg-white/10" />
                                 </div>
                               )}
@@ -308,7 +336,7 @@ export default function ConnectOverlay({ onClose }: ConnectOverlayProps) {
                                   <span className="text-sm text-evdx-text block">{device.name}</span>
                                   <span className="text-xs text-evdx-text-secondary">
                                     RSSI: {device.rssi} dBm
-                                    {device.isUnknown && ' · Name unavailable'}
+                                    {device.isUnknown && ` · ${t('nameUnavailable')}`}
                                   </span>
                                 </div>
                                 {connectingToDevice === device.deviceId ? (
@@ -318,7 +346,7 @@ export default function ConnectOverlay({ onClose }: ConnectOverlayProps) {
                                   <span className="text-[10px] text-evdx-green bg-evdx-green/10 px-1.5 py-0.5 rounded">{device.profile.name}</span>
                                 )}
                                 {!device.isOBDLike && !device.isUnknown && (
-                                  <span className="text-[10px] text-evdx-text-secondary bg-white/5 px-1.5 py-0.5 rounded">BLE</span>
+                                  <span className="text-[10px] text-evdx-text-secondary bg-white/5 px-1.5 py-0.5 rounded">{t('ble')}</span>
                                 )}
                               </button>
                             </React.Fragment>
@@ -327,7 +355,7 @@ export default function ConnectOverlay({ onClose }: ConnectOverlayProps) {
                       ) : (
                         <div className="text-center py-4">
                           <Bluetooth size={32} className="text-evdx-text-secondary mx-auto mb-2" />
-                          <p className="text-sm text-evdx-text-secondary">No adapters found</p>
+                          <p className="text-sm text-evdx-text-secondary">{t('noAdaptersFound')}</p>
                         </div>
                       )}
                       <Button
@@ -336,7 +364,7 @@ export default function ConnectOverlay({ onClose }: ConnectOverlayProps) {
                         className="w-full bg-evdx-primary hover:bg-evdx-primary/90 text-[#0D1117] h-11 rounded-xl"
                       >
                         <RefreshCw size={16} className="mr-2" />
-                        Scan Again
+                        {t('scanAgain')}
                       </Button>
                     </>
                   )}
@@ -352,10 +380,10 @@ export default function ConnectOverlay({ onClose }: ConnectOverlayProps) {
                   className="space-y-4"
                 >
                   <button onClick={() => setMode('select')} className="text-sm text-evdx-primary hover:underline">
-                    ← Back
+                    ← {t('back')}
                   </button>
                   <div>
-                    <label className="text-sm text-evdx-text-secondary mb-1 block">IP Address</label>
+                    <label className="text-sm text-evdx-text-secondary mb-1 block">{t('ipAddress')}</label>
                     <Input
                       value={wifiIp}
                       onChange={(e) => setWifiIp(e.target.value)}
@@ -364,8 +392,11 @@ export default function ConnectOverlay({ onClose }: ConnectOverlayProps) {
                     />
                   </div>
                   <div>
-                    <label className="text-sm text-evdx-text-secondary mb-1 block">Port</label>
+                    <label className="text-sm text-evdx-text-secondary mb-1 block">{t('port')}</label>
                     <Input
+                      type="number"
+                      min={1}
+                      max={65535}
                       value={wifiPort}
                       onChange={(e) => setWifiPort(e.target.value)}
                       placeholder="35000"
@@ -378,7 +409,7 @@ export default function ConnectOverlay({ onClose }: ConnectOverlayProps) {
                     className="w-full bg-evdx-primary hover:bg-evdx-primary/90 text-[#0D1117] h-11 rounded-xl"
                   >
                     {isConnecting ? <Loader2 className="animate-spin mr-2" size={16} /> : null}
-                    {isConnecting ? 'Connecting...' : 'Connect'}
+                    {isConnecting ? t('connecting') : t('connect')}
                   </Button>
                 </motion.div>
               )}
@@ -392,16 +423,16 @@ export default function ConnectOverlay({ onClose }: ConnectOverlayProps) {
                   className="space-y-4"
                 >
                   <button onClick={() => setMode('select')} className="text-sm text-evdx-primary hover:underline">
-                    ← Back
+                    ← {t('back')}
                   </button>
                   <div>
-                    <label className="text-sm text-evdx-text-secondary mb-1 block">Brand</label>
+                    <label className="text-sm text-evdx-text-secondary mb-1 block">{t('brand')}</label>
                     <select
                       value={demoBrand}
                       onChange={(e) => { setDemoBrand(e.target.value); setDemoModel(''); }}
                       className="w-full bg-[#0D1117] border border-white/10 rounded-lg px-4 py-2.5 text-evdx-text text-sm focus:outline-none focus:border-evdx-primary"
                     >
-                      <option value="">Select brand</option>
+                      <option value="">{t('selectBrand')}</option>
                       {vehiclesData.map((b) => (
                         <option key={b.id} value={b.id}>{b.name}</option>
                       ))}
@@ -409,13 +440,13 @@ export default function ConnectOverlay({ onClose }: ConnectOverlayProps) {
                   </div>
                   {demoBrand && (
                     <div>
-                      <label className="text-sm text-evdx-text-secondary mb-1 block">Model</label>
+                      <label className="text-sm text-evdx-text-secondary mb-1 block">{t('model')}</label>
                       <select
                         value={demoModel}
                         onChange={(e) => setDemoModel(e.target.value)}
                         className="w-full bg-[#0D1117] border border-white/10 rounded-lg px-4 py-2.5 text-evdx-text text-sm focus:outline-none focus:border-evdx-primary"
                       >
-                        <option value="">Select model</option>
+                        <option value="">{t('selectModel')}</option>
                         {vehiclesData.find((b) => b.id === demoBrand)?.models.map((m) => (
                           <option key={m} value={m}>{m}</option>
                         ))}
@@ -424,10 +455,11 @@ export default function ConnectOverlay({ onClose }: ConnectOverlayProps) {
                   )}
                   <Button
                     onClick={handleDemoConnect}
-                    className="w-full bg-evdx-green hover:bg-evdx-green/90 text-[#0D1117] font-semibold h-11 rounded-xl"
+                    disabled={!demoBrand || !demoModel}
+                    className="w-full bg-evdx-green hover:bg-evdx-green/90 text-[#0D1117] font-semibold h-11 rounded-xl disabled:opacity-40"
                   >
                     <Zap size={18} className="mr-2" />
-                    Start Demo Mode
+                    {t('startDemoMode')}
                   </Button>
                 </motion.div>
               )}

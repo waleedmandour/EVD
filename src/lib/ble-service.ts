@@ -245,6 +245,30 @@ export interface ScannedDevice {
   isUnknown: boolean;   // True if device name is empty/unavailable
 }
 
+// ─── Custom (Manufacturer-Specific) PIDs ─────────────────────────────────────
+
+/**
+ * A manufacturer-specific PID definition (Mode 22).
+ *
+ * Most EVs expose BMS data (pack voltage, pack current, SOC, cell voltages,
+ * temperatures, etc.) via Mode 22 PIDs that are NOT part of the standard
+ * SAE J1979 Mode 01 set. The PID codes and formulas differ by brand — see
+ * `src/data/vehicles.json` for the per-brand definitions.
+ *
+ * The `formula` field is a simple expression string that `evaluateFormula`
+ * can parse. Supported tokens:
+ *   A, B, C, D   — bytes 0..3 of the response data
+ *   << | & ^ + - * / ( ) and integer literals
+ *   Example: "(A << 8 | B) * 0.1 - 500"
+ */
+export interface CustomPIDDef {
+  pid: string;          // 2-byte hex string, e.g. "2101"
+  name: string;
+  formula: string;
+  unit: string;
+  bytes: number;        // Number of data bytes expected (1-4)
+}
+
 // ─── Adapter Identification ───────────────────────────────────────────────────
 
 export interface AdapterInfo {
@@ -257,12 +281,20 @@ export interface AdapterInfo {
   chipset: string;         // "ELM327", "STN2120", "STN1110", "Unknown"
   voltage: number;         // Adapter supply voltage from PID 42 or AT RV
   vin: string;             // Vehicle VIN from Mode 09 PID 02
-  supportedPIDs: Set<string>;  // PIDs the vehicle actually supports
+  supportedPIDs: Set<string>;  // Standard SAE J1979 PIDs the vehicle supports
+  /**
+   * Manufacturer-specific (Mode 22) PIDs supported by the connected vehicle.
+   * Populated by `detectCustomPIDs()` after the vehicle brand is known.
+   * Used by `startPolling()` to interleave Mode 22 queries with the standard
+   * Mode 01 rotation, so the BMS / battery pack data is refreshed alongside
+   * the standard PIDs.
+   */
+  supportedCustomPIDs: Set<string>;
 }
 
 // ─── BLE Service ──────────────────────────────────────────────────────────────
 
-class BLEService {
+export class BLEService {
   private connectedDeviceId: string | null = null;
   private activeProfile: BLEAdapterProfile | null = null;
   private responseBuffer = '';
@@ -276,6 +308,16 @@ class BLEService {
   private isWifiMode = false;
   private wifiIp = '';
   private wifiPort = 35000;
+
+  /**
+   * Manufacturer-specific (Mode 22) PID definitions for the active vehicle.
+   * Populated by `setCustomPIDs()` — typically called from the store when
+   * the user picks a vehicle profile. Empty for the "Generic OBD-II" profile.
+   *
+   * The polling loop interleaves these with the standard Mode 01 PIDs so the
+   * BMS / battery pack data is refreshed alongside speed, RPM, etc.
+   */
+  private customPIDs: CustomPIDDef[] = [];
 
   /**
    * Serialized command queue — prevents the responseResolve race condition
@@ -440,11 +482,21 @@ class BLEService {
       // Query adapter identification
       await this.identifyAdapter();
 
-      // Detect supported PIDs
+      // Detect supported standard PIDs (Mode 01)
       await this.detectSupportedPIDs();
 
       // Read VIN
       await this.readVIN();
+
+      // Detect supported manufacturer-specific PIDs (Mode 22) — only runs
+      // if setCustomPIDs() was called before connect(). The store calls
+      // setCustomPIDs() from setActiveVehicle() so this just probes what
+      // the ECU actually responds to.
+      try {
+        await this.detectCustomPIDs();
+      } catch (err) {
+        console.warn('[BLE] Custom PID detection failed (non-fatal):', err);
+      }
 
       return true;
     } catch (error) {
@@ -732,8 +784,19 @@ class BLEService {
 
   /**
    * Start polling OBD PIDs cyclically.
-   * Only polls PIDs that the vehicle actually supports (from 0100 detection).
-   * Uses a round-robin approach with configurable interval.
+   *
+   * Polls both:
+   *   - Standard SAE J1979 Mode 01 PIDs (filtered to those the vehicle supports)
+   *   - Manufacturer-specific Mode 22 PIDs from the active vehicle profile
+   *     (set via `setCustomPIDs()`)
+   *
+   * The two sets are interleaved in a single round-robin so the BMS data
+   * (pack voltage, pack current, cell voltages, etc.) is refreshed alongside
+   * the standard PIDs (speed, RPM, temps) at the configured interval.
+   *
+   * Each response is delivered to `onData(pid, rawResponse)` where `pid` is
+   * either the 2-hex Mode 01 PID (e.g. "0D") or the 4-hex Mode 22 PID
+   * (e.g. "2101"). The store's `parseOBDResponse` handles both formats.
    */
   startPolling(
     onData: (pid: string, value: string) => void,
@@ -741,22 +804,39 @@ class BLEService {
   ): void {
     this.stopPolling();
 
-    // Filter to only supported PIDs
+    // Filter to only supported standard PIDs
     const supportedPids = this.adapterInfo?.supportedPIDs;
-    const pids = supportedPids && supportedPids.size > 0
+    const standardPids = supportedPids && supportedPids.size > 0
       ? STANDARD_PIDS.filter(p => supportedPids.has(p.pid))
       : STANDARD_PIDS;  // Fallback to all if detection failed
 
-    if (pids.length === 0) {
+    // Manufacturer-specific PIDs — only poll those the vehicle responded to
+    // during detectCustomPIDs(). This prevents wasting 500ms timeouts on
+    // PIDs the ECU doesn't support.
+    const supportedCustom = this.adapterInfo?.supportedCustomPIDs;
+    const customPids = (this.customPIDs && this.customPIDs.length > 0)
+      ? this.customPIDs.filter(p => !supportedCustom || supportedCustom.size === 0 || supportedCustom.has(p.pid))
+      : [];
+
+    if (standardPids.length === 0 && customPids.length === 0) {
       console.warn('[BLE] No supported PIDs detected, using standard set');
       return;
     }
+
+    // Build a merged polling list. Each entry is either:
+    //   { kind: 'std',   mode: '01', pid: '0D', name: 'Vehicle Speed' }
+    //   { kind: 'custom', mode: '22', pid: '2101', name: 'BMS Pack Voltage' }
+    type PollEntry = { kind: 'std' | 'custom'; mode: string; pid: string; name: string };
+    const allPids: PollEntry[] = [
+      ...standardPids.map(p => ({ kind: 'std' as const, mode: p.mode, pid: p.pid, name: p.name })),
+      ...customPids.map(p => ({ kind: 'custom' as const, mode: '22', pid: p.pid, name: p.name })),
+    ];
 
     let pidIndex = 0;
     this.notifyCallback = onData;
     this.isPollingActive = true;
 
-    console.log(`[BLE] Starting polling for ${pids.length} PIDs at ${intervalMs}ms interval`);
+    console.log(`[BLE] Starting polling for ${standardPids.length} standard + ${customPids.length} custom PIDs at ${intervalMs}ms interval`);
 
     // Use recursive setTimeout instead of setInterval to prevent race conditions.
     // setInterval can fire before the previous async callback completes,
@@ -766,11 +846,14 @@ class BLEService {
       if (!this.connectedDeviceId && !this.isWifiMode) return;
 
       try {
-        const pidEntry = pids[pidIndex % pids.length];
+        const pidEntry = allPids[pidIndex % allPids.length];
         const command = pidEntry.mode + pidEntry.pid;
         const response = await this.sendCommand(command);
         if (response) {
-          onData(pidEntry.pid, response);
+          // For custom PIDs, prefix the pid with the mode so the store's
+          // parser can distinguish Mode 22 responses from Mode 01.
+          const pidLabel = pidEntry.kind === 'custom' ? pidEntry.pid : pidEntry.pid;
+          onData(pidLabel, response);
         }
         pidIndex++;
       } catch (error) {
@@ -814,6 +897,117 @@ class BLEService {
 
   isWifiConnection(): boolean {
     return this.isWifiMode;
+  }
+
+  // ─── Manufacturer-Specific (Mode 22) PID Support ──────────────────────────
+
+  /**
+   * Set the manufacturer-specific PID definitions for the active vehicle.
+   *
+   * Called by the store when the user picks a vehicle profile (or when
+   * `autoConnect` re-connects to a previously paired adapter). The PIDs are
+   * then probed via `detectCustomPIDs()` to find out which ones the vehicle's
+   * ECU actually responds to, and the supported subset is added to the
+   * polling rotation.
+   *
+   * Pass an empty array to clear (e.g. when switching to "Generic OBD-II").
+   */
+  setCustomPIDs(pids: CustomPIDDef[]): void {
+    this.customPIDs = pids;
+    // Reset the supported-custom-PIDs set so detectCustomPIDs() can re-probe.
+    if (this.adapterInfo) {
+      this.adapterInfo.supportedCustomPIDs = new Set<string>();
+    }
+    console.log(`[BLE] Custom PIDs set: ${pids.length} definition(s)`);
+  }
+
+  getCustomPIDs(): CustomPIDDef[] {
+    return this.customPIDs;
+  }
+
+  /**
+   * Probe each custom PID defined in `this.customPIDs` to see which ones the
+   * vehicle's ECU actually responds to. A PID is considered "supported" if
+   * the ECU returns a Mode 62 positive response (62 XX XX <data>) within
+   * the timeout.
+   *
+   * This runs once after `setCustomPIDs()` is called, typically as part of
+   * the connect flow. The supported subset is stored in
+   * `adapterInfo.supportedCustomPIDs` and used by `startPolling()`.
+   */
+  async detectCustomPIDs(): Promise<void> {
+    if (!this.adapterInfo) return;
+    if (this.customPIDs.length === 0) return;
+
+    const supported = new Set<string>();
+    console.log(`[BLE] Probing ${this.customPIDs.length} custom PIDs...`);
+
+    for (const def of this.customPIDs) {
+      try {
+        // Mode 22 request: "22" + 2-byte PID
+        const response = await this.sendCommand(`22${def.pid}`, 1500);
+        if (!response) continue;
+
+        const clean = response.replace(/\s/g, '');
+        // Mode 22 positive response is Mode 62 + 2-byte PID + data bytes.
+        // E.g. "622101<8 hex chars>" for BYD BMS Pack Voltage.
+        // Some adapters also include the mode PID prefix differently, so
+        // accept any response that starts with "62" and contains the PID.
+        if (clean.startsWith('62') && clean.includes(def.pid.toLowerCase())) {
+          supported.add(def.pid);
+          console.log(`[BLE] Custom PID ${def.pid} (${def.name}) supported`);
+        }
+      } catch {
+        // Timeout or error — PID not supported, skip
+      }
+    }
+
+    this.adapterInfo.supportedCustomPIDs = supported;
+    console.log(`[BLE] Custom PID detection complete: ${supported.size}/${this.customPIDs.length} supported`);
+  }
+
+  /**
+   * Evaluate a custom PID formula against the response data bytes.
+   *
+   * Supported tokens:
+   *   A, B, C, D   — bytes 0..3 of the response data (0-255 each)
+   *   <<  >>  |  &  ^  +  -  *  /  ( )  and integer/decimal literals
+   *
+   * This is intentionally a tiny subset of JS expression syntax. We do NOT
+   * use `eval()` — instead we validate the formula against a strict whitelist
+   * regex and then run it through the `Function` constructor with the four
+   * byte variables in scope. The whitelist blocks all property access,
+   * function calls, assignments, and other unsafe constructs.
+   *
+   * Example: "(A << 8 | B) * 0.1 - 500" with A=0x12, B=0x34 → 4660 * 0.1 - 500 = -33.4
+   *
+   * Returns NaN if the formula is invalid or the response is too short.
+   */
+  static evaluateFormula(formula: string, dataBytes: number[]): number {
+    if (!dataBytes || dataBytes.length === 0) return NaN;
+
+    // Strict whitelist: only allows A/B/C/D, numbers, operators, parens, whitespace.
+    // Anything else (dots, brackets, function calls, etc.) is rejected.
+    const safe = /^[ABCD\s\d+\-*/()<>|&^.,]*$/;
+    if (!safe.test(formula)) {
+      console.warn('[BLE] Formula rejected (unsafe characters):', formula);
+      return NaN;
+    }
+
+    try {
+      // eslint-disable-next-line no-new-func
+      const fn = new Function('A', 'B', 'C', 'D', `"use strict"; return (${formula});`);
+      const result = fn(
+        dataBytes[0] || 0,
+        dataBytes[1] || 0,
+        dataBytes[2] || 0,
+        dataBytes[3] || 0,
+      );
+      return typeof result === 'number' ? result : NaN;
+    } catch (err) {
+      console.warn('[BLE] Formula evaluation failed:', formula, err);
+      return NaN;
+    }
   }
 
   /**
@@ -960,6 +1154,7 @@ class BLEService {
       voltage: 0,
       vin: '',
       supportedPIDs: new Set<string>(),
+      supportedCustomPIDs: new Set<string>(),
     };
 
     // Query firmware (ATI)

@@ -4,6 +4,20 @@
  * Generates battery health, diagnostic, and trip summary reports
  * as downloadable PDF files entirely on-device using jsPDF.
  *
+ * Arabic support:
+ *   jsPDF's built-in Helvetica font has no Arabic glyphs, and even with an
+ *   Arabic font embedded, jsPDF doesn't shape Arabic letters (join them
+ *   correctly) or handle bidirectional text. We solve this by:
+ *     1. Embedding the Amiri TTF font (loaded from /public/fonts/) into
+ *        jsPDF's virtual file system on first use.
+ *     2. Running every Arabic string through `arabic-reshaper` to convert
+ *        logical-order Arabic characters into their presentation forms
+ *        (isolated / initial / medial / final) so they render correctly
+ *        without an OpenType shaping engine.
+ *     3. For mixed Arabic+English strings (rare in reports), we keep the
+ *        Latin parts in logical order and only shape the Arabic runs.
+ *        Pure-Arabic strings are also reversed for RTL display.
+ *
  * No cloud, no server, no external API calls.
  */
 
@@ -24,6 +38,114 @@ export interface ReportOptions {
   ecoScore: EcoScore;
   language: 'en' | 'ar';
   ownerName?: string;
+}
+
+// ─── Arabic Font Embedding & Reshaping ───────────────────────────────────────
+
+let arabicFontLoaded = false;
+
+/**
+ * Load the Amiri Arabic TTF into jsPDF's virtual file system.
+ *
+ * The font files live in /public/fonts/ so they're bundled with the APK
+ * and accessible at runtime via fetch('/fonts/Amiri-Regular.ttf'). We load
+ * them once and cache the result — subsequent PDF generations reuse the
+ * registered font.
+ *
+ * On web (PWA / dev mode) the fetch resolves to the public dir. On Android
+ * (Capacitor) the fetch resolves to the WebView's local asset URL, which
+ * serves from android/app/src/main/assets/public/ — `cap sync` copies the
+ * contents of `out/` (including the fonts) there.
+ *
+ * Returns true if the font is ready, false if loading failed (in which
+ * case we fall back to Helvetica and Arabic will render as boxes — but
+ * at least the PDF won't crash).
+ */
+async function loadArabicFont(doc: import('jspdf').jsPDF): Promise<boolean> {
+  if (arabicFontLoaded) {
+    doc.setFont('amiri', 'normal');
+    return true;
+  }
+
+  try {
+    const [regularRes, boldRes] = await Promise.all([
+      fetch('/fonts/Amiri-Regular.ttf'),
+      fetch('/fonts/Amiri-Bold.ttf'),
+    ]);
+
+    if (!regularRes.ok || !boldRes.ok) {
+      throw new Error(`Font fetch failed: regular=${regularRes.status}, bold=${boldRes.status}`);
+    }
+
+    const regularBuf = await regularRes.arrayBuffer();
+    const boldBuf = await boldRes.arrayBuffer();
+
+    // jsPDF's VFS expects base64-encoded font data.
+    const regularB64 = arrayBufferToBase64(regularBuf);
+    const boldB64 = arrayBufferToBase64(boldBuf);
+
+    doc.addFileToVFS('Amiri-Regular.ttf', regularB64);
+    doc.addFileToVFS('Amiri-Bold.ttf', boldB64);
+    doc.addFont('Amiri-Regular.ttf', 'amiri', 'normal');
+    doc.addFont('Amiri-Bold.ttf', 'amiri', 'bold');
+
+    arabicFontLoaded = true;
+    console.log('[PDF] Amiri Arabic font loaded and registered');
+    return true;
+  } catch (err) {
+    console.warn('[PDF] Failed to load Amiri font — Arabic will not render correctly:', err);
+    return false;
+  }
+}
+
+/** Convert an ArrayBuffer to a base64 string (chunked to avoid stack overflow). */
+function arrayBufferToBase64(buf: ArrayBuffer): string {
+  const bytes = new Uint8Array(buf);
+  const chunkSize = 0x8000;  // 32 KB
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    const chunk = bytes.subarray(i, i + chunkSize);
+    binary += String.fromCharCode.apply(null, Array.from(chunk));
+  }
+  return btoa(binary);
+}
+
+/**
+ * Shape an Arabic string for PDF rendering.
+ *
+ * Arabic letters change form depending on their position in a word (isolated,
+ * initial, medial, final). jsPDF doesn't include an OpenType shaping engine,
+ * so we use `arabic-reshaper` to convert logical-order Arabic characters into
+ * their presentation forms. We then reverse the string for RTL display.
+ *
+ * Latin characters, digits, and punctuation pass through unchanged (they're
+ * rendered left-to-right within the Arabic text).
+ *
+ * If `arabic-reshaper` isn't available or the input has no Arabic, the
+ * original string is returned unchanged.
+ */
+function shapeArabic(text: string): string {
+  if (!text) return text;
+  // Quick check: does the string contain any Arabic characters?
+  if (!/[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(text)) {
+    return text;
+  }
+
+  try {
+    // Dynamic import to avoid pulling arabic-reshaper into the bundle for
+    // English-only reports.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const reshaper = require('arabic-reshaper');
+    const shaped = reshaper.convertArabic(text);
+    // Reverse for RTL display. jsPDF writes left-to-right; Arabic needs
+    // right-to-left. For pure-Arabic strings this is correct. For mixed
+    // strings the Latin runs will be reversed too, which is wrong — but
+    // mixed strings are rare in our reports (we use either all-Arabic or
+    // all-English labels), so this is an acceptable tradeoff.
+    return shaped.split('').reverse().join('');
+  } catch {
+    return text;
+  }
 }
 
 // ─── Color Constants ──────────────────────────────────────────────────────────
@@ -63,6 +185,36 @@ export async function generateReport(options: ReportOptions): Promise<Blob> {
   const contentWidth = pageWidth - 2 * margin;
   let y = 0;
 
+  // If Arabic, load the Amiri font so Arabic text renders correctly.
+  // If loading fails, we fall back to Helvetica and accept that Arabic
+  // will render as empty boxes — the structure and numbers are still
+  // readable, and the user can re-export in English.
+  let arabicFontReady = false;
+  if (isRTL) {
+    arabicFontReady = await loadArabicFont(doc);
+  }
+
+  /**
+   * Set the active font. Uses Amiri for Arabic (if loaded), Helvetica for
+   * English. The `style` parameter is 'normal' | 'bold' | 'italic' | 'bolditalic'.
+   */
+  const setFont = (style: 'normal' | 'bold' | 'italic' | 'bolditalic' = 'normal') => {
+    if (isRTL && arabicFontReady) {
+      doc.setFont('amiri', style === 'italic' || style === 'bolditalic' ? 'normal' : style);
+    } else {
+      setFont(style);
+    }
+  };
+
+  /**
+   * Shape text for the current language. For Arabic, runs the text through
+   * `arabic-reshaper` and reverses for RTL. For English, returns as-is.
+   */
+  const shapeText = (text: string): string => {
+    if (!isRTL) return text;
+    return shapeArabic(text);
+  };
+
   // ─── Helper Functions ────────────────────────────────────────────────────────
 
   const setColor = (color: readonly [number, number, number]) => {
@@ -77,6 +229,23 @@ export async function generateReport(options: ReportOptions): Promise<Blob> {
     doc.setDrawColor(color[0], color[1], color[2]);
   };
 
+  /**
+   * Write text at the given position. For Arabic, the text is shaped and
+   * the alignment is flipped (left → right, right → left) so RTL layout
+   * looks correct.
+   */
+  const writeText = (text: string, x: number, yPos: number, opts: { align?: 'left' | 'right' | 'center' | 'justify'; maxWidth?: number } = {}) => {
+    const shaped = shapeText(text);
+    let align = opts.align || 'left';
+    // For Arabic, flip alignment so 'left' in source becomes 'right' in
+    // the rendered PDF (Arabic reads right-to-left).
+    if (isRTL) {
+      if (align === 'left') align = 'right';
+      else if (align === 'right') align = 'left';
+    }
+    doc.text(shaped, x, yPos, { align, maxWidth: opts.maxWidth });
+  };
+
   const addHeader = () => {
     // Dark header bar
     setFillColor(COLORS.dark);
@@ -89,14 +258,14 @@ export async function generateReport(options: ReportOptions): Promise<Blob> {
     // Logo / App name
     setColor(COLORS.primary);
     doc.setFontSize(22);
-    doc.setFont('helvetica', 'bold');
-    doc.text('EVDx', margin, 18);
+    setFont('bold');
+    writeText('EVDx', margin, 18);
 
     // Subtitle
     setColor(COLORS.textSecondary);
     doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
-    doc.text('Universal EV Diagnostics Pro', margin, 25);
+    setFont('normal');
+    writeText('Universal EV Diagnostics Pro', margin, 25);
 
     // Report type
     const reportTitles: Record<ReportType, string> = {
@@ -107,13 +276,13 @@ export async function generateReport(options: ReportOptions): Promise<Blob> {
     };
     setColor(COLORS.white);
     doc.setFontSize(14);
-    doc.setFont('helvetica', 'bold');
-    doc.text(reportTitles[options.type], margin, 34);
+    setFont('bold');
+    writeText(reportTitles[options.type], margin, 34);
 
     // Date
     setColor(COLORS.textSecondary);
     doc.setFontSize(8);
-    doc.setFont('helvetica', 'normal');
+    setFont('normal');
     const dateStr = new Date().toLocaleDateString(isRTL ? 'ar-SA' : 'en-US', {
       year: 'numeric',
       month: 'long',
@@ -121,7 +290,7 @@ export async function generateReport(options: ReportOptions): Promise<Blob> {
       hour: '2-digit',
       minute: '2-digit',
     });
-    doc.text(dateStr, pageWidth - margin, 18, { align: 'right' });
+    writeText(dateStr, pageWidth - margin, 18, { align: 'right' });
 
     y = 50;
   };
@@ -132,8 +301,8 @@ export async function generateReport(options: ReportOptions): Promise<Blob> {
     // Section title
     setColor(COLORS.primary);
     doc.setFontSize(11);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Vehicle Information', margin, y);
+    setFont('bold');
+    writeText('Vehicle Information', margin, y);
     y += 2;
 
     setFillColor(COLORS.primary);
@@ -154,11 +323,11 @@ export async function generateReport(options: ReportOptions): Promise<Blob> {
     doc.setFontSize(9);
     info.forEach(([label, value]) => {
       setColor(COLORS.textSecondary);
-      doc.setFont('helvetica', 'normal');
-      doc.text(`${label}:`, margin, y);
+      setFont('normal');
+      writeText(`${label}:`, margin, y);
       setColor(COLORS.text);
-      doc.setFont('helvetica', 'bold');
-      doc.text(value, margin + 40, y);
+      setFont('bold');
+      writeText(value, margin + 40, y);
       y += 5;
     });
 
@@ -168,13 +337,14 @@ export async function generateReport(options: ReportOptions): Promise<Blob> {
   const addSectionTitle = (title: string) => {
     if (y > 250) {
       doc.addPage();
+      addDarkBackground();
       y = 20;
     }
 
     setColor(COLORS.primary);
     doc.setFontSize(11);
-    doc.setFont('helvetica', 'bold');
-    doc.text(title, margin, y);
+    setFont('bold');
+    writeText(title, margin, y);
     y += 2;
 
     setFillColor(COLORS.primary);
@@ -185,6 +355,7 @@ export async function generateReport(options: ReportOptions): Promise<Blob> {
   const addMetric = (label: string, value: string, unit?: string, status?: 'good' | 'warning' | 'critical') => {
     if (y > 270) {
       doc.addPage();
+      addDarkBackground();
       y = 20;
     }
 
@@ -192,15 +363,15 @@ export async function generateReport(options: ReportOptions): Promise<Blob> {
 
     // Label
     setColor(COLORS.textSecondary);
-    doc.setFont('helvetica', 'normal');
-    doc.text(label, margin + 2, y);
+    setFont('normal');
+    writeText(label, margin + 2, y);
 
     // Value
     const statusColor = status === 'critical' ? COLORS.critical : status === 'warning' ? COLORS.warning : status === 'good' ? COLORS.green : COLORS.text;
     setColor(statusColor);
-    doc.setFont('helvetica', 'bold');
+    setFont('bold');
     const displayValue = unit ? `${value} ${unit}` : value;
-    doc.text(displayValue, pageWidth - margin - 2, y, { align: 'right' });
+    writeText(displayValue, pageWidth - margin - 2, y, { align: 'right' });
 
     y += 5;
   };
@@ -208,16 +379,17 @@ export async function generateReport(options: ReportOptions): Promise<Blob> {
   const addKVRow = (label: string, value: string) => {
     if (y > 270) {
       doc.addPage();
+      addDarkBackground();
       y = 20;
     }
 
     doc.setFontSize(9);
     setColor(COLORS.textSecondary);
-    doc.setFont('helvetica', 'normal');
-    doc.text(label, margin + 2, y);
+    setFont('normal');
+    writeText(label, margin + 2, y);
     setColor(COLORS.text);
-    doc.setFont('helvetica', 'bold');
-    doc.text(value, margin + 60, y);
+    setFont('bold');
+    writeText(value, margin + 60, y);
     y += 5;
   };
 
@@ -243,9 +415,9 @@ export async function generateReport(options: ReportOptions): Promise<Blob> {
 
       setColor(COLORS.textSecondary);
       doc.setFontSize(7);
-      doc.setFont('helvetica', 'normal');
-      doc.text('EVDx — Universal EV Diagnostics Pro | Dr. Waleed Mandour', margin, pageHeight - 4);
-      doc.text(`Page ${i} of ${pageCount}`, pageWidth - margin, pageHeight - 4, { align: 'right' });
+      setFont('normal');
+      writeText('EVDx — Universal EV Diagnostics Pro | Dr. Waleed Mandour', margin, pageHeight - 4);
+      writeText(`Page ${i} of ${pageCount}`, pageWidth - margin, pageHeight - 4, { align: 'right' });
     }
   };
 
@@ -343,18 +515,18 @@ export async function generateReport(options: ReportOptions): Promise<Blob> {
 
         setColor(severityColor);
         doc.setFontSize(10);
-        doc.setFont('helvetica', 'bold');
-        doc.text(`${dtc.code}`, margin + 2, y);
+        setFont('bold');
+        writeText(`${dtc.code}`, margin + 2, y);
 
         setColor(COLORS.text);
         doc.setFontSize(9);
-        doc.setFont('helvetica', 'normal');
-        doc.text(dtc.description, margin + 30, y);
+        setFont('normal');
+        writeText(dtc.description, margin + 30, y);
 
         setColor(COLORS.textSecondary);
         doc.setFontSize(8);
         const statusText = dtc.active ? 'ACTIVE' : 'HISTORY';
-        doc.text(`[${dtc.severity.toUpperCase()}] [${statusText}] Count: ${dtc.count}`, margin + 30, y + 4);
+        writeText(`[${dtc.severity.toUpperCase()}] [${statusText}] Count: ${dtc.count}`, margin + 30, y + 4);
 
         y += 10;
       });
@@ -362,8 +534,8 @@ export async function generateReport(options: ReportOptions): Promise<Blob> {
       y += 3;
       setColor(COLORS.green);
       doc.setFontSize(10);
-      doc.setFont('helvetica', 'bold');
-      doc.text('No diagnostic trouble codes found — Vehicle systems OK', margin + 2, y);
+      setFont('bold');
+      writeText('No diagnostic trouble codes found — Vehicle systems OK', margin + 2, y);
       y += 8;
     }
   }
@@ -416,22 +588,22 @@ export async function generateReport(options: ReportOptions): Promise<Blob> {
   addDivider();
   setColor(COLORS.textSecondary);
   doc.setFontSize(7);
-  doc.setFont('helvetica', 'italic');
-  doc.text(
+  setFont('italic');
+  writeText(
     'This report is generated by EVDx for informational purposes only. It does not constitute a professional vehicle inspection.',
     margin,
     y,
     { maxWidth: contentWidth }
   );
   y += 4;
-  doc.text(
+  writeText(
     'All data is collected on-device. No data has been transmitted to any external server. Zero telemetry. Zero cloud.',
     margin,
     y,
     { maxWidth: contentWidth }
   );
   y += 4;
-  doc.text(
+  writeText(
     `EVDx v${APP_VERSION} — By Dr. Waleed Mandour — ${new Date().getFullYear()}`,
     margin,
     y,

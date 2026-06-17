@@ -738,8 +738,47 @@ export class SimulatorEngine {
 
   private resolveBrand(vehicle: VehicleProfile | null): BrandParams {
     if (!vehicle) return BRAND_PROFILES.generic;
-    const brandId = vehicle.brand.toLowerCase().replace(/\s+/g, '-');
-    return BRAND_PROFILES[brandId] ?? BRAND_PROFILES.generic;
+
+    // Try multiple matching strategies in order of specificity:
+    //   1. Exact id match (e.g. "byd", "tesla") — set by OnboardingFlow
+    //   2. Brand name → slug match (e.g. "BYD" → "byd", "Hyundai/Kia" → "hyundai-kia")
+    //   3. Substring match (e.g. "VW Group" contains "vw", "Mercedes-Benz" contains "mercedes")
+    //   4. Fallback to generic
+    //
+    // The previous implementation only tried strategy #2 with a naive slugify,
+    // so "VW Group" → "vw-group" (no match) → generic. This lost brand-specific
+    // chemistry (LFP vs NCA vs NMC), thermal coefficients, cell counts, charge
+    // curves, and DTC prefixes for most vehicles.
+
+    // Strategy 3: substring match against known brand keys
+    const brandLower = vehicle.brand.toLowerCase();
+    for (const [key, _profile] of Object.entries(BRAND_PROFILES)) {
+      if (key === 'generic') continue;
+      // Handle "hyundai-kia" specially: match either "hyundai" or "kia"
+      if (key === 'hyundai-kia') {
+        if (brandLower.includes('hyundai') || brandLower.includes('kia')) {
+          return BRAND_PROFILES['hyundai-kia'];
+        }
+        continue;
+      }
+      // Handle "vw-group": match "vw", "volkswagen", "audi", "porsche", "skoda", "seat"
+      if (key === 'vw-group') {
+        if (brandLower.includes('vw') || brandLower.includes('volkswagen') ||
+            brandLower.includes('audi') || brandLower.includes('porsche') ||
+            brandLower.includes('skoda') || brandLower.includes('seat') ||
+            brandLower.includes('id.') || brandLower.includes('e-tron')) {
+          return BRAND_PROFILES['vw-group'];
+        }
+        continue;
+      }
+      // Generic substring match
+      if (brandLower.includes(key)) {
+        return BRAND_PROFILES[key];
+      }
+    }
+
+    // Strategy 4: fallback
+    return BRAND_PROFILES.generic;
   }
 
   private createDefaultSimState(): SimState {
