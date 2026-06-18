@@ -28,6 +28,12 @@ export default function ConnectOverlay({ onClose }: ConnectOverlayProps) {
   const [scannedDevices, setScannedDevices] = useState<ScannedDevice[]>([]);
   const [permissionError, setPermissionError] = useState('');
   const [connectingToDevice, setConnectingToDevice] = useState<string | null>(null);
+  // Profile picker state — shown when auto-detection fails or when the user
+  // taps "Try a different profile" after a "characteristics not found" error.
+  // The user picks a profile from the list and we retry connect() with it.
+  const [showProfilePicker, setShowProfilePicker] = useState(false);
+  const [profilePickerDevice, setProfilePickerDevice] = useState<ScannedDevice | null>(null);
+  const [profilesList, setProfilesList] = useState<Array<{ name: string; serviceUUID: string; writeUUID: string; notifyUUID: string }>>([]);
 
   const handleBluetoothScan = useCallback(async () => {
     setScanning(true);
@@ -63,9 +69,10 @@ export default function ConnectOverlay({ onClose }: ConnectOverlayProps) {
     }
   }, [t]);
 
-  const handleBluetoothConnect = useCallback(async (device: ScannedDevice) => {
+  const handleBluetoothConnect = useCallback(async (device: ScannedDevice, forcedProfile?: { name: string; serviceUUID: string; writeUUID: string; notifyUUID: string }) => {
     setConnectingToDevice(device.deviceId);
     setPermissionError('');
+    setShowProfilePicker(false);
     // Set the store to 'connecting' so the WiFi/Bluetooth buttons disable
     // and a spinner shows. The previous implementation jumped straight from
     // 'disconnected' to 'connected' without ever showing the connecting state,
@@ -75,8 +82,8 @@ export default function ConnectOverlay({ onClose }: ConnectOverlayProps) {
     setConnectionStatus('connecting');
 
     try {
-      const { bleService } = await import('@/lib/ble-service');
-      const connected = await bleService.connect(device.deviceId, device.profile);
+      const { bleService, CharacteristicsNotFoundError, NoMatchingProfileError } = await import('@/lib/ble-service');
+      const connected = await bleService.connect(device.deviceId, forcedProfile as any);
 
       if (connected) {
         // Get adapter identification info
@@ -111,6 +118,27 @@ export default function ConnectOverlay({ onClose }: ConnectOverlayProps) {
       }
     } catch (error: any) {
       console.error('BLE connect error:', error);
+
+      // v1.5.2: catch the typed errors specifically and show the profile
+      // picker instead of just dumping the raw error.
+      const { CharacteristicsNotFoundError, NoMatchingProfileError } = await import('@/lib/ble-service');
+      if (error instanceof CharacteristicsNotFoundError || error instanceof NoMatchingProfileError) {
+        console.warn('[ConnectOverlay] Profile detection failed, showing profile picker');
+        setConnectionStatus('error');
+        setProfilePickerDevice(device);
+        // Load the list of all known profiles
+        const { bleService } = await import('@/lib/ble-service');
+        setProfilesList([...bleService.getAdapterProfiles()]);
+        setShowProfilePicker(true);
+        // Show a user-friendly error message explaining what happened
+        setPermissionError(
+          error instanceof CharacteristicsNotFoundError
+            ? t('characteristicsNotFound', { profile: error.triedProfile })
+            : t('noMatchingProfile')
+        );
+        return;
+      }
+
       setConnectionStatus('error');
       setPermissionError(error?.message || t('connectFailed'));
     } finally {
@@ -366,6 +394,56 @@ export default function ConnectOverlay({ onClose }: ConnectOverlayProps) {
                         <RefreshCw size={16} className="mr-2" />
                         {t('scanAgain')}
                       </Button>
+
+                      {/* v1.5.2: Profile picker — shown when auto-detection fails
+                          with NoMatchingProfileError or when startNotifications
+                          throws "characteristics not found". The user can manually
+                          pick a profile from the list and retry the connection. */}
+                      {showProfilePicker && profilePickerDevice && (
+                        <div className="mt-4 p-4 bg-[#0D1117] border border-evdx-warning/30 rounded-xl space-y-3">
+                          <div className="flex items-center gap-2">
+                            <AlertCircle size={16} className="text-evdx-warning shrink-0" />
+                            <p className="text-sm font-semibold text-evdx-warning">
+                              {t('profilePickerTitle')}
+                            </p>
+                          </div>
+                          <p className="text-xs text-evdx-text-secondary leading-relaxed">
+                            {t('profilePickerDescription')}
+                          </p>
+                          <div className="space-y-2 max-h-64 overflow-y-auto">
+                            {profilesList.map((profile) => (
+                              <button
+                                key={profile.name}
+                                onClick={() => handleBluetoothConnect(profilePickerDevice, profile)}
+                                disabled={connectingToDevice !== null}
+                                className="w-full flex items-center gap-3 rounded-lg px-4 py-3 transition-colors disabled:opacity-50 bg-[#1A2332] hover:bg-evdx-primary/5 border border-white/5 text-start"
+                              >
+                                <Bluetooth size={16} className="text-evdx-primary shrink-0" />
+                                <div className="flex-1 min-w-0">
+                                  <span className="text-sm text-evdx-text block truncate">{profile.name}</span>
+                                  <span className="text-[10px] text-evdx-text-secondary font-mono block truncate">
+                                    {profile.serviceUUID.substring(0, 8)}…
+                                  </span>
+                                </div>
+                                {connectingToDevice === profilePickerDevice.deviceId && (
+                                  <Loader2 size={14} className="animate-spin text-evdx-primary" />
+                                )}
+                              </button>
+                            ))}
+                          </div>
+                          <Button
+                            onClick={() => {
+                              setShowProfilePicker(false);
+                              setProfilePickerDevice(null);
+                              setPermissionError('');
+                            }}
+                            variant="outline"
+                            className="w-full h-9 text-xs border-white/10 text-evdx-text-secondary"
+                          >
+                            {t('cancel', { ns: 'common' })}
+                          </Button>
+                        </div>
+                      )}
                     </>
                   )}
                 </motion.div>
