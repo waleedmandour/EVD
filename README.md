@@ -16,41 +16,50 @@
 
 ## 📦 Download Latest Release
 
-> **EVDx v1.5.1** — Critical BLE/OBD-II fixes: command queue race condition resolved, multi-frame VIN parsing corrected, real diagnostic scan now actually queries the vehicle ECU (Modes 03/07/0A), DTC clear sends Mode 04 to the vehicle, disconnect no longer leaks pending commands, release builds now use a proper keystore.
+> **EVDx v1.5.2** — Fixes "characteristics not found" on Vgate iCar Pro v3+ with new FFF0 BLE profile + profile picker UI + firmware update guide. Also includes all v1.5.1 fixes (command queue, VIN parsing, real DTC scan, Mode 22 PIDs, Arabic PDF, voice commands, onboarding flow).
 
-[![Download APK](https://img.shields.io/badge/Download-EVDx%20v1.5.1--pre%20APK-blue?style=for-the-badge&logo=android)](https://github.com/waleedmandour/EVD/releases/tag/v1.5.1-pre)
+[![Download APK](https://img.shields.io/badge/Download-EVDx%20v1.5.2-pre%20APK-blue?style=for-the-badge&logo=android)](https://github.com/waleedmandour/EVD/releases/tag/v1.5.2-pre)
 
 | Asset | Description |
 |---|---|
-| 📦 [evdx-v1.5.1-pre-release.apk](https://github.com/waleedmandour/EVD/releases/download/v1.5.1-pre/evdx-v1.5.1-pre-release.apk) | Android APK (25 MB, versionCode 8, targetSdk 36) |
-| 📘 [User Guide (English)](https://github.com/waleedmandour/EVD/releases/download/v1.5.1-pre/EVDx-UserGuide-EN-v1.5.1.pdf) | Complete English guide |
-| 📗 [دليل المستخدم (العربية)](https://github.com/waleedmandour/EVD/releases/download/v1.5.1-pre/EVDx-UserGuide-AR-v1.5.1.pdf) | دليل عربي كامل |
-| 📝 [Changelog v1.5.1](CHANGELOG-v1.5.1.md) | Full list of fixes in this release |
+| 📦 [evdx-v1.5.2-pre-release.apk](https://github.com/waleedmandour/EVD/releases/download/v1.5.2-pre/evdx-v1.5.2-pre-release.apk) | Android APK (25 MB, versionCode 9, targetSdk 36) |
+| 📘 [User Guide (English)](https://github.com/waleedmandour/EVD/releases/download/v1.5.2-pre/EVDx-UserGuide-EN-v1.5.2.pdf) | Complete English guide |
+| 📗 [دليل المستخدم (العربية)](https://github.com/waleedmandour/EVD/releases/download/v1.5.2-pre/EVDx-UserGuide-AR-v1.5.2.pdf) | دليل عربي كامل |
+| 📝 [Changelog v1.5.2](CHANGELOG-v1.5.2.md) | Full list of fixes in this release |
 
 **Installation:**
-1. Download the APK from the [Releases page](https://github.com/waleedmandour/EVD/releases/tag/v1.5.1-pre)
+1. Download the APK from the [Releases page](https://github.com/waleedmandour/EVD/releases/tag/v1.5.2-pre)
 2. Enable "Install from Unknown Sources" in your Android settings
 3. Open the downloaded APK and tap **Install**
 4. Launch EVDx and follow the onboarding wizard
 
 **System Requirements:** Android 7.0 (API 24) or later, Bluetooth LE recommended
 
-### 🔧 What's New in v1.5.1
+### 🔧 What's New in v1.5.2
 
 | Area | Fix |
 |---|---|
+| **FFF0 BLE profile** | New "vGate iCar Pro v3+ (FFF0)" profile fixes the "characteristics not found" error on 2023+ iCar Pro units. Also added "BOLUTEK / CSR Clone (FFF0/FFF2)" for asymmetric write/notify clones. Total: 13 profiles (was 10). |
+| **Profile picker UI** | When auto-detection fails or "characteristics not found" occurs, a profile picker dialog appears automatically. Lists all 13 known BLE profiles — user taps one to retry the connection with that specific profile. No more dead-end errors. |
+| **Typed BLE errors** | New `CharacteristicsNotFoundError` and `NoMatchingProfileError` classes provide structured error info (device name, tried profile) for better UI handling. |
+| **detectProfile() fix** | No longer silently falls back to vGate iCar Pro FFE0 when no profile matches. Throws `NoMatchingProfileError` instead, triggering the profile picker UI. |
+| **Firmware update guide** | New "Firmware Update Information" section in the Device tab documents the official firmware update path for each adapter brand (OBDLink app, vLinker app, Carly app, etc.). |
 | **BLE command queue** | Concurrent `sendCommand` calls previously overwrote the single `responseResolve` callback, causing silent data corruption during polling + UI requests. Replaced with a proper FIFO command queue that serializes commands. |
 | **VIN multi-frame parsing** | Frame counter bytes (01/02/03) in Mode 09 PID 02 responses were being decoded as ASCII digits and corrupting the VIN. Each `49 02 NN` frame header is now detected and its 2-hex counter is skipped. |
 | **Real diagnostic scan** | "Run Full Scan" in DiagnosticsView only animated a progress bar — it now actually issues Mode 03 (stored) + Mode 07 (pending) + Mode 0A (permanent) DTC reads via `bleService.readDTCs()` and merges results with descriptions from `dtc-codes.ts`. |
 | **Real DTC clear** | "Clear Codes" only cleared local UI state — it now also sends Mode 04 to the vehicle ECU via `bleService.clearDTCs()`. |
-| **Disconnect cleanup** | Pending `sendCommand` promises are now rejected via `flushQueue()` on disconnect, so callers don't hang for the full timeout. |
-| **Release signing** | Release builds now use `evdx.keystore` (with safe fallback to debug signing) instead of always using the debug key. |
-| **APK filename** | `build-apk.sh` now derives the APK output name from `versionName` in `build.gradle` (was hardcoded to `v1.0.0`). |
+| **Mode 22 custom PIDs** | Manufacturer-specific PIDs (BYD 2101–210A, Tesla 2110–2219, Nissan 5B9A–5BA4, etc.) are now polled and decoded. Real OBD data for pack V/I, SOC, SOH, cell voltages, temperatures — not just defaults. |
+| **Arabic PDF rendering** | Amiri TTF font embedded in jsPDF + arabic-reshaper for letter joining. Arabic PDF reports now render correctly instead of empty boxes. |
+| **Voice commands wired** | 12 previously-stub voice commands now actually perform actions: clear codes, switch language, enable/mute alerts, set drive mode, export report, start/stop demo, connect/disconnect adapter. |
+| **Onboarding flow** | "Connect Adapter" button now does a real BLE scan + permission request + inline device picker (was a fake 2-second timer). Battery capacity input gets validation. |
+| **WiFi cleartext whitelist** | Expanded from 25 IPs to cover all common private-use subnets (192.168.x.x, 10.x.x.x, 172.16.x.x, Android/iOS hotspots). |
+| **Settings persistence** | Alert thresholds and quiet hours now persist to settings (was local useState that lost values on tab change). Quiet Hours switch correctly bound to `quietHours.enabled` (was bound to `notifications`). |
+| **Dead code removed** | Deleted `src/lib/db.ts` (never imported, claimed SQLite but used localStorage) and `prisma/schema.prisma` (Next.js template leftover). |
 | **CI workflow** | Added `.github/workflows/ci.yml` that runs `tsc --noEmit`, the Next.js build, the OBD-II protocol simulation test, and the Android release APK build on every push/PR. |
 | **Type safety** | `tsconfig.json` now excludes unrelated `examples/`, `skills/`, `android/` template folders from type checking. |
 | **Keystore hygiene** | `.gitignore` now excludes `*.keystore`, `*.jks`, `keystore.properties` so private signing keys never get committed. |
 
-See [CHANGELOG-v1.5.1.md](CHANGELOG-v1.5.1.md) for full details and [scripts/obd-protocol-sim.test.mjs](scripts/obd-protocol-sim.test.mjs) for the verification suite (26 tests covering PID decoding, DTC parsing, VIN multi-frame regression, command queue serialization regression).
+See [CHANGELOG-v1.5.2.md](CHANGELOG-v1.5.2.md) for full details and [scripts/obd-protocol-sim.test.mjs](scripts/obd-protocol-sim.test.mjs) for the verification suite (34 tests covering PID decoding, DTC parsing, VIN multi-frame regression, command queue serialization regression, Mode 22 formula evaluation, and formula safety rejection).
 
 ---
 
@@ -353,7 +362,7 @@ The first `build-apk.sh` run generates `evdx.keystore` (RSA 2048, 10000-day vali
 | `bun run cap:sync` | Sync web assets to Android |
 | `bun run cap:open:android` | Open Android project in Android Studio |
 | `bun run apk:build` | Build release APK |
-| `node scripts/obd-protocol-sim.test.mjs` | Run OBD-II protocol simulation test (26 tests) |
+| `node scripts/obd-protocol-sim.test.mjs` | Run OBD-II protocol simulation test (34 tests) |
 
 ### Continuous Integration
 
@@ -387,7 +396,7 @@ EVD/
 │   │   │   └── res/
 │   │   │       ├── xml/network_security_config.xml
 │   │   │       └── values/strings.xml
-│   │   └── build.gradle              # versionCode 8, versionName 1.5.1
+│   │   └── build.gradle              # versionCode 9, versionName 1.5.1
 │   └── gradle/
 ├── scripts/
 │   └── obd-protocol-sim.test.mjs    # 26-test OBD-II byte-level parser regression suite
@@ -445,7 +454,7 @@ EVD/
 ├── next.config.ts                   # Next.js static export config
 ├── tailwind.config.ts               # Tailwind CSS configuration
 ├── build-apk.sh                     # One-command APK build script
-├── CHANGELOG-v1.5.1.md              # Detailed v1.5.1 changelog
+├── CHANGELOG-v1.5.2.md              # Detailed v1.5.2 changelog
 ├── PRIVACY.md                       # Privacy policy (EN/AR)
 ├── VEHICLES.md                      # Vehicle database documentation
 ├── ADAPTERS.md                      # Adapter compatibility list
