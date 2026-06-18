@@ -43,19 +43,47 @@ export interface BLEAdapterProfile {
 /**
  * Known OBD adapter BLE profiles with verified UUIDs.
  *
- * The 4 main BLE profile families:
- * 1. FFE0/FFE1 — Used by vGate iCar Pro, ELM327 Generic, many Chinese clones
- * 2. 18F0/2AF0/2AF1 — OBDLink MX+ and OBDLink CX (OBDLink proprietary)
- * 3. Nordic NUS (6e400001/002/003) — vLinker MC+, FS, BM+; also some DIY adapters
- * 4. FFE0/FFE1/FFE2 — Veepeak OBDCheck BLE+ (FFE2 is alternate notify)
+ * The 5 main BLE profile families:
+ * 1. FFE0/FFE1 — Used by vGate iCar Pro (v1.x, v2.x), ELM327 Generic, many Chinese clones
+ * 2. FFF0/FFF1 — vGate iCar Pro v3+ (2023+), BOLUTEK, some Silicon Labs-based clones.
+ *                This is the profile that fixes the "characteristics not found" error
+ *                for newer Vgate iCar Pro units on Android 13+ devices (e.g. Pixel).
+ * 3. 18F0/2AF0/2AF1 — OBDLink MX+ and OBDLink CX (OBDLink proprietary)
+ * 4. Nordic NUS (6e400001/002/003) — vLinker MC+, FS, BM+; also some DIY adapters
+ * 5. FFE0/FFE1/FFE2 — Veepeak OBDCheck BLE+ (FFE2 is alternate notify)
+ *
+ * If you're adding a new adapter, add an entry to ADAPTER_PROFILES below AND
+ * add the corresponding aliases. The auto-detection in detectProfile() will
+ * try each profile's service/characteristic UUIDs in order.
  */
 const ADAPTER_PROFILES: BLEAdapterProfile[] = [
   {
-    name: 'vGate iCar Pro',
+    name: 'vGate iCar Pro (FFE0)',
     serviceUUID: '0000ffe0-0000-1000-8000-00805f9b34fb',
     writeUUID: '0000ffe1-0000-1000-8000-00805f9b34fb',
     notifyUUID: '0000ffe1-0000-1000-8000-00805f9b34fb',
-    aliases: ['icar', 'vgate', 'icarpro', 'icar pro', 'v-gate'],
+    aliases: ['icar', 'vgate', 'icarpro', 'icar pro', 'v-gate', 'vgate icar'],
+  },
+  {
+    // NEW in v1.5.2: Vgate iCar Pro v3+ (2023+) and many BOLUTEK / Silicon Labs
+    // clones use Service FFF0 + Characteristic FFF1/FFF2 instead of the
+    // classic FFE0/FFE1. This is the fix for the "characteristics not found"
+    // error reported on newer iCar Pro units paired with Android 13+ phones
+    // (e.g. Google Pixel).
+    name: 'vGate iCar Pro v3+ (FFF0)',
+    serviceUUID: '0000fff0-0000-1000-8000-00805f9b34fb',
+    writeUUID: '0000fff1-0000-1000-8000-00805f9b34fb',
+    notifyUUID: '0000fff1-0000-1000-8000-00805f9b34fb',
+    aliases: ['icar v3', 'vgate v3', 'bolutek', 'fff0', 'fff1'],
+  },
+  {
+    // NEW in v1.5.2: BOLUTEK / CSR-based clones commonly use FFF0 with FFF2
+    // as the notify characteristic (asymmetric write/notify).
+    name: 'BOLUTEK / CSR Clone (FFF0/FFF2)',
+    serviceUUID: '0000fff0-0000-1000-8000-00805f9b34fb',
+    writeUUID: '0000fff1-0000-1000-8000-00805f9b34fb',
+    notifyUUID: '0000fff2-0000-1000-8000-00805f9b34fb',
+    aliases: ['bolutek', 'csr', 'ble-obd', 'obd-ble'],
   },
   {
     name: 'OBDLink MX+',
@@ -292,10 +320,59 @@ export interface AdapterInfo {
   supportedCustomPIDs: Set<string>;
 }
 
+// ─── Typed Errors ────────────────────────────────────────────────────────────
+
+/**
+ * Error thrown when BLE connection succeeds but the adapter doesn't expose
+ * any of our known GATT characteristics. This is the "characteristics not found"
+ * error users see when their adapter uses a non-standard UUID scheme that
+ * isn't in ADAPTER_PROFILES.
+ *
+ * The UI catches this specifically and shows a profile-picker dialog so the
+ * user can manually try each profile until one works — instead of just
+ * showing the raw plugin error.
+ */
+export class CharacteristicsNotFoundError extends Error {
+  readonly deviceName: string;
+  readonly triedProfile: string;
+
+  constructor(deviceName: string, triedProfile: string, message?: string) {
+    super(message || `Characteristics not found on "${deviceName}" using profile "${triedProfile}". The adapter may use a non-standard BLE profile — try a different one.`);
+    this.name = 'CharacteristicsNotFoundError';
+    this.deviceName = deviceName;
+    this.triedProfile = triedProfile;
+  }
+}
+
+/**
+ * Error thrown when auto-detection (detectProfile) couldn't match any of
+ * the known profiles to the connected device. Instead of silently falling
+ * back to vGate iCar Pro (which would then fail with CharacteristicsNotFoundError
+ * on the first startNotifications call), we throw this so the UI can prompt
+ * the user to pick a profile manually.
+ */
+export class NoMatchingProfileError extends Error {
+  readonly deviceName: string;
+  readonly deviceAddress: string;
+
+  constructor(deviceName: string, deviceAddress: string) {
+    super(`No matching BLE profile found for "${deviceName}". Please select a profile manually.`);
+    this.name = 'NoMatchingProfileError';
+    this.deviceName = deviceName;
+    this.deviceAddress = deviceAddress;
+  }
+}
+
 // ─── BLE Service ──────────────────────────────────────────────────────────────
 
 export class BLEService {
   private connectedDeviceId: string | null = null;
+  /**
+   * Human-readable name of the most recently connected device, cached so
+   * error messages (e.g. NoMatchingProfileError) can include it even after
+   * the connection state has been cleared.
+   */
+  private lastConnectedDeviceName: string = '';
   private activeProfile: BLEAdapterProfile | null = null;
   private responseBuffer = '';
   private responseResolve: ((value: string) => void) | null = null;
@@ -449,9 +526,18 @@ export class BLEService {
   async connect(deviceId: string, profile?: BLEAdapterProfile): Promise<boolean> {
     if (!this.initialized) return false;
 
+    // Cache the device name (best-effort — BleClient doesn't expose a
+    // synchronous name lookup, so we use the deviceId as a fallback).
+    // This is used in error messages when detectProfile() throws.
+    this.lastConnectedDeviceName = deviceId;
+
     try {
       await BleClient.connect(deviceId);
       this.connectedDeviceId = deviceId;
+
+      // If no profile was passed in, auto-detect. This now throws
+      // NoMatchingProfileError instead of silently falling back to vGate
+      // iCar Pro — see detectProfile() for the rationale.
       this.activeProfile = profile || await this.detectProfile(deviceId);
       this.isWifiMode = false;
 
@@ -462,18 +548,38 @@ export class BLEService {
       // Android during connect(). No explicit requestMtu call is needed —
       // multi-frame OBD responses (e.g. Mode 09 VIN) will arrive intact.
 
-      // Set up notification listener using BleClient
+      // Set up notification listener using BleClient.
+      //
+      // This is the call that throws "characteristics not found" when the
+      // adapter doesn't actually have the service/characteristic UUIDs in
+      // the active profile. We catch it and re-throw as a typed
+      // CharacteristicsNotFoundError so the UI can show the profile picker.
       if (this.activeProfile) {
-        await BleClient.startNotifications(
-          deviceId,
-          this.activeProfile.serviceUUID,
-          this.activeProfile.notifyUUID,
-          (value: DataView) => {
-            const data = this.decodeDataView(value);
-            this.handleNotification(data);
+        try {
+          await BleClient.startNotifications(
+            deviceId,
+            this.activeProfile.serviceUUID,
+            this.activeProfile.notifyUUID,
+            (value: DataView) => {
+              const data = this.decodeDataView(value);
+              this.handleNotification(data);
+            }
+          );
+          console.log('[BLE] Notifications started on', this.activeProfile.notifyUUID);
+        } catch (notifErr: any) {
+          // Translate the raw plugin error into a typed error so the UI
+          // can catch it specifically and show the profile picker.
+          const msg = String(notifErr?.message || notifErr || '').toLowerCase();
+          if (msg.includes('characteristic') && msg.includes('not found')) {
+            console.warn('[BLE] startNotifications threw "characteristics not found" for profile', this.activeProfile.name);
+            throw new CharacteristicsNotFoundError(
+              this.lastConnectedDeviceName,
+              this.activeProfile.name,
+            );
           }
-        );
-        console.log('[BLE] Notifications started on', this.activeProfile.notifyUUID);
+          // Some other error — re-throw as-is
+          throw notifErr;
+        }
       }
 
       // Run full ELM327 initialization sequence
@@ -895,6 +1001,25 @@ export class BLEService {
     return this.activeProfile;
   }
 
+  /**
+   * Return all known adapter profiles (for the profile-picker UI).
+   *
+   * Returns a shallow copy of each profile so the UI can't mutate the
+   * internal list. Used by ConnectOverlay when auto-detection fails —
+   * the user can manually pick a profile and retry the connection.
+   */
+  getAdapterProfiles(): readonly BLEAdapterProfile[] {
+    return ADAPTER_PROFILES.map(p => ({ ...p, aliases: [...p.aliases] }));
+  }
+
+  /**
+   * Get the human-readable name of the most recently connected device.
+   * Used in error messages.
+   */
+  getLastConnectedDeviceName(): string {
+    return this.lastConnectedDeviceName;
+  }
+
   isWifiConnection(): boolean {
     return this.isWifiMode;
   }
@@ -1070,28 +1195,45 @@ export class BLEService {
    * Falls back to vGate iCar Pro profile (most common FFE0/FFE1 adapter).
    */
   private async detectProfile(deviceId: string): Promise<BLEAdapterProfile> {
-    if (!this.connectedDeviceId) return ADAPTER_PROFILES[0];
-
-    try {
-      // Try to discover services and match against known profiles
-      for (const profile of ADAPTER_PROFILES) {
-        try {
-          // Attempt to read the service — if it exists, this profile is likely correct
-          await BleClient.read(deviceId, profile.serviceUUID, profile.writeUUID);
-          console.log('[BLE] Profile detected via service probe:', profile.name);
-          return profile;
-        } catch {
-          // Service doesn't exist on this device, try next profile
-          continue;
-        }
-      }
-    } catch (error) {
-      console.warn('[BLE] Service probing failed, using default profile:', error);
+    if (!this.connectedDeviceId) {
+      throw new NoMatchingProfileError('Unknown', deviceId);
     }
 
-    // Default to vGate iCar Pro — most common FFE0/FFE1 adapter
-    console.log('[BLE] Using default profile: vGate iCar Pro (FFE0/FFE1)');
-    return ADAPTER_PROFILES[0];
+    // Strategy 1: try reading from each known profile's service/char UUIDs.
+    // If a read succeeds, the service+characteristic exist on the device
+    // and this profile is likely correct.
+    //
+    // Note: some adapters don't allow reads on the write characteristic
+    // (they only accept writes). For those, the read will throw even
+    // though the service exists. We accept this trade-off — auto-detection
+    // is best-effort, and the user can always pick a profile manually
+    // via the profile picker UI when auto-detection fails.
+    for (const profile of ADAPTER_PROFILES) {
+      try {
+        await BleClient.read(deviceId, profile.serviceUUID, profile.writeUUID);
+        console.log('[BLE] Profile detected via service probe:', profile.name);
+        return profile;
+      } catch {
+        // Service/characteristic doesn't exist on this device, try next
+        continue;
+      }
+    }
+
+    // Strategy 2: no profile matched via read probing. In v1.5.1 we silently
+    // fell back to ADAPTER_PROFILES[0] (vGate iCar Pro FFE0), which then
+    // failed with "characteristics not found" on the startNotifications
+    // call for any adapter that didn't actually have FFE0/FFE1 — including
+    // newer Vgate iCar Pro v3+ units that use FFF0/FFF1. The user got a
+    // confusing error with no recovery path.
+    //
+    // In v1.5.2 we throw NoMatchingProfileError instead. The ConnectOverlay
+    // UI catches this and shows a profile-picker dialog so the user can
+    // manually try each profile until one works.
+    console.warn('[BLE] No profile matched via auto-detection — throwing NoMatchingProfileError');
+    throw new NoMatchingProfileError(
+      this.lastConnectedDeviceName || 'Unknown device',
+      deviceId,
+    );
   }
 
   /**
