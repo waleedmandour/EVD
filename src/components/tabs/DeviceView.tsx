@@ -202,6 +202,80 @@ export default function DeviceView() {
           </div>
         </CardContent>
       </Card>
+
+      {/* v1.5.2: Firmware Update Information
+          Documents the official firmware update path for each adapter brand.
+          EVDx itself cannot update adapter firmware — that requires the
+          manufacturer's proprietary tool. This section tells the user where
+          to get the tool and how to use it. */}
+      <Card className="bg-[#1A2332] border-white/5">
+        <CardContent className="p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Info size={16} className="text-evdx-primary" />
+            <p className="text-sm font-medium text-evdx-text">Firmware Update Information</p>
+          </div>
+          <p className="text-xs text-evdx-text-secondary mb-3 leading-relaxed">
+            EVDx cannot update adapter firmware directly — each manufacturer provides their own update tool. If you're experiencing connection issues (e.g. "characteristics not found"), a firmware update may resolve them. Below is the official update path for each supported adapter:
+          </p>
+          <div className="space-y-3">
+            {[
+              {
+                brand: 'Vgate iCar Pro',
+                status: 'No public tool',
+                notes: 'Vgate does not publish a firmware update tool. Firmware is closed-source and can only be updated via the manufacturer\'s internal PC tool (not distributed publicly). If your iCar Pro is from 2023+ and shows "characteristics not found", it likely uses the FFF0 BLE profile — try the "vGate iCar Pro v3+ (FFF0)" profile in the profile picker instead of updating firmware.',
+                color: 'warning',
+              },
+              {
+                brand: 'OBDLink MX+ / CX',
+                status: 'OBDLink App (Android/iOS)',
+                notes: 'Download the official "OBDLink" app from Play Store or App Store. Connect your adapter via the app, and it will automatically check for and offer firmware updates. Updates typically take 2-5 minutes and require the adapter to remain powered on.',
+                color: 'green',
+              },
+              {
+                brand: 'vLinker MC+ / FS / BM+',
+                status: 'vLinker App (Android)',
+                notes: 'Download the "vLinker" app from Play Store. The app detects your adapter and offers firmware updates when available. vLinker releases firmware updates several times per year — keeping your adapter up-to-date improves compatibility with newer vehicles.',
+                color: 'green',
+              },
+              {
+                brand: 'Veepeak OBDCheck BLE+',
+                status: 'No public tool',
+                notes: 'Veepeak does not provide a public firmware update tool. Contact Veepeak support (support@veepeak.com) if you suspect a firmware issue. Most Veepeak adapters use standard FFE0/FFE1/FFE2 profiles that EVDx already supports.',
+                color: 'warning',
+              },
+              {
+                brand: 'Carly Universal',
+                status: 'Carly App (Android/iOS)',
+                notes: 'The Carly app handles firmware updates for Carly adapters. Note: Carly requires a paid subscription for most features, but firmware updates are free. Connect via the Carly app to check for updates.',
+                color: 'green',
+              },
+              {
+                brand: 'Generic ELM327 clones',
+                status: 'No update path',
+                notes: 'Generic ELM327 clones (typically PIC-based, sold as "ELM327 v1.5" or "v2.1") cannot be firmware-updated — they run masked ROM, not flash. If a clone doesn\'t work with EVDx, try a different profile from the profile picker, or replace it with a genuine adapter (OBDLink or vLinker recommended).',
+                color: 'critical',
+              },
+            ].map((item) => (
+              <div key={item.brand} className="bg-[#0D1117] rounded-lg p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-evdx-text">{item.brand}</span>
+                  <Badge
+                    className="text-[10px]"
+                    style={{
+                      backgroundColor: item.color === 'green' ? 'rgba(0, 230, 118, 0.1)' : item.color === 'warning' ? 'rgba(255, 179, 0, 0.1)' : 'rgba(255, 61, 0, 0.1)',
+                      color: item.color === 'green' ? '#00E676' : item.color === 'warning' ? '#FFB300' : '#FF3D00',
+                      borderColor: item.color === 'green' ? 'rgba(0, 230, 118, 0.3)' : item.color === 'warning' ? 'rgba(255, 179, 0, 0.3)' : 'rgba(255, 61, 0, 0.3)',
+                    }}
+                  >
+                    {item.status}
+                  </Badge>
+                </div>
+                <p className="text-[11px] text-evdx-text-secondary leading-relaxed">{item.notes}</p>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
