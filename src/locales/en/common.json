@@ -151,6 +151,10 @@
   "otherBleDevices": "Other BLE Devices",
   "nameUnavailable": "Name unavailable",
   "ble": "BLE",
+  "characteristicsNotFound": "EVDx connected to the adapter but couldn't find the OBD data channel using the \"{{profile}}\" profile. The adapter may use a non-standard BLE profile (common on newer Vgate iCar Pro v3+ units). Try a different profile below.",
+  "noMatchingProfile": "EVDx couldn't auto-detect the adapter's BLE profile. Please select a profile manually from the list below. If none works, your adapter may use a non-standard profile not yet supported — report it on GitHub.",
+  "profilePickerTitle": "Select a BLE profile",
+  "profilePickerDescription": "Tap a profile to retry the connection with it. If your adapter is a Vgate iCar Pro bought in 2023 or later, try the \"vGate iCar Pro v3+ (FFF0)\" profile first.",
   "modes": {
     "eco": "Eco",
     "normal": "Normal",
