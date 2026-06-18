@@ -10,7 +10,7 @@
  * way the version shown to the user always matches the version reported by
  * Android's package manager.
  */
-export const APP_VERSION = '1.5.1';
+export const APP_VERSION = '1.5.2';
 
 /**
  * Build identifier — bumped when we ship a new APK even if the semantic
