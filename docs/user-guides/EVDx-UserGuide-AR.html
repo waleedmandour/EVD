@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>دليل مستخدم EVDx (العربية)</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&family=Amiri:wght@400;700&display=swap" rel="stylesheet">
+<style>
+@page {
+    size: 720px 1020px;
+    margin: 0;
+}
+:root {
+    --c-bg: #0D1117;
+    --c-surface: #1A2332;
+    --c-text: #E8EAF6;
+    --c-text-secondary: #78909C;
+    --c-primary: #00D2FF;
+    --c-green: #00E676;
+    --c-warning: #FFB300;
+    --c-critical: #FF3D00;
+    --c-purple: #7B2FBE;
+}
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 720px;
+    background: var(--c-bg);
+    color: var(--c-text);
+    font-family: 'Cairo', 'Noto Sans Arabic', sans-serif;
+    font-size: 14px;
+    line-height: 1.7;
+    direction: rtl;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+}
+@media screen {
+    html {
+        height: auto;
+        display: flex;
+        justify-content: center;
+        background: #222;
+    }
+    body {
+        margin: 20px auto;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    }
+}
+
+/* ─── Cover Page ────────────────────────────────────────────── */
+.cover {
+    width: 720px;
+    height: 1020px;
+    box-sizing: border-box;
+    padding: 60px;
+    background: linear-gradient(135deg, #0D1117 0%, #1A2332 100%);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+    break-after: page;
+    direction: rtl;
+}
+.cover::before {
+    content: '';
+    position: absolute;
+    top: -100px;
+    left: -100px;
+    width: 400px;
+    height: 400px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(0, 210, 255, 0.15) 0%, transparent 70%);
+}
+.cover::after {
+    content: '';
+    position: absolute;
+    bottom: -150px;
+    right: -150px;
+    width: 500px;
+    height: 500px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(123, 47, 190, 0.10) 0%, transparent 70%);
+}
+.cover-tag {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 3px;
+    color: var(--c-primary);
+    text-transform: uppercase;
+    margin-bottom: 24px;
+    position: relative;
+    z-index: 2;
+    direction: rtl;
+}
+.cover-title {
+    font-size: 80px;
+    font-weight: 800;
+    line-height: 1.05;
+    color: var(--c-text);
+    margin: 0 0 16px 0;
+    position: relative;
+    z-index: 2;
+    direction: ltr;
+    text-align: right;
+}
+.cover-subtitle {
+    font-size: 22px;
+    font-weight: 400;
+    color: var(--c-text-secondary);
+    margin: 0 0 40px 0;
+    line-height: 1.5;
+    position: relative;
+    z-index: 2;
+}
+.cover-features {
+    position: relative;
+    z-index: 2;
+    margin-top: 30px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    direction: rtl;
+}
+.cover-feature {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(0, 210, 255, 0.15);
+    border-radius: 10px;
+    padding: 14px 16px;
+}
+.cover-feature-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--c-primary);
+    margin-bottom: 4px;
+}
+.cover-feature-desc {
+    font-size: 11px;
+    color: var(--c-text-secondary);
+    line-height: 1.5;
+}
+.cover-footer {
+    position: absolute;
+    bottom: 40px;
+    left: 60px;
+    right: 60px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 11px;
+    color: var(--c-text-secondary);
+    z-index: 2;
+    direction: rtl;
+}
+.cover-version {
+    background: var(--c-primary);
+    color: var(--c-bg);
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 11px;
+}
+
+/* ─── Main Content ──────────────────────────────────────────── */
+.main-content {
+    padding: 50px 55px 40px 55px;
+    direction: rtl;
+}
+
+/* Chapter headers */
+.chapter-header {
+    break-after: avoid;
+    break-inside: avoid;
+    margin-top: 24px;
+    margin-bottom: 14px;
+}
+.chapter-header:first-child { margin-top: 0; }
+.chapter-tag {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--c-primary);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+}
+.chapter-title {
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--c-text);
+    margin: 0 0 8px 0;
+    line-height: 1.3;
+}
+.divider {
+    width: 50px;
+    height: 3px;
+    background: var(--c-primary);
+    border-radius: 2px;
+    margin-bottom: 14px;
+}
+
+/* Body text */
+.body-text {
+    margin: 0 0 12px 0;
+    color: var(--c-text);
+    font-size: 14px;
+    line-height: 1.75;
+}
+.body-text strong {
+    color: var(--c-primary);
+    font-weight: 600;
+}
+
+/* Callout boxes */
+.callout {
+    break-inside: avoid;
+    background: var(--c-surface);
+    border-right: 3px solid var(--c-primary);
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin: 12px 0;
+}
+.callout-warning { border-right-color: var(--c-warning); }
+.callout-critical { border-right-color: var(--c-critical); }
+.callout-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--c-primary);
+    margin-bottom: 6px;
+    letter-spacing: 0.5px;
+}
+.callout-warning .callout-title { color: var(--c-warning); }
+.callout-critical .callout-title { color: var(--c-critical); }
+.callout-body {
+    font-size: 13px;
+    color: var(--c-text);
+    line-height: 1.65;
+    margin: 0;
+}
+
+/* Cards */
+.card {
+    break-inside: avoid;
+    background: var(--c-surface);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 10px;
+    padding: 16px 18px;
+    margin-bottom: 12px;
+}
+.card-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+    direction: rtl;
+}
+.card-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: rgba(0, 210, 255, 0.12);
+    color: var(--c-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+.card-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--c-text);
+}
+.card-body {
+    font-size: 13px;
+    color: var(--c-text-secondary);
+    line-height: 1.65;
+    margin: 0;
+}
+.card-body strong { color: var(--c-text); }
+
+/* Tables */
+.table {
+    break-inside: avoid;
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12px 0;
+    font-size: 12px;
+    direction: rtl;
+}
+.table th {
+    background: var(--c-surface);
+    color: var(--c-primary);
+    text-align: right;
+    padding: 10px 12px;
+    font-weight: 600;
+    font-size: 11px;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid var(--c-primary);
+}
+.table td {
+    padding: 10px 12px;
+    color: var(--c-text);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    line-height: 1.5;
+    text-align: right;
+}
+.table td strong { color: var(--c-primary); }
+.table tr:last-child td { border-bottom: none; }
+
+/* Code blocks */
+.code {
+    break-inside: avoid;
+    background: var(--c-bg);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin: 10px 0;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    color: var(--c-green);
+    line-height: 1.5;
+    direction: ltr;
+    text-align: left;
+    overflow-x: auto;
+}
+
+/* Steps */
+.steps {
+    margin: 12px 0;
+    padding: 0;
+    list-style: none;
+    counter-reset: step-counter;
+}
+.steps li {
+    break-inside: avoid;
+    padding-right: 36px;
+    position: relative;
+    margin-bottom: 10px;
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--c-text);
+}
+.steps li::before {
+    counter-increment: step-counter;
+    content: counter(step-counter);
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: 24px;
+    height: 24px;
+    background: var(--c-primary);
+    color: var(--c-bg);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+/* Feature grid */
+.feature-grid {
+    break-inside: avoid;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin: 12px 0;
+    direction: rtl;
+}
+.feature-item {
+    background: var(--c-surface);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 8px;
+    padding: 12px 14px;
+}
+.feature-item-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--c-primary);
+    margin-bottom: 4px;
+}
+.feature-item-desc {
+    font-size: 11px;
+    color: var(--c-text-secondary);
+    line-height: 1.55;
+    margin: 0;
+}
+
+/* ─── Ending Page ───────────────────────────────────────────── */
+.ending {
+    width: 720px;
+    height: 1020px;
+    box-sizing: border-box;
+    padding: 60px;
+    background: linear-gradient(135deg, #1A2332 0%, #0D1117 100%);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    break-before: page;
+    direction: rtl;
+}
+.ending::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 600px;
+    height: 600px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(0, 210, 255, 0.08) 0%, transparent 70%);
+}
+.ending-title {
+    font-size: 36px;
+    font-weight: 700;
+    color: var(--c-text);
+    margin: 0 0 16px 0;
+    position: relative;
+    z-index: 2;
+    line-height: 1.4;
+}
+.ending-text {
+    font-size: 15px;
+    color: var(--c-text-secondary);
+    line-height: 1.8;
+    max-width: 480px;
+    margin: 0 0 30px 0;
+    position: relative;
+    z-index: 2;
+}
+.ending-contact {
+    background: var(--c-surface);
+    border: 1px solid rgba(0, 210, 255, 0.2);
+    border-radius: 12px;
+    padding: 20px 28px;
+    position: relative;
+    z-index: 2;
+    margin-top: 10px;
+}
+.ending-contact-label {
+    font-size: 10px;
+    color: var(--c-primary);
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+}
+.ending-contact-value {
+    font-size: 14px;
+    color: var(--c-text);
+    font-weight: 500;
+}
+.ending-footer {
+    position: absolute;
+    bottom: 40px;
+    left: 60px;
+    right: 60px;
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--c-text-secondary);
+    z-index: 2;
+    direction: rtl;
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════ COVER ═══════════════ -->
+<div class="cover">
+    <div class="cover-tag">دليل المستخدم · العربية</div>
+    <h1 class="cover-title">EVDx</h1>
+    <p class="cover-subtitle">التشخيص الشامل للمركبات الكهربائية<br>منتقي الملفات الشخصية، دعم FFF0، دليل تحديث البرامج الثابتة</p>
+
+    <div class="cover-features">
+        <div class="cover-feature">
+            <div class="cover-feature-title">OBD-II بلوتوث</div>
+            <div class="cover-feature-desc">13 ملف تعريف للمحولات بما في ذلك FFF0، تهيئة ELM327، طابور الأوامر</div>
+        </div>
+        <div class="cover-feature">
+            <div class="cover-feature-title">مسح الأعطال</div>
+            <div class="cover-feature-desc">قراءة Modes 03/07/0A، مسح Mode 04، قاعدة 500+ كود</div>
+        </div>
+        <div class="cover-feature">
+            <div class="cover-feature-title">ثنائي اللغة</div>
+            <div class="cover-feature-desc">دعم كامل للعربية والإنجليزية مع تخطيط RTL</div>
+        </div>
+        <div class="cover-feature">
+            <div class="cover-feature-title">الخصوصية أولاً</div>
+            <div class="cover-feature-desc">100% على الجهاز، بلا سحابة، بلا تتبع</div>
+        </div>
+    </div>
+
+    <div class="cover-footer">
+        <span>د. وليد مندور · waleedmandour@gmail.com</span>
+        <span class="cover-version">Latest</span>
+    </div>
+</div>
+
+<!-- ═══════════════ MAIN CONTENT ═══════════════ -->
+<div class="main-content">
+
+<!-- Chapter 1 -->
+<div class="chapter-header">
+    <div class="chapter-tag">الفصل الأول</div>
+    <h2 class="chapter-title">البدء</h2>
+    <div class="divider"></div>
+</div>
+
+<p class="body-text">
+    EVDx هو <strong>تطبيق تشخيص للمركبات الكهربائية يضع الخصوصية أولاً</strong> يعمل على أندرويد 7.0 وما بعده، يحوّل هاتفك إلى أداة فحص OBD-II احترافية. قم بتوصيل محول ELM327 عبر البلوتوث LE أو الواي فاي، وسيقوم EVDx بقراءة البيانات الحية، ومسح أكواد الأعطال، وتتبع جلسات الشحن، وإنشاء تقارير PDF — كل ذلك دون إرسال أي بايت واحد إلى السحابة.
+</p>
+<p class="body-text">
+    الإصدار Latest يجلب إصلاحات حرجة لخط إدارة أوامر البلوتوث، ومنطق المسح التشخيصي الحقيقي، وتدفق قطع الاتصال. إذا كنت تترقى من الإصدار 1.4.x أو أقدم، فإن ملفات تعريف المركبات وسجل الصيانة الخاص بك محفوظة تلقائياً.
+</p>
+
+<div class="callout">
+    <div class="callout-title">متطلبات النظام</div>
+    <p class="callout-body">أندرويد 7.0 (API 24) أو أحدث. يُفضّل وجود بلوتوث LE (معظم المحولات الحديثة تدعمه). 25 ميجابايت مساحة تخزين حرة. لا يحتاج التطبيق إلى اتصال بالإنترنت — يعمل بالكامل دون اتصال بعد التثبيت.</p>
+</div>
+
+<div class="chapter-header">
+    <div class="chapter-tag">الفصل الأول · 1</div>
+    <h2 class="chapter-title">التثبيت</h2>
+    <div class="divider"></div>
+</div>
+
+<ol class="steps">
+    <li>حمّل ملف APK من <strong>صفحة إصدار Latest</strong> على GitHub. اسم الملف <code>evdx-Latest.apk</code> وحجمه تقريباً 25 ميجابايت.</li>
+    <li>على هاتفك الأندرويد، افتح <strong>الإعدادات → الأمان</strong> (أو <strong>الخصوصية</strong> على الإصدارات الأحدث) وفعّل <strong>"تثبيت التطبيقات من مصادر غير معروفة"</strong> لمتصفحك أو مدير الملفات.</li>
+    <li>افتح ملف APK المحمّل من الإشعارات أو مدير الملفات واضغط <strong>تثبيت</strong>. يستغرق التثبيت حوالي 10 ثوانٍ.</li>
+    <li>اضغط <strong>فتح</strong> عند اكتمال التثبيت. سيبدأ معالج الإعداد التلقائي لـ EVDx.</li>
+</ol>
+
+<div class="callout callout-warning">
+    <div class="callout-title">هل تترقى من إصدار سابق؟</div>
+    <p class="callout-body">إذا كان لديك الإصدار 1.4.x أو Latest مثبتاً، فإن تثبيت APK للإصدار Latest سيحل محله دون فقدان ملفات تعريف المركبات أو سجل الصيانة أو الإعدادات. الإصدار الجديد يستخدم نفس معرّف التطبيق (<code>com.waleedmandour.evdx</code>) ولكن مع versionCode جديد (8)، لذا يتعرف أندرويد عليه كتحديث.</p>
+</div>
+
+<!-- Chapter 2 -->
+<div class="chapter-header">
+    <div class="chapter-tag">الفصل الثاني</div>
+    <h2 class="chapter-title">معالج الإعداد</h2>
+    <div class="divider"></div>
+</div>
+
+<p class="body-text">
+    عند أول تشغيل لـ EVDx، تظهر معالج إعداد من 5 خطوات يرشدك خلال الإعداد الأولي. كل خطوة يمكن تخطّيها، ولكن إكمال الخطوات الخمس جميعاً يمنحك أفضل تجربة.
+</p>
+
+<div class="feature-grid">
+    <div class="feature-item">
+        <div class="feature-item-title">١. شاشة البداية</div>
+        <p class="feature-item-desc">مقدمة عن التطبيق وعرض الإصدار.</p>
+    </div>
+    <div class="feature-item">
+        <div class="feature-item-title">٢. اللغة</div>
+        <p class="feature-item-desc">اختر العربية أو الإنجليزية. التغيير فوري.</p>
+    </div>
+    <div class="feature-item">
+        <div class="feature-item-title">٣. الموافقة على الخصوصية</div>
+        <p class="feature-item-desc">تأكيد فهمك بأن البيانات لا تغادر الجهاز.</p>
+    </div>
+    <div class="feature-item">
+        <div class="feature-item-title">٤. إعداد المركبة</div>
+        <p class="feature-item-desc">اختيار الماركة والموديل وسعة البطارية.</p>
+    </div>
+    <div class="feature-item">
+        <div class="feature-item-title">٥. المحول/التجربة</div>
+        <p class="feature-item-desc">اقتران محول OBD أو تجربة الوضع التجريبي.</p>
+    </div>
+    <div class="feature-item">
+        <div class="feature-item-title">تم</div>
+        <p class="feature-item-desc">تفتح لوحة المعلومات — ابدأ القيادة أو المسح.</p>
+    </div>
+</div>
+
+<!-- Chapter 3 -->
+<div class="chapter-header">
+    <div class="chapter-tag">الفصل الثالث</div>
+    <h2 class="chapter-title">توصيل محول OBD-II</h2>
+    <div class="divider"></div>
+</div>
+
+<p class="body-text">
+    يدعم EVDx <strong>ثلاثة أوضاع توصيل</strong>: بلوتوث LE (موصى به)، وواي فاي ELM327، والوضع التجريبي (بيانات محاكاة لتجربة التطبيق بدون محول). اضغط زر <strong>توصيل</strong> في أعلى أي شاشة لفتح نافذة التوصيل.
+</p>
+
+<div class="chapter-header">
+    <div class="chapter-tag">الفصل الثالث · 1</div>
+    <h2 class="chapter-title">التوصيل عبر البلوتوث LE</h2>
+    <div class="divider"></div>
+</div>
+
+<p class="body-text">
+    معظم محولات OBD-II الحديثة تستخدم البلوتوث LE. يكتشف EVDx تلقائياً 10 ملفات تعريف للمحولات ويعرض كل أجهزة BLE في النطاق — بما في ذلك الأسماء غير المعروفة — لتتمكن من اختيار محولك حتى لو لم يكن على القائمة الرسمية.
+</p>
+
+<ol class="steps">
+    <li>أدخل محول OBD-II في منفذ التشخيص بالمركبة (أسفل لوحة العدادات، جانب السائق). يجب أن تضيء لمبة المحول.</li>
+    <li>في EVDx، اضغط <strong>توصيل → بلوتوث OBD</strong>. يبدأ المسح تلقائياً ويستمر لمدة 8 ثوانٍ.</li>
+    <li>على أندرويد 12+، سيُطلب منك منح صلاحيات <strong>BLUETOOTH_CONNECT</strong> و <strong>BLUETOOTH_SCAN</strong>. على أندرويد 11 وأقل، سيُطلب منك <strong>ACCESS_FINE_LOCATION</strong> (مطلوبة لنتائج مسح BLE).</li>
+    <li>عند انتهاء المسح، تُعرض الأجهزة الشبيهة بـ OBD في الأعلى (مرتبة حسب قوة الإشارة). اضغط على محولك للتوصيل.</li>
+    <li>يشغّل EVDx سلسلة تهيئة ELM327 الكاملة، ويستعلم عن تعريف المحول (البرامج الثابتة، الشريحة، البروتوكول)، ويكتشف PIDs المدعومة، ويقرأ رقم VIN. يستغرق ذلك 5-10 ثوانٍ.</li>
+</ol>
+
+<div class="callout">
+    <div class="callout-title">ما الجديد</div>
+    <p class="callout-body"><strong>ثلاثة تحسينات رئيسية:</strong> (1) تستخدم خدمة البلوتوث الآن <strong>طابور أوامر تسلسلي</strong> — لم تعد الأوامر المتزامنة تفسد استجابات بعضها البعض. (2) أُضيفت <strong>ثلاثة ملفات تعريف BLE جديدة</strong>: "vGate iCar Pro v3+ (FFF0)" لوحدات iCar Pro لعام 2023+، "BOLUTEK / CSR Clone (FFF0/FFF2)" للنسخ غير المتماثلة، وإعادة تسمية ملف FFE0 الحالي للتوضيح. (3) يظهر <strong>منتقي الملفات الشخصية</strong> تلقائياً عند فشل الكشف التلقائي — بدلاً من خطأ "characteristics not found" المحير، تحصل الآن على قائمة بجميع الملفات الـ 13 لتجربتها يدوياً.</p>
+</div>
+
+<div class="chapter-header">
+    <div class="chapter-tag">الفصل الثالث · 1ب</div>
+    <h2 class="chapter-title">منتقي الملفات الشخصية — "Characteristics Not Found"</h2>
+    <div class="divider"></div>
+</div>
+
+<p class="body-text">
+    إذا اتصل EVDx بمحولك لكنه لم يتمكن من العثور على خصائص GATT المتوقعة، فسترى خطأ <strong>"characteristics not found"</strong>. يحدث هذا عندما يستخدم المحول ملف تعريف BLE غير قياسي لا يتطابق مع أي من الملفات الـ 13 المعروفة في قاعدة بيانات EVDx.
+</p>
+<p class="body-text">
+    في Latest، بدلاً من عرض خطأ نهائي، يعرض EVDx الآن <strong>منتقي الملفات الشخصية</strong> تلقائياً. يسرد المنتقي جميع ملفات تعريف BLE الـ 13 المعروفة مع UUIDs الخاصة بها. اضغط على كل ملف تعريف لإعادة محاولة الاتصال به — سيحاول EVDx الاتصال باستخدام UUIDs الخاصة بذلك الملف.
+</p>
+
+<div class="callout callout-warning">
+    <div class="callout-title">Vgate iCar Pro v3+ (2023+)</div>
+    <p class="callout-body">إذا كان محول Vgate iCar Pro الخاص بك مشترى في 2023 أو بعده، فمن المحتمل أنه يستخدم ملف تعريف <strong>FFF0</strong> BLE بدلاً من FFE0 الكلاسيكي. عندما يظهر منتقي الملفات الشخصية، اضغط <strong>"vGate iCar Pro v3+ (FFF0)"</strong> أولاً — هذا هو الملف المخصص لوحدات iCar Pro الأحدث. إذا لم يعمل، جرّب "BOLUTEK / CSR Clone (FFF0/FFF2)" التالي، ثم الملفات المتبقية بالترتيب.</p>
+</div>
+
+<p class="body-text">
+    <strong>كيفية استخدام منتقي الملفات الشخصية:</strong>
+</p>
+<ol class="steps">
+    <li>اتصل بمحولك كالمعتاد (توصيل → بلوتوث OBD → اضغط جهازك).</li>
+    <li>إذا فشل الاتصال بـ "characteristics not found"، يظهر منتقي الملفات الشخصية تلقائياً أسفل قائمة الأجهزة.</li>
+    <li>اقرأ رسالة الخطأ — تخبرك بأي ملف تعريف تم تجربته وفشل.</li>
+    <li>اضغط على ملف تعريف من القائمة لإعادة المحاولة. يقوم EVDx بقطع الاتصال، إعادة الاتصال، وتجربة UUIDs الخاصة بالملف الجديد.</li>
+    <li>إذا عمل الملف الجديد، فأنت متصل. إذا لم يعمل، جرّب الملف التالي.</li>
+    <li>إذا لم يعمل أي من الملفات الـ 13، فقد يستخدم محولك ملف تعريف BLE غير قياسي تماماً. أبلغ عنه على GitHub مع ماركة محولك وموديله وسنة الشراء حتى نتمكن من إضافة الدعم.</li>
+</ol>
+
+<div class="callout">
+    <div class="callout-title">لماذا يحدث هذا؟</div>
+    <p class="callout-body">تكشف محولات BLE عن جدول خدمة GATT مع UUIDs محددة. تستخدم الشركات المصنعة المختلفة أنظمة UUID مختلفة — Vgate iCar Pro v1/v2 يستخدم <code>FFE0/FFE1</code>، Vgate iCar Pro v3+ يستخدم <code>FFF0/FFF1</code>، OBDLink يستخدم <code>18F0/2AF0/2AF1</code>، vLinker يستخدم Nordic NUS (<code>6e400001/002/003</code>)، إلخ. يقوم الكشف التلقائي في EVDx بفحص UUIDs لكل ملف تعريف معروف؛ إذا لم يتطابق أي منها، لا يمكنه معرفة UUIDs التي يجب استخدامها. يتيح لك منتقي الملفات الشخصية التجاوز اليدوي للكشف التلقائي.</p>
+</div>
+
+<div class="chapter-header">
+    <div class="chapter-tag">الفصل الثالث · 2</div>
+    <h2 class="chapter-title">التوصيل عبر واي فاي ELM327</h2>
+    <div class="divider"></div>
+</div>
+
+<p class="body-text">
+    بعض المحولات (لا سيما OBDLink WiFi وبعض نسخ ELM327 WiFi) توفر مقبس TCP بدلاً من BLE. يستطيع EVDx التحدث معها عبر HTTP المحلي.
+</p>
+
+<ol class="steps">
+    <li>صل هاتفك بشبكة واي فاي المحول (عادةً ما تكون باسم <code>OBDII</code> أو <code>WiFi_OBDII</code> أو ما شابه — راجع دليل المحول).</li>
+    <li>في EVDx، اضغط <strong>توصيل → واي فاي OBD</strong>.</li>
+    <li>أدخل عنوان IP للمحول (الافتراضي <code>192.168.0.10</code>) والمنفذ (الافتراضي <code>35000</code>).</li>
+    <li>اضغط <strong>توصيل</strong>. تُنفّذ نفس سلسلة تهيئة ELM327 كما في البلوتوث.</li>
+</ol>
+
+<div class="callout callout-warning">
+    <div class="callout-title">تنبيه حول الواي فاي</div>
+    <p class="callout-body">توفر محولات ELM327 اللاسلكية مقبس TCP خام، وليس HTTP. يستخدم EVDx بديلاً HTTP يعمل مع العديد من المحولات ولكن ليس جميعها. إذا فشل وضع الواي فاي في التوصيل، جرّب البلوتوث — فمعظم المحولات المباعة اليوم تدعم كليهما.</p>
+</div>
+
+<div class="chapter-header">
+    <div class="chapter-tag">الفصل الثالث · 3</div>
+    <h2 class="chapter-title">الوضع التجريبي</h2>
+    <div class="divider"></div>
+</div>
+
+<p class="body-text">
+    يُشغّل الوضع التجريبي محاكي القيادة/الشحن متعدد الماركات المدمج. ينتج بيانات قياس عن بُعد واقعية للمركبات الكهربائية لـ BYD (LFP)، وتسلا (NCA)، ونيسان (NMC)، وهيونداي/كيا (NCM)، ومجموعة VW (NMC)، أو ملفاً عاماً. استخدمه لاستكشاف التطبيق قبل شراء محول، أو لتدريب الموظفين دون شغل مركبة.
+</p>
+<p class="body-text">
+    لبدء الوضع التجريبي: <strong>توصيل → التجربة</strong>، اختر ماركة وموديل، ثم اضغط <strong>بدء الوضع التجريبي</strong>. يبدأ المحاكي فوراً بدفع البيانات الحية إلى لوحة المعلومات. في Latest، يقوم تشغيل المسح التشخيصي في الوضع التجريبي أيضاً بحقن عينتين من أكواد الأعطال (<code>P0A80</code> تدهور بطارية الهجين، <code>P0C79</code> أداء عاكس المحرك) لكي تتمكن من استكشاف واجهة التشخيص دون مركبة حقيقية.
+</p>
+
+<!-- Chapter 4 -->
+<div class="chapter-header">
+    <div class="chapter-tag">الفصل الرابع</div>
+    <h2 class="chapter-title">إجراء مسح تشخيصي</h2>
+    <div class="divider"></div>
+</div>
+
+<p class="body-text">
+    بمجرد التوصيل (بلوتوث، واي فاي، أو تجريبي)، افتح تبويب <strong>التشخيص</strong> واضغط <strong>تشغيل المسح الكامل</strong>. يستعلم EVDx وحدة التحكم الإلكترونية (ECU) للمركبة عن ثلاث فئات من أكواد الأعطال:
+</p>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>الوضع</th>
+            <th>النوع</th>
+            <th>ما يعيده</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr><td><strong>03</strong></td><td>أعطال مخزّنة</td><td>أكواد الأعطال النشطة المخزّنة حالياً في ECU</td></tr>
+        <tr><td><strong>07</strong></td><td>أعطال معلّقة</td><td>أعطال اكتُشفت ولكن لم تؤكَّد بعد (قد تُمحى ذاتياً)</td></tr>
+        <tr><td><strong>0A</strong></td><td>أعطال دائمة</td><td>أكواد محيها المستخدم لكن ECU يتابعها حسب لوائح EPA</td></tr>
+    </tbody>
+</table>
+
+<p class="body-text">
+    كل كود يُزوّد بوصف، ومستوى خطورة (منخفض / متوسط / عالٍ / حرج)، والأسباب الشائعة، والإجراءات الموصى بها من قاعدة بيانات الأعطال المدمجة التي تضم أكثر من 500 كود. اضغط على أي كود لتوسيع التفاصيل.
+</p>
+
+<div class="callout callout-critical">
+    <div class="callout-title">ما الذي أُصلح في Latest</div>
+    <p class="callout-body">في الإصدارين 1.4.x وLatest، كان زر "تشغيل المسح الكامل" <strong>يعرض شريط تقدم متحرك فقط</strong> — ولم يكن يستعلم المركبة فعلياً. تم إصلاح ذلك الآن: يُصدر الزر قراءات Mode 03/07/0A حقيقية عبر <code>bleService.readDTCs()</code> ويدمج النتائج مع الأوصاف من قاعدة بيانات الأعطال. كما يُرسل زر "مسح الأكواد" الآن أمر Mode 04 حقيقي إلى ECU (سابقاً كان يمسح حالة الواجهة المحلية فقط، فتعود الأكواد في المسح التالي).</p>
+</div>
+
+<div class="chapter-header">
+    <div class="chapter-tag">الفصل الرابع · 1</div>
+    <h2 class="chapter-title">مسح الأكواد</h2>
+    <div class="divider"></div>
+</div>
+
+<p class="body-text">
+    لمسح الأكواد من ECU للمركبة: اضغط <strong>مسح الأكواد</strong> في تبويب التشخيص، ثم أكّد في النافذة المنبثقة. يُرسل EVDx أمر Mode 04، ينتظر الرد الإيجابي، ويمسح قائمة الأعطال المحلية. يجب أيضاً أن تنطفئ لمبة فحص المحرك (MIL) إذا كانت جميع الأكواد الحرجة قد مُحيت.
+</p>
+
+<div class="callout callout-warning">
+    <div class="callout-title">مطابقة دقيقة لـ Mode 04</div>
+    <p class="callout-body">يُصلح Latest أيضاً خطأ إيجابية كاذبة في فحص نجاح مسح الأعطال. الكود السابق استخدم <code>response.includes('44')</code> الذي يطابق أي رد يحتوي على السلسلة "44" في أي مكان — بما في ذلك ردود OBD متعددة البايتات تحتوي على بايتات 0x44 مدمجة. الإصلاح يستخدم مطابقة دقيقة لبادئة الرد بعد إزالة المسافات، فلا يُبلَّغ عن النجاح إلا عندما يُعيد ECU فعلاً الرد الإيجابي لـ Mode 04.</p>
+</div>
+
+<!-- Chapter 5 -->
+<div class="chapter-header">
+    <div class="chapter-tag">الفصل الخامس</div>
+    <h2 class="chapter-title">البيانات الحية والاستطلاع</h2>
+    <div class="divider"></div>
+</div>
+
+<p class="body-text">
+    أثناء التوصيل، يستطلع EVDx وحدة ECU للمركبة كل 500 مللي ثانية عن أكواد PID القياسية SAE J1979 Mode 01. تُفلتر قائمة الاستطلاع لتشمل فقط أكواد PID التي تدعمها المركبة فعلاً (تُكتشف عبر استعلام bitfield 0100/0120/0140/... أثناء التوصيل).
+</p>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>PID</th>
+            <th>الاسم</th>
+            <th>الصيغة</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr><td><strong>0D</strong></td><td>سرعة المركبة</td><td>A كم/س</td></tr>
+        <tr><td><strong>0C</strong></td><td>RPM المحرك</td><td>(A×256+B)/4</td></tr>
+        <tr><td><strong>05</strong></td><td>حرارة المبرد / المحرك</td><td>A−40 °م</td></tr>
+        <tr><td><strong>0F</strong></td><td>حرارة الهواء الداخل / العاكس</td><td>A−40 °م</td></tr>
+        <tr><td><strong>42</strong></td><td>جهد وحدة التحكم</td><td>(A×256+B)/1000 فولت</td></tr>
+        <tr><td><strong>46</strong></td><td>حرارة الهواء المحيط</td><td>A−40 °م</td></tr>
+        <tr><td><strong>2F</strong></td><td>مستوى الوقود (بديل SOC)</td><td>A×100/255 %</td></tr>
+        <tr><td><strong>61</strong></td><td>عزم السائق المطلوب</td><td>A−125 %</td></tr>
+        <tr><td><strong>62</strong></td><td>عزم المحرك الفعلي</td><td>A−125 %</td></tr>
+        <tr><td><strong>A6</strong></td><td>عداد المسافة</td><td>(A×16777216+B×65536+C×256+D)/10 كم</td></tr>
+    </tbody>
+</table>
+
+<p class="body-text">
+    تتدفق البيانات الحية إلى تبويبات <strong>لوحة المعلومات</strong>، <strong>البطارية</strong>، <strong>الشحن</strong>، و<strong>البيانات الحية</strong>. يتيح لك تبويب البيانات الحية رسم حتى 6 معاملات في وقت واحد وتصدير النافذة كملف CSV.
+</p>
+
+<!-- Chapter 6 -->
+<div class="chapter-header">
+    <div class="chapter-tag">الفصل السادس</div>
+    <h2 class="chapter-title">تسجيل الجلسات</h2>
+    <div class="divider"></div>
+</div>
+
+<p class="body-text">
+    يتيح لك تبويب <strong>الجلسات</strong> تسجيل رحلة لمراجعتها لاحقاً. اضغط <strong>بدء الرحلة</strong> قبل القيادة و<strong>إيقاف الرحلة</strong> عند الانتهاء. يسجّل EVDx: المسافة، متوسط السرعة، أقصى سرعة، الطاقة المستهلكة، الطاقة المستردة عبر الكبح التجديدي، مدة الرحلة، SOC في البداية والنهاية، وتفصيل درجة القيادة الاقتصادية.
+</p>
+
+<div class="callout callout-critical">
+    <div class="callout-title">ما الذي أُصلح في Latest</div>
+    <p class="callout-body">في الإصدارات السابقة، كان سجل الجلسات يسجّل البيانات في <strong>الوضع التجريبي فقط</strong> — وعند التوصيل بمحول بلوتوث/واي فاي حقيقي، لم يكن زر "بدء الرحلة" يفعل شيئاً لأن المحاكي (الذي يكتب السجل) كان متوقفاً. يُصلح Latest ذلك: يكتب محلل استجابة OBD الآن مدخلات مجمّعة إلى سجل الجلسة كلما كان التسجيل نشطاً، مع تحديد معدل ثانية واحدة لكل PID لمنع الإغراق بمعدل الاستطلاع 500 مللي ثانية. تُسجَّل أيضاً أخطاء بروتوكول OBD (NO DATA، UNABLE TO CONNECT، BUS ERROR) لتتمكن من تشخيص مشاكل المحول أثناء الرحلة.</p>
+</div>
+
+<!-- Chapter 7 -->
+<div class="chapter-header">
+    <div class="chapter-tag">الفصل السابع</div>
+    <h2 class="chapter-title">المساعد الصوتي</h2>
+    <div class="divider"></div>
+</div>
+
+<p class="body-text">
+    يتضمن EVDx مساعداً صوتياً ثنائي اللغة مع التعرف على الكلام وتحويل النص إلى كلام على الجهاز. اضغط أيقونة الميكروفون العائمة (أسفل اليمين) لبدء التحدث، أو اضغط أيقونة الشررات لقراءة ملخص الصفحة الحالية بصوت عالٍ.
+</p>
+
+<p class="body-text">
+    يتعرف المساعد على <strong>أكثر من 90 عبارة أمر</strong> عبر العربية الفصحى، واللهجة الخليجية، واللهجة المصرية، والإنجليزية. أوامر التنقل ("لوحة المعلومات"، "البطارية"، "التشخيص") تبدّل التبويبات. استعلامات البيانات ("مستوى البطارية"، "المدى"، "حرارة المحرك") تقرأ القيمة الحالية بصوت عالٍ مع نبرة تتناسب مع مستوى الخطورة.
+</p>
+
+<div class="feature-grid">
+    <div class="feature-item">
+        <div class="feature-item-title">"battery"</div>
+        <p class="feature-item-desc">يقرأ SOC و SOH الحاليين.</p>
+    </div>
+    <div class="feature-item">
+        <div class="feature-item-title">"scan faults"</div>
+        <p class="feature-item-desc">ينتقل إلى تبويب التشخيص.</p>
+    </div>
+    <div class="feature-item">
+        <div class="feature-item-title">"summarize"</div>
+        <p class="feature-item-desc">يقرأ ملخص الصفحة الحالية.</p>
+    </div>
+    <div class="feature-item">
+        <div class="feature-item-title">"حالة البطارية"</div>
+        <p class="feature-item-desc">استعلام عن حالة البطارية بالعربية.</p>
+    </div>
+</div>
+
+<!-- Chapter 8 -->
+<div class="chapter-header">
+    <div class="chapter-tag">الفصل الثامن</div>
+    <h2 class="chapter-title">تقارير PDF</h2>
+    <div class="divider"></div>
+</div>
+
+<p class="body-text">
+    يستطيع EVDx إنشاء ثلاثة أنواع من تقارير PDF بالكامل على الجهاز باستخدام jsPDF:
+</p>
+
+<div class="card">
+    <div class="card-header">
+        <div class="card-icon">ب</div>
+        <div class="card-title">تقرير صحة البطارية</div>
+    </div>
+    <p class="card-body">SOC، SOH، تحليل جهد الخلايا، حالة الإدارة الحرارية، رسوم بيانية للسعة، وتوصيات العناية. يُنشأ من تبويب البطارية.</p>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <div class="card-icon">ت</div>
+        <div class="card-title">تقرير المسح التشخيصي</div>
+    </div>
+    <p class="card-body">قائمة DTC كاملة مع الأوصاف، ومستويات الخطورة، والأسباب، والإجراءات الموصى بها. يتضمن حالة جاهزية المراقبة. يُنشأ من تبويب التشخيص بعد المسح.</p>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <div class="card-icon">ر</div>
+        <div class="card-title">تقرير ملخص الرحلة</div>
+    </div>
+    <p class="card-body">المسافة، استهلاك الطاقة، تفصيل درجة القيادة الاقتصادية، تحليل التكلفة (ر.ع / دولار). يُنشأ من تبويب الجلسات بعد إيقاف رحلة.</p>
+</div>
+
+<!-- Chapter 9 -->
+<div class="chapter-header">
+    <div class="chapter-tag">الفصل التاسع</div>
+    <h2 class="chapter-title">تتبع الصيانة</h2>
+    <div class="divider"></div>
+</div>
+
+<p class="body-text">
+    يتيح لك تبويب <strong>الصيانة</strong> تسجيل سجلات الخدمة: تبديل الإطارات، فحص الكوابح، تغيير سائل التبريد، فلتر الهواء الداخلي، صحة البطارية، تحديث البرمجيات، أو أخرى. كل سجل يلتقط التاريخ، عداد المسافة، التكلفة (ر.ع)، الملاحظات، ومسافة الاستحقاق التالية. السجل الكامل قابل للفرز والتصدير.
+</p>
+
+<div class="callout">
+    <div class="callout-title">ما الذي أُصلح في Latest</div>
+    <p class="callout-body">كانت تُعرض تسميات نوع الخدمة سابقاً كمفاتيح خام (مثل <code>items.tire_rotation</code>) لأن ملفات الترجمة كانت تحتوي فقط على مفاتيح camelCase (مثل <code>items.tireRotation</code>). يضيف Latest المفاتيح السبعة snake_case إلى ملفات الترجمة الإنجليزية والعربية، فتُعرض أنواع الخدمة الآن بشكل صحيح كـ "تبديل الإطارات"، "فحص الكوابح"، إلخ.</p>
+</div>
+
+<!-- Chapter 10 -->
+<div class="chapter-header">
+    <div class="chapter-tag">الفصل العاشر</div>
+    <h2 class="chapter-title">الخصوصية والبيانات</h2>
+    <div class="divider"></div>
+</div>
+
+<p class="body-text">
+    بُني EVDx بـ <strong>بنية تضع الخصوصية أولاً</strong>. لا يُعلن AndroidManifest عن أي صلاحية إنترنت لحركة المرور السحابية — الوصول الوحيد للشبكة مخصص لاتصالات محول ELM327 اللاسلكية المحلية على 192.168.x.x. لا توجد حزم تحليلات، ولا تقارير أعطال، ولا حسابات مستخدمين، ولا تخزين على الخادم.
+</p>
+
+<p class="body-text">
+    جميع بيانات المركبة، وسجلات الجلسة، وسجلات الصيانة، والإعدادات مخزّنة على الجهاز باستخدام وسيط persist لـ Zustand (مدعوم بـ localStorage). لتصدير كل شيء كـ JSON: <strong>الإعدادات → تصدير البيانات</strong>. لحذف جميع البيانات: <strong>الإعدادات → حذف جميع البيانات</strong>.
+</p>
+
+<div class="callout">
+    <div class="callout-title">التحقق من ادعاء الخصوصية</div>
+    <p class="callout-body">يمكنك التحقق من أن EVDx لا يجري اتصالات شبكية صادرة بتشغيله في Network Inspector في Android Studio، أو باستخدام تطبيق جدار حماية مثل NetGuard لحظر جميع حركة المرور لـ EVDx — سيعمل التطبيق بشكل مماثل. الكود المصدري مفتوح في <code>github.com/waleedmandour/EVD</code>.</p>
+</div>
+
+<!-- Chapter 11 -->
+<div class="chapter-header">
+    <div class="chapter-tag">الفصل الحادي عشر</div>
+    <h2 class="chapter-title">استكشاف الأخطاء وإصلاحها</h2>
+    <div class="divider"></div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <div class="card-icon">!</div>
+        <div class="card-title">لا يتم العثور على محولات في مسح البلوتوث</div>
+    </div>
+    <p class="card-body">تأكد من أن محولك موصول ومُشغَّل (اللمبة مضاءة). اقترب لمسافة مترين من المحول. على أندرويد 11 وأقل، امنح <strong>ACCESS_FINE_LOCATION</strong> (مطلوبة لنتائج مسح BLE). أعِد تشغيل البلوتوث. اضغط <strong>مسح مرة أخرى</strong>.</p>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <div class="card-icon">!</div>
+        <div class="card-title">"UNABLE TO CONNECT" أثناء التهيئة</div>
+    </div>
+    <p class="card-body">لا يستطيع ELM327 تأسيس بروتوكول مع ECU. هذا يعني عادةً أن إشعال المركبة مطفأة — أدرها إلى ON (أو شغّل المحرك). بالنسبة للمركبات الكهربائية، يجب أن تكون المركبة في وضع READY. بعض المحولات تحتاج بضع ثوانٍ بعد التوصيل؛ انتظر 10 ثوانٍ وحاول مرة أخرى.</p>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <div class="card-icon">!</div>
+        <div class="card-title">ردود "NO DATA"</div>
+    </div>
+    <p class="card-body">ELM327 متصل لكن ECU لم يستجب لـ PID محدد. هذا طبيعي — ليست كل أكواد PID مدعومة على جميع المركبات. تُفلتر حلقة استطلاع EVDx تلقائياً لتشمل فقط أكواد PID المدعومة، لذا يجب أن ترى هذا فقط للاستعلامات الفردية (مثل VIN). إذا كانت كل رد NO DATA، فقد يكون البروتوكول خاطئاً — جرّب ATSP0 (الكشف التلقائي، الافتراضي).</p>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <div class="card-icon">!</div>
+        <div class="card-title">يعرض VIN أرقاماً إضافية أو أحرفاً خاطئة</div>
+    </div>
+    <p class="card-body">كان هذا خللاً في الإصدارين 1.4.x وLatest حيث كانت ردود VIN متعددة الإطارات تُحلَّل بشكل خاطئ — بايتات عدّاد الإطار (01، 02، 03) كانت تُفكَّر كأرقام ASCII وتُلوّث VIN. <strong>أُصلح هذا في Latest.</strong> إذا استمرت المشاكل، فقد يكون محولك يُعيد ردوداً متعددة الإطارات مشوّهة؛ جرّب محولاً آخر أو أبلغ عن المشكلة على GitHub.</p>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <div class="card-icon">!</div>
+        <div class="card-title">يعرض الوضع التجريبي تيار بطارية 12.5 A بدلاً من 125 A</div>
+    </div>
+    <p class="card-body">كان هذا خطأ حسابياً بمقدار 10× في المحاكي — الصيغة السابقة ضربت kW في 1000 (مُعاملة kW كـ W) AND قسمت على 10 في خطوة التقريب، ف display 125 A كـ 12.5 A. <strong>أُصلح هذا في Latest.</strong> يعرض الوضع التجريبي الآن تيارات بطارية واقعية.</p>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <div class="card-icon">!</div>
+        <div class="card-title">"Characteristics not found" عند الاتصال</div>
+    </div>
+    <p class="card-body">يعني هذا أن EVDx اتصل بالمحول عبر البلوتوث لكنه لم يتمكن من العثور على خصائص GATT اللازمة لقراءة/كتابة بيانات OBD. في <strong>Latest</strong>، يؤدي هذا إلى تشغيل <strong>منتقي الملفات الشخصية</strong> تلقائياً — راجع الفصل الثالث · 1ب للتعليمات الكاملة. إذا كان محولك Vgate iCar Pro مشترى في 2023 أو بعده، اختر <strong>"vGate iCar Pro v3+ (FFF0)"</strong> من منتقي الملفات الشخصية. إذا لم يعمل أي من الملفات الـ 13، فقد يستخدم محولك ملف تعريف BLE غير قياسي تماماً — أبلغ عنه على GitHub مع ماركة محولك وموديله وسنة الشراء.</p>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <div class="card-icon">!</div>
+        <div class="card-title">تحديث البرامج الثابتة للمحول</div>
+    </div>
+    <p class="card-body">لا يستطيع EVDx تحديث البرامج الثابتة للمحول مباشرة — كل شركة مصنعة توفر أداتها الخاصة. افتح تبويب <strong>الجهاز</strong> في EVDx وانتقل إلى قسم <strong>"معلومات تحديث البرامج الثابتة"</strong> للحصول على مسار التحديث الرسمي لماركة محولك. Vgate iCar Pro لا يحتوي على أداة برامج ثابتة عامة — استخدم منتقي الملفات الشخصية بدلاً من ذلك. يمكن تحديث محولات OBDLink و vLinker عبر تطبيقات أندرويد الخاصة بها.</p>
+</div>
+
+</div>
+
+<!-- ═══════════════ ENDING ═══════════════ -->
+<div class="ending">
+    <h2 class="ending-title">صُمم لمجتمع المركبات الكهربائية العالمي</h2>
+    <p class="ending-text">
+        EVDx مشروع مستقل يموّله المطوّر بالكامل من ميزانيته الشخصية، أنشأه الدكتور وليد مندور. الكود المصدري والإصدارات والتوثيق متاحة جميعها على GitHub. ترحيب بالملاحظات وتقارير الأعطال والمساهمات.
+    </p>
+    <div class="ending-contact">
+        <div class="ending-contact-label">المؤلف</div>
+        <div class="ending-contact-value">د. وليد مندور</div>
+        <div class="ending-contact-label" style="margin-top: 12px;">التواصل</div>
+        <div class="ending-contact-value">waleedmandour@gmail.com</div>
+        <div class="ending-contact-label" style="margin-top: 12px;">المستودع</div>
+        <div class="ending-contact-value" style="direction: ltr; text-align: right;">github.com/waleedmandour/EVD</div>
+    </div>
+    <div class="ending-footer">
+        <span>EVDx · دليل المستخدم (العربية)</span>
+        <span>© 2026 د. وليد مندور</span>
+    </div>
+</div>
+
+</body>
+</html>
