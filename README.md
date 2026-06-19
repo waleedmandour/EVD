@@ -540,9 +540,9 @@ See [LICENSE](LICENSE) for details.
 
 ## 🕊️ Dedication إهداء
 
-أُهدي هذا المشروع إلى مجتمع السيارات الكهربائية في العالم العربي، سواء في مصر أو الأردن أو عمان أو المغرب أو أي بلد عربي. فقد صممت هذه الأداة لتكون عوناً لكم في العناية بمركباتكم بكل سهولة. نفعنا الله وإياكم.
+إهداء إلي أهلنا في مصر وعمان وكل العرب والمسلمين. صممت هذه الأداة لتكون عوناً لكم في العناية بمركباتكم بكل سهولة. نفعنا الله وإياكم.
 
-I dedicate this project to the Arab EV community, whether in Egypt, Jordan, Oman, Morocco, or any other Arab country. I designed this tool to help you care for your vehicles with ease. May it be of benefit to us all.
+Made with ❤ to Egypt, Oman, and all Arab and Muslim Communities. I designed this tool to help you care for your vehicles with ease. May it be of benefit to us all.
 
 ---
 
