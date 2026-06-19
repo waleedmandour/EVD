@@ -62,7 +62,7 @@ const ADAPTER_PROFILES: BLEAdapterProfile[] = [
     serviceUUID: '0000ffe0-0000-1000-8000-00805f9b34fb',
     writeUUID: '0000ffe1-0000-1000-8000-00805f9b34fb',
     notifyUUID: '0000ffe1-0000-1000-8000-00805f9b34fb',
-    aliases: ['icar', 'vgate', 'icarpro', 'icar pro', 'v-gate', 'vgate icar'],
+    aliases: ['icar', 'vgate', 'icarpro', 'icar pro', 'v-gate', 'vgate icar', 'android-vlink', 'android vlink'],
   },
   {
     // NEW in v1.5.2: Vgate iCar Pro v3+ (2023+) and many BOLUTEK / Silicon Labs
@@ -74,7 +74,7 @@ const ADAPTER_PROFILES: BLEAdapterProfile[] = [
     serviceUUID: '0000fff0-0000-1000-8000-00805f9b34fb',
     writeUUID: '0000fff1-0000-1000-8000-00805f9b34fb',
     notifyUUID: '0000fff1-0000-1000-8000-00805f9b34fb',
-    aliases: ['icar v3', 'vgate v3', 'bolutek', 'fff0', 'fff1'],
+    aliases: ['icar v3', 'vgate v3', 'bolutek', 'fff0', 'fff1', 'android-vlink v3', 'android vlink v3'],
   },
   {
     // NEW in v1.5.2: BOLUTEK / CSR-based clones commonly use FFF0 with FFF2
@@ -271,6 +271,7 @@ export interface ScannedDevice {
   profile?: BLEAdapterProfile;
   isOBDLike: boolean;   // True if name matches known OBD patterns
   isUnknown: boolean;   // True if device name is empty/unavailable
+  isIOSMode: boolean;   // True if adapter is in iOS BLE mode (can't connect from Android)
 }
 
 // ─── Custom (Manufacturer-Specific) PIDs ─────────────────────────────────────
@@ -480,6 +481,18 @@ export class BLEService {
 
         const isUnknown = !name;
 
+        // v1.5.3: Detect iOS BLE mode. Some dual-mode adapters (notably Vgate
+        // iCar Pro) advertise as "iOS BLE" when locked to iOS mode. These
+        // cannot be connected from Android — the GATT profile is completely
+        // different from the ELM327 standard. We tag them so the UI can
+        // show a warning instead of letting the user try (and fail) to
+        // connect.
+        const lowerName = name.toLowerCase();
+        const isIOSMode = lowerName === 'ios ble' ||
+          lowerName === 'ios-ble' ||
+          lowerName === 'ios_ble' ||
+          (lowerName.includes('ios') && lowerName.includes('ble'));
+
         // Show ALL BLE devices — user chooses which is their OBD adapter.
         // Many adapters have non-standard names (BT05, HC-08, CC41-A, JDY-23, etc.)
         // or no name at all. The user knows their device better than our keyword list.
@@ -490,6 +503,7 @@ export class BLEService {
           profile,
           isOBDLike,
           isUnknown,
+          isIOSMode,
         });
       });
 
