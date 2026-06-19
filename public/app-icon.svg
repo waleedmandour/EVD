@@ -1,68 +1,37 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#0D1117"/>
-      <stop offset="100%" style="stop-color:#1A2332"/>
-    </linearGradient>
-    <linearGradient id="boltGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+    <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" style="stop-color:#00D2FF"/>
-      <stop offset="100%" style="stop-color:#0099CC"/>
+      <stop offset="100%" style="stop-color:#7B2FBE"/>
     </linearGradient>
-    <linearGradient id="carGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" style="stop-color:#E8EAF6"/>
-      <stop offset="100%" style="stop-color:#B0BEC5"/>
-    </linearGradient>
-    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-      <feGaussianBlur stdDeviation="8" result="coloredBlur"/>
+    <filter id="logoGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="12" result="blur"/>
       <feMerge>
-        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="blur"/>
         <feMergeNode in="SourceGraphic"/>
       </feMerge>
     </filter>
   </defs>
 
-  <!-- Rounded square background -->
-  <rect width="512" height="512" rx="112" ry="112" fill="url(#bgGrad)"/>
+  <!-- Background: dark rounded square (app theme) -->
+  <rect width="1024" height="1024" rx="224" ry="224" fill="#0D1117"/>
 
-  <!-- Subtle border accent -->
-  <rect x="4" y="4" width="504" height="504" rx="108" ry="108" fill="none" stroke="#00D2FF" stroke-width="2" opacity="0.3"/>
+  <!-- Logo: gradient rounded square with lightning bolt (matches app header) -->
+  <g transform="translate(512, 420)">
+    <!-- Gradient square -->
+    <rect x="-200" y="-200" width="400" height="400" rx="88" ry="88" fill="url(#logoGrad)" filter="url(#logoGlow)"/>
 
-  <!-- EV car silhouette (simplified top-view) -->
-  <g transform="translate(256, 280)">
-    <!-- Car body -->
-    <path d="M -90,-50 Q -90,-65 -75,-65 L 75,-65 Q 90,-65 90,-50 L 90,40 Q 90,55 75,55 L -75,55 Q -90,55 -90,40 Z"
-          fill="url(#carGrad)" opacity="0.15"/>
-    <!-- Windshield (front) -->
-    <path d="M -60,-50 L -40,-30 L 40,-30 L 60,-50 Z" fill="#00D2FF" opacity="0.2"/>
-    <!-- Rear window -->
-    <path d="M -60,40 L -40,20 L 40,20 L 60,40 Z" fill="#00D2FF" opacity="0.15"/>
-    <!-- Side windows -->
-    <rect x="-40" y="-30" width="80" height="50" rx="5" fill="#00D2FF" opacity="0.1"/>
-    <!-- Wheels -->
-    <ellipse cx="-65" cy="-35" rx="12" ry="18" fill="#1A2332" stroke="#78909C" stroke-width="2"/>
-    <ellipse cx="65" cy="-35" rx="12" ry="18" fill="#1A2332" stroke="#78909C" stroke-width="2"/>
-    <ellipse cx="-65" cy="35" rx="12" ry="18" fill="#1A2332" stroke="#78909C" stroke-width="2"/>
-    <ellipse cx="65" cy="35" rx="12" ry="18" fill="#1A2332" stroke="#78909C" stroke-width="2"/>
+    <!-- Lightning bolt (Zap icon shape, scaled up) -->
+    <path d="M 30,-130 L -50,-130 L -10,-30 L -60,-30 L 50,130 L 10,20 L 60,20 Z"
+          fill="#FFFFFF" stroke="#FFFFFF" stroke-width="4" stroke-linejoin="round"/>
   </g>
 
-  <!-- Lightning bolt (EV symbol) - prominent, with glow -->
-  <g transform="translate(256, 200)" filter="url(#glow)">
-    <path d="M -20,-55 L 10,-55 L -5,-15 L 20,-15 L -15,45 L 0,5 L -25,5 Z"
-          fill="url(#boltGrad)" stroke="#00D2FF" stroke-width="1.5" stroke-linejoin="round"/>
-  </g>
-
-  <!-- "EVDx" text at bottom -->
-  <text x="256" y="430" text-anchor="middle" font-family="'Inter', 'Segoe UI', sans-serif"
-        font-size="52" font-weight="800" fill="#00D2FF" letter-spacing="2">EVDx</text>
+  <!-- "EVDx" text (matches app branding) -->
+  <text x="512" y="800" text-anchor="middle" font-family="'Inter', 'Segoe UI', sans-serif"
+        font-size="96" font-weight="800" fill="#00D2FF" letter-spacing="4">EVDx</text>
 
   <!-- Subtitle -->
-  <text x="256" y="465" text-anchor="middle" font-family="'Inter', 'Segoe UI', sans-serif"
-        font-size="16" font-weight="400" fill="#78909C" letter-spacing="3">EV DIAGNOSTICS</text>
-
-  <!-- Diagnostic pulse lines (subtle, top corners) -->
-  <g opacity="0.4" stroke="#00E676" stroke-width="2" fill="none" stroke-linecap="round">
-    <polyline points="40,120 60,120 65,110 75,130 85,120 110,120"/>
-    <polyline points="402,120 422,120 427,110 437,130 447,120 472,120"/>
-  </g>
+  <text x="512" y="870" text-anchor="middle" font-family="'Inter', 'Segoe UI', sans-serif"
+        font-size="28" font-weight="400" fill="#78909C" letter-spacing="6">EV DIAGNOSTICS</text>
 </svg>
