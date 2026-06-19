@@ -257,7 +257,7 @@ export interface AppSettings {
   dataSharing: boolean;
   wifiIp: string;
   wifiPort: number;
-  currency: 'OMR' | 'USD';
+  currency: 'OMR' | 'USD' | 'SAR' | 'AED' | 'QAR' | 'BHD' | 'KWD' | 'EGP' | 'JOD' | 'MAD' | 'DZD' | 'TND' | 'LYD' | 'IQD' | 'SDG' | 'YER';
   electricityCostPerKwh: number;
   alertThresholds: AlertThresholds;
   quietHours: QuietHours;
