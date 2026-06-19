@@ -286,7 +286,7 @@ export default function SettingsView() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-evdx-text">{isRTL ? 'سعر الكهرباء' : 'Electricity Rate'}</p>
-              <p className="text-xs text-evdx-text-secondary">{settings.electricityCostPerKwh} OMR/kWh</p>
+              <p className="text-xs text-evdx-text-secondary">{settings.electricityCostPerKwh} {settings.currency}/kWh</p>
             </div>
             <Input
               type="number"
@@ -295,6 +295,36 @@ export default function SettingsView() {
               className="w-24 bg-[#0D1117] border-white/10 text-evdx-text text-sm h-8"
               step="0.001"
             />
+          </div>
+
+          {/* v1.5.3: Currency selector with Arab + international currencies */}
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-evdx-text">{isRTL ? 'العملة' : 'Currency'}</p>
+              <p className="text-xs text-evdx-text-secondary">{isRTL ? 'عملة حساب التكلفة' : 'Cost calculation currency'}</p>
+            </div>
+            <select
+              value={settings.currency}
+              onChange={(e) => updateSettings({ currency: e.target.value as any })}
+              className="w-32 bg-[#0D1117] border border-white/10 rounded-lg px-3 py-2 text-evdx-text text-sm focus:outline-none focus:border-evdx-primary"
+            >
+              <option value="OMR">OMR — Omani Rial</option>
+              <option value="SAR">SAR — Saudi Riyal</option>
+              <option value="AED">AED — UAE Dirham</option>
+              <option value="QAR">QAR — Qatari Riyal</option>
+              <option value="BHD">BHD — Bahraini Dinar</option>
+              <option value="KWD">KWD — Kuwaiti Dinar</option>
+              <option value="EGP">EGP — Egyptian Pound</option>
+              <option value="JOD">JOD — Jordanian Dinar</option>
+              <option value="MAD">MAD — Moroccan Dirham</option>
+              <option value="DZD">DZD — Algerian Dinar</option>
+              <option value="TND">TND — Tunisian Dinar</option>
+              <option value="LYD">LYD — Libyan Dinar</option>
+              <option value="IQD">IQD — Iraqi Dinar</option>
+              <option value="SDG">SDG — Sudanese Pound</option>
+              <option value="YER">YER — Yemeni Rial</option>
+              <option value="USD">USD — US Dollar</option>
+            </select>
           </div>
         </CardContent>
       </Card>
@@ -343,7 +373,15 @@ export default function SettingsView() {
 
           <div className="text-center pt-2">
             <p className="text-[10px] text-evdx-text-secondary flex items-center justify-center gap-1">
-              Made with <Heart size={10} className="text-evdx-critical fill-evdx-critical" /> in Oman
+              {isRTL ? (
+                <>
+                  إهداء إلي أهلنا في <Heart size={10} className="text-evdx-critical fill-evdx-critical" /> مصر وعمان وكل العرب والمسلمين
+                </>
+              ) : (
+                <>
+                  Made with <Heart size={10} className="text-evdx-critical fill-evdx-critical" /> to Egypt, Oman, and all Arab and Muslim Communities
+                </>
+              )}
             </p>
           </div>
         </CardContent>
