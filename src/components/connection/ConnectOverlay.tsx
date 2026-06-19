@@ -351,29 +351,35 @@ export default function ConnectOverlay({ onClose }: ConnectOverlayProps) {
                                 </div>
                               )}
                               <button
-                                onClick={() => handleBluetoothConnect(device)}
-                                disabled={connectingToDevice !== null}
+                                onClick={() => device.isIOSMode ? null : handleBluetoothConnect(device)}
+                                disabled={connectingToDevice !== null || device.isIOSMode}
                                 className={`w-full flex items-center gap-3 rounded-lg px-4 py-3 transition-colors disabled:opacity-50 ${
-                                  device.isOBDLike
+                                  device.isIOSMode
+                                    ? 'bg-[#0D1117]/40 border border-evdx-critical/20 cursor-not-allowed'
+                                    : device.isOBDLike
                                     ? 'bg-[#0D1117] hover:bg-evdx-primary/5 border border-evdx-primary/20'
                                     : 'bg-[#0D1117]/60 hover:bg-evdx-primary/5 border border-white/5'
                                 }`}
                               >
-                                <Bluetooth size={18} className={device.isOBDLike ? 'text-evdx-primary' : 'text-evdx-text-secondary'} />
+                                <Bluetooth size={18} className={device.isIOSMode ? 'text-evdx-critical' : device.isOBDLike ? 'text-evdx-primary' : 'text-evdx-text-secondary'} />
                                 <div className="flex-1 text-start">
                                   <span className="text-sm text-evdx-text block">{device.name}</span>
                                   <span className="text-xs text-evdx-text-secondary">
                                     RSSI: {device.rssi} dBm
                                     {device.isUnknown && ` · ${t('nameUnavailable')}`}
+                                    {device.isIOSMode && ` · ${t('iosModeWarning')}`}
                                   </span>
                                 </div>
                                 {connectingToDevice === device.deviceId ? (
                                   <Loader2 size={16} className="animate-spin text-evdx-primary" />
                                 ) : null}
-                                {device.profile && (
+                                {device.isIOSMode && (
+                                  <span className="text-[10px] text-evdx-critical bg-evdx-critical/10 px-1.5 py-0.5 rounded">{t('iosMode')}</span>
+                                )}
+                                {!device.isIOSMode && device.profile && (
                                   <span className="text-[10px] text-evdx-green bg-evdx-green/10 px-1.5 py-0.5 rounded">{device.profile.name}</span>
                                 )}
-                                {!device.isOBDLike && !device.isUnknown && (
+                                {!device.isIOSMode && !device.isOBDLike && !device.isUnknown && (
                                   <span className="text-[10px] text-evdx-text-secondary bg-white/5 px-1.5 py-0.5 rounded">{t('ble')}</span>
                                 )}
                               </button>
