@@ -34,6 +34,39 @@ export default function ConnectOverlay({ onClose }: ConnectOverlayProps) {
   const [showProfilePicker, setShowProfilePicker] = useState(false);
   const [profilePickerDevice, setProfilePickerDevice] = useState<ScannedDevice | null>(null);
   const [profilesList, setProfilesList] = useState<Array<{ name: string; serviceUUID: string; writeUUID: string; notifyUUID: string }>>([]);
+  // Bonded (paired) devices — checked immediately when the user enters
+  // Bluetooth mode, so they can "Quick Connect" without waiting for a scan.
+  const [bondedDevices, setBondedDevices] = useState<ScannedDevice[]>([]);
+  const [checkingBonded, setCheckingBonded] = useState(false);
+
+  /**
+   * Check Android's bonded (paired) BLE device list for OBD-like adapters.
+   * Called automatically when the user enters Bluetooth mode — if bonded
+   * devices are found, they appear at the top of the screen as "Quick Connect"
+   * options, so the user can connect instantly without scanning.
+   */
+  const checkBondedDevices = useCallback(async () => {
+    setCheckingBonded(true);
+    try {
+      const { requestBlePermissions } = await import('@/lib/permissions');
+      const permResult = await requestBlePermissions();
+      if (!permResult.granted) {
+        setCheckingBonded(false);
+        return;
+      }
+      const { bleService } = await import('@/lib/ble-service');
+      await bleService.initialize();
+      const bonded = await bleService.getBondedOBDDevices();
+      setBondedDevices(bonded);
+      if (bonded.length > 0) {
+        console.log(`[ConnectOverlay] Found ${bonded.length} bonded OBD device(s) for quick connect`);
+      }
+    } catch (error) {
+      console.warn('[ConnectOverlay] Bonded device check failed:', error);
+    } finally {
+      setCheckingBonded(false);
+    }
+  }, []);
 
   const handleBluetoothScan = useCallback(async () => {
     setScanning(true);
@@ -260,7 +293,11 @@ export default function ConnectOverlay({ onClose }: ConnectOverlayProps) {
                   <button
                     onClick={() => {
                       setMode('bluetooth');
-                      // Auto-start scan when entering bluetooth mode
+                      // Check bonded (paired) devices first — if the user has
+                      // already paired their OBD adapter, show it as a Quick
+                      // Connect option before the scan even starts.
+                      setTimeout(() => checkBondedDevices(), 100);
+                      // Auto-start scan in parallel
                       setTimeout(() => handleBluetoothScan(), 300);
                     }}
                     className="w-full flex items-center gap-4 bg-[#0D1117] hover:bg-[#0D1117]/80 border border-white/5 rounded-xl p-4 transition-colors"
@@ -318,6 +355,47 @@ export default function ConnectOverlay({ onClose }: ConnectOverlayProps) {
                     <div className="flex items-start gap-2 bg-evdx-critical/10 border border-evdx-critical/20 rounded-lg p-3">
                       <AlertCircle size={16} className="text-evdx-critical shrink-0 mt-0.5" />
                       <p className="text-xs text-evdx-critical">{permissionError}</p>
+                    </div>
+                  )}
+
+                  {/* Quick Connect: bonded (paired) devices — appears instantly,
+                      before the scan finishes. The user can tap to connect
+                      immediately without waiting for the 8-second scan. */}
+                  {bondedDevices.length > 0 && !connectingToDevice && (
+                    <div className="bg-evdx-green/5 border border-evdx-green/20 rounded-xl p-3 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Zap size={14} className="text-evdx-green" />
+                        <p className="text-xs font-semibold text-evdx-green">{t('quickConnect')}</p>
+                      </div>
+                      {bondedDevices.map((device) => (
+                        <button
+                          key={device.deviceId}
+                          onClick={() => device.isIOSMode ? null : handleBluetoothConnect(device)}
+                          disabled={device.isIOSMode}
+                          className={`w-full flex items-center gap-3 rounded-lg px-4 py-3 transition-colors disabled:opacity-50 ${
+                            device.isIOSMode
+                              ? 'bg-[#0D1117]/40 border border-evdx-critical/20 cursor-not-allowed'
+                              : 'bg-[#0D1117] hover:bg-evdx-green/10 border border-evdx-green/30'
+                          }`}
+                        >
+                          <Bluetooth size={18} className={device.isIOSMode ? 'text-evdx-critical' : 'text-evdx-green'} />
+                          <div className="flex-1 text-start">
+                            <span className="text-sm text-evdx-text block">{device.name}</span>
+                            <span className="text-xs text-evdx-green">{t('pairedDevice')}</span>
+                            {device.isIOSMode && <span className="text-xs text-evdx-critical block">{t('iosModeWarning')}</span>}
+                          </div>
+                          {!device.isIOSMode && device.profile && (
+                            <span className="text-[10px] text-evdx-green bg-evdx-green/10 px-1.5 py-0.5 rounded">{device.profile.name}</span>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {checkingBonded && !scanning && bondedDevices.length === 0 && (
+                    <div className="flex items-center justify-center py-4 gap-2">
+                      <Loader2 size={16} className="animate-spin text-evdx-primary" />
+                      <p className="text-xs text-evdx-text-secondary">{t('checkingPaired')}</p>
                     </div>
                   )}
 
