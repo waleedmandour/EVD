@@ -529,6 +529,81 @@ export class BLEService {
   }
 
   /**
+   * Get OBD-like devices from Android's bonded (paired) device list.
+   *
+   * Uses `BleClient.getBondedDevices()` — which calls Android's
+   * `BluetoothAdapter.getBondedDevices()` under the hood — to retrieve
+   * all BLE devices the user has already paired with at the OS level.
+   * We then filter to those that look like OBD adapters.
+   *
+   * This is faster than a full BLE scan (no 8-second discovery needed)
+   * and lets us offer a "Quick Connect" option for previously-paired
+   * adapters.
+   *
+   * Returns an empty array on non-Android platforms or if no bonded
+   * devices match OBD patterns.
+   */
+  async getBondedOBDDevices(): Promise<ScannedDevice[]> {
+    if (!this.initialized) {
+      await this.initialize();
+    }
+
+    try {
+      const bonded = await BleClient.getBondedDevices();
+      const result: ScannedDevice[] = [];
+
+      for (const device of bonded) {
+        const name = device.name || '';
+        const profile = this.matchProfile(name, device.deviceId);
+
+        // Use the same OBD-like detection as scan()
+        const lowerName = name.toLowerCase();
+        const isOBDLike = !!(profile ||
+          lowerName.includes('obd') ||
+          lowerName.includes('elm') ||
+          lowerName.includes('vlink') ||
+          lowerName.includes('icar') ||
+          lowerName.includes('vgate') ||
+          lowerName.includes('carly') ||
+          lowerName.includes('veepeak') ||
+          lowerName.includes('lemon') ||
+          lowerName.includes('link') ||
+          lowerName.includes('scanner') ||
+          lowerName.includes('diag') ||
+          lowerName.includes('ble') ||
+          lowerName.includes('bth') ||
+          lowerName.includes('hh') ||
+          lowerName.includes('android-vlink'));
+
+        const isIOSMode = lowerName === 'ios ble' ||
+          lowerName === 'ios-ble' ||
+          lowerName === 'ios_ble' ||
+          (lowerName.includes('ios') && lowerName.includes('ble'));
+
+        // Only include OBD-like devices (skip headphones, watches, etc.)
+        // Also include unknown-name devices — user may know which one is theirs
+        if (isOBDLike || isIOSMode || !name) {
+          result.push({
+            deviceId: device.deviceId,
+            name: name || `Unknown (${device.deviceId.substring(0, 8)})`,
+            rssi: -50, // Bonded devices don't have RSSI — use a default "good" value
+            profile,
+            isOBDLike,
+            isUnknown: !name,
+            isIOSMode,
+          });
+        }
+      }
+
+      console.log(`[BLE] Found ${result.length} bonded OBD-like device(s)`);
+      return result;
+    } catch (error) {
+      console.warn('[BLE] getBondedDevices failed:', error);
+      return [];
+    }
+  }
+
+  /**
    * Connect to a BLE OBD adapter.
    * After connection:
    * 1. Set up BLE notifications
