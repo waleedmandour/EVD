@@ -148,6 +148,20 @@ const ADAPTER_PROFILES: BLEAdapterProfile[] = [
     notifyUUID: '0000ffe1-0000-1000-8000-00805f9b34fb',
     aliases: ['elm327', 'elm-327', 'obd2', 'obdii', 'obd-ii', 'obd scanner'],
   },
+  {
+    name: 'Microchip RN4020',
+    serviceUUID: '49535343-fe7d-4ae5-8fa9-9fafd205e455',
+    writeUUID: '49535343-1e4d-4bd9-ba61-23c647249616',
+    notifyUUID: '49535343-1e4d-4bd9-ba61-23c647249616',
+    aliases: ['microchip', 'rn4020'],
+  },
+  {
+    name: 'TIO Transparent UART',
+    serviceUUID: '0000fefb-0000-1000-8000-00805f9b34fb',
+    writeUUID: '00000001-0000-1000-8000-008025000000',
+    notifyUUID: '00000002-0000-1000-8000-008025000000',
+    aliases: ['tio', 'transparent uart'],
+  },
 ];
 
 // ─── ELM327 AT Command Sequences ──────────────────────────────────────────────
@@ -374,6 +388,12 @@ export class BLEService {
    * the connection state has been cleared.
    */
   private lastConnectedDeviceName: string = '';
+  private reconnectAttempts = 0;
+  private readonly MAX_RECONNECT_ATTEMPTS = 3;
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private isReconnecting = false;
+  private keepaliveTimer: ReturnType<typeof setInterval> | null = null;
+  private readonly KEEPALIVE_INTERVAL_MS = 10000;
   private activeProfile: BLEAdapterProfile | null = null;
   private responseBuffer = '';
   private responseResolve: ((value: string) => void) | null = null;
@@ -619,9 +639,13 @@ export class BLEService {
     // synchronous name lookup, so we use the deviceId as a fallback).
     // This is used in error messages when detectProfile() throws.
     this.lastConnectedDeviceName = deviceId;
+    this.reconnectAttempts = 0;
 
     try {
-      await BleClient.connect(deviceId);
+      await BleClient.connect(deviceId, (disconnectedDeviceId: string) => {
+        console.log('[BLE] Disconnected from', disconnectedDeviceId);
+        this.handleDisconnect(disconnectedDeviceId);
+      });
       this.connectedDeviceId = deviceId;
 
       // If no profile was passed in, auto-detect. This now throws
@@ -821,6 +845,16 @@ export class BLEService {
   async disconnect(): Promise<void> {
     // Stop polling first so no new commands are queued
     this.stopPolling();
+
+    // Cancel any pending reconnect attempts
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+    this.isReconnecting = false;
+
+    // Stop keepalive
+    this.stopKeepalive();
 
     // Reject any in-flight command and drain the queue so callers don't hang
     this.flushQueue(new Error('Connection closed'));
@@ -1031,6 +1065,9 @@ export class BLEService {
     this.notifyCallback = onData;
     this.isPollingActive = true;
 
+    // Start keepalive to prevent connection drops
+    this.startKeepalive();
+
     console.log(`[BLE] Starting polling for ${standardPids.length} standard + ${customPids.length} custom PIDs at ${intervalMs}ms interval`);
 
     // Use recursive setTimeout instead of setInterval to prevent race conditions.
@@ -1071,11 +1108,73 @@ export class BLEService {
       clearTimeout(this.pollingTimeout);
       this.pollingTimeout = null;
     }
+    this.stopKeepalive();
     this.notifyCallback = null;
   }
 
   isConnected(): boolean {
     return this.connectedDeviceId !== null || this.isWifiMode;
+  }
+
+  private handleDisconnect(deviceId: string): void {
+    this.stopKeepalive();
+    this.flushQueue(new Error('BLE disconnected'));
+    if (!this.connectedDeviceId || this.connectedDeviceId !== deviceId) return;
+    if (this.isReconnecting) return;
+    if (!this.isPollingActive) {
+      this.connectedDeviceId = null;
+      this.activeProfile = null;
+      return;
+    }
+    console.log(`[BLE] Unexpected disconnect — attempting auto-reconnect (${this.reconnectAttempts + 1}/${this.MAX_RECONNECT_ATTEMPTS})`);
+    this.attemptReconnect(deviceId);
+  }
+
+  private attemptReconnect(deviceId: string): void {
+    if (this.reconnectAttempts >= this.MAX_RECONNECT_ATTEMPTS) {
+      console.warn('[BLE] Max reconnection attempts reached');
+      this.isReconnecting = false;
+      this.connectedDeviceId = null;
+      this.activeProfile = null;
+      this.isPollingActive = false;
+      return;
+    }
+    this.isReconnecting = true;
+    this.reconnectAttempts++;
+    const delay = 2000 * Math.pow(2, this.reconnectAttempts - 1);
+    console.log(`[BLE] Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts})`);
+    this.reconnectTimer = setTimeout(async () => {
+      this.reconnectTimer = null;
+      try {
+        await BleClient.connect(deviceId, (id: string) => { this.handleDisconnect(id); });
+        console.log('[BLE] Reconnected successfully');
+        this.isReconnecting = false;
+        this.reconnectAttempts = 0;
+        if (this.activeProfile) {
+          try {
+            await BleClient.startNotifications(deviceId, this.activeProfile.serviceUUID, this.activeProfile.notifyUUID,
+              (value: DataView) => { this.handleNotification(this.decodeDataView(value)); });
+            this.startKeepalive();
+          } catch (err) { console.warn('[BLE] Failed to restart notifications:', err); }
+        }
+      } catch (error) {
+        console.warn(`[BLE] Reconnect attempt ${this.reconnectAttempts} failed:`, error);
+        this.attemptReconnect(deviceId);
+      }
+    }, delay);
+  }
+
+  private startKeepalive(): void {
+    this.stopKeepalive();
+    this.keepaliveTimer = setInterval(async () => {
+      if (!this.connectedDeviceId || !this.isPollingActive) return;
+      try { await this.sendCommand('ATRV', 2000); } catch {}
+    }, this.KEEPALIVE_INTERVAL_MS);
+    console.log(`[BLE] Keepalive started (${this.KEEPALIVE_INTERVAL_MS}ms)`);
+  }
+
+  private stopKeepalive(): void {
+    if (this.keepaliveTimer) { clearInterval(this.keepaliveTimer); this.keepaliveTimer = null; }
   }
 
   getConnectedDeviceId(): string | null {
@@ -1288,37 +1387,45 @@ export class BLEService {
       throw new NoMatchingProfileError('Unknown', deviceId);
     }
 
-    // Strategy 1: try reading from each known profile's service/char UUIDs.
-    // If a read succeeds, the service+characteristic exist on the device
-    // and this profile is likely correct.
-    //
-    // Note: some adapters don't allow reads on the write characteristic
-    // (they only accept writes). For those, the read will throw even
-    // though the service exists. We accept this trade-off — auto-detection
-    // is best-effort, and the user can always pick a profile manually
-    // via the profile picker UI when auto-detection fails.
+    // Strategy 1: GATT service discovery (AndrOBD approach — most reliable)
+    try {
+      const services = await BleClient.getServices(deviceId);
+      console.log(`[BLE] Discovered ${services.length} GATT services`);
+      const discoveredUuids = new Set<string>();
+      for (const service of services) {
+        const uuid = service.uuid.toLowerCase();
+        discoveredUuids.add(uuid);
+        console.log(`[BLE]   Service: ${uuid}`);
+      }
+      for (const profile of ADAPTER_PROFILES) {
+        const profileUuid = profile.serviceUUID.toLowerCase();
+        if (discoveredUuids.has(profileUuid)) {
+          const service = services.find(s => s.uuid.toLowerCase() === profileUuid);
+          if (service) {
+            const charUuids = new Set((service.characteristics || []).map(c => c.uuid.toLowerCase()));
+            if (charUuids.has(profile.writeUUID.toLowerCase()) &&
+                (charUuids.has(profile.notifyUUID.toLowerCase()) || profile.writeUUID === profile.notifyUUID)) {
+              console.log(`[BLE] Profile matched via GATT discovery: ${profile.name}`);
+              return profile;
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.warn('[BLE] GATT service discovery failed, falling back to read probing:', error);
+    }
+
+    // Strategy 2: Read probing (fallback)
     for (const profile of ADAPTER_PROFILES) {
       try {
         await BleClient.read(deviceId, profile.serviceUUID, profile.writeUUID);
-        console.log('[BLE] Profile detected via service probe:', profile.name);
+        console.log('[BLE] Profile detected via read probe:', profile.name);
         return profile;
-      } catch {
-        // Service/characteristic doesn't exist on this device, try next
-        continue;
-      }
+      } catch { continue; }
     }
 
-    // Strategy 2: no profile matched via read probing. In v1.5.1 we silently
-    // fell back to ADAPTER_PROFILES[0] (vGate iCar Pro FFE0), which then
-    // failed with "characteristics not found" on the startNotifications
-    // call for any adapter that didn't actually have FFE0/FFE1 — including
-    // newer Vgate iCar Pro v3+ units that use FFF0/FFF1. The user got a
-    // confusing error with no recovery path.
-    //
-    // In v1.5.2 we throw NoMatchingProfileError instead. The ConnectOverlay
-    // UI catches this and shows a profile-picker dialog so the user can
-    // manually try each profile until one works.
-    console.warn('[BLE] No profile matched via auto-detection — throwing NoMatchingProfileError');
+    // Strategy 3: No match — trigger profile picker
+    console.warn('[BLE] No profile matched');
     throw new NoMatchingProfileError(
       this.lastConnectedDeviceName || 'Unknown device',
       deviceId,
