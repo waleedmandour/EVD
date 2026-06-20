@@ -375,11 +375,11 @@ export default function SettingsView() {
             <p className="text-[10px] text-evdx-text-secondary flex items-center justify-center gap-1">
               {isRTL ? (
                 <>
-                  إهداء إلي أهلنا في <Heart size={10} className="text-evdx-critical fill-evdx-critical" /> مصر وعمان وكل العرب والمسلمين
+                  إهداء إلي جميع <Heart size={10} className="text-evdx-critical fill-evdx-critical" /> ملاك السيارات الكهربائية في العالم العربي
                 </>
               ) : (
                 <>
-                  Made with <Heart size={10} className="text-evdx-critical fill-evdx-critical" /> to Egypt, Oman, and all Arab and Muslim Communities
+                  Made with <Heart size={10} className="text-evdx-critical fill-evdx-critical" /> to EV Owners in the Arab World
                 </>
               )}
             </p>
