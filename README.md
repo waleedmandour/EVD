@@ -540,7 +540,7 @@ See [LICENSE](LICENSE) for details.
 
 ## 🕊️ Dedication إهداء
 
-إهداء إلي أهلنا في مصر وعمان وكل العرب والمسلمين. صممت هذه الأداة لتكون عوناً لكم في العناية بمركباتكم بكل سهولة. نفعنا الله وإياكم.
+إهداء إلي أهلنا في مصر وعمان وكل العرب والمسلمين. صممت هذه الأداة لتساعدكم في العناية بسياراتكم بكل سهولة. نفعنا الله وإياكم.
 
 Made with ❤ to Egypt, Oman, and all Arab and Muslim Communities. I designed this tool to help you care for your vehicles with ease. May it be of benefit to us all.
 
