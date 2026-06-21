@@ -269,3 +269,58 @@
   transform: translateY(0);
   transition: opacity 0.3s ease-out, transform 0.3s ease-out;
 }
+
+/* ===== BYD HEAD UNIT LANDSCAPE LAYOUT ===== */
+/* When running on a BYD car head unit (landscape screen), switch from
+   the narrow phone layout to a wider two-column layout. */
+@media (min-width: 800px) and (orientation: landscape) {
+  .byd-landscape main,
+  .byd-landscape .max-w-md {
+    max-width: 100% !important;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  /* Two-column grid for main content */
+  .byd-landscape main > div:first-child {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  /* Make cards use the full width */
+  .byd-landscape .grid {
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)) !important;
+  }
+
+  /* Larger gauges on the car screen */
+  .byd-landscape svg {
+    max-width: 100% !important;
+  }
+
+  /* Bottom nav spans full width */
+  .byd-landscape nav,
+  .byd-landscape .fixed.bottom-0 {
+    max-width: 100% !important;
+    left: 0 !important;
+    right: 0 !important;
+  }
+
+  /* Header spans full width */
+  .byd-landscape header {
+    max-width: 100% !important;
+  }
+
+  /* Cards get more padding on the bigger screen */
+  .byd-landscape .rounded-xl {
+    border-radius: 16px;
+  }
+}
+
+/* BYD-specific: dark theme with blue accent for car display */
+.byd-landscape {
+  --background: #0D1117;
+  --foreground: #E8EAF6;
+}
