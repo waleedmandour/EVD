@@ -9,8 +9,8 @@ import { simulator } from '@/lib/simulator';
 // On non-BYD devices both are no-ops (BYDService.initialize() returns false,
 // BYDLayoutManager only activates when window is wider than 800px AND in
 // landscape orientation, which never happens on a phone).
-import { bydLayoutManager } from '../byd/BYDLayoutManager';
-import { bydService } from '../byd/BYDService';
+import { bydLayoutManager } from '../../byd/BYDLayoutManager';
+import { bydService } from '../../byd/BYDService';
 import I18nProvider from '@/components/I18nProvider';
 import BottomNav from '@/components/navigation/BottomNav';
 import OnboardingFlow from '@/components/onboarding/OnboardingFlow';
