@@ -5,7 +5,11 @@ const config: CapacitorConfig = {
   appName: 'EVDx',
   webDir: 'out',
   server: {
-    androidScheme: 'https',
+    // Use 'http' instead of 'https' for better compatibility with older
+    // Android WebView versions (Android 10 / Chromium 83 on BYD head units).
+    // The 'https' scheme can cause black screen issues on some head units
+    // because the WebView can't establish a local SSL context.
+    androidScheme: 'http',
   },
   plugins: {
     BluetoothLe: {
@@ -23,6 +27,9 @@ const config: CapacitorConfig = {
   android: {
     allowMixedContent: true,
     backgroundColor: '#0D1117',
+    // Force WebView to use legacy mode for better compatibility with
+    // older Android versions (BYD DiLink 3.0 runs Android 10).
+    webContentsDebuggingEnabled: true,
   },
 };
 
