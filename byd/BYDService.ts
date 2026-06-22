@@ -6,35 +6,15 @@
  * running on a BYD vehicle's infotainment system (DiLink 3.0).
  *
  * Architecture:
- *   EVDx App → BYDService → BYDAutoManager → DiCarServer → /dev/spidev_ivi → MCU → CAN bus
- *
- * This is dramatically faster and more reliable than BLE OBD-II:
- *   - No adapter to pair/charge/position
- *   - No BLE signal drops
- *   - Direct MCU access (no ELM327 command queue)
- *   - Access to BYD-proprietary data (AC, doors, tire pressure, etc.)
+ *   EVDx App → BYDService → BYDAutoPlugin (Capacitor) → BYDAutoManager → CAN bus
  *
  * Based on the reverse-engineered BYD API documented at:
  *   https://github.com/wheregoes/byd-dolphin-hacking
- *
- * Key BYD API classes (loaded via reflection at runtime):
- *   - BYDAutoManager         — Main entry point
- *   - BYDAutoEnergyDevice    — Battery SOC, SOH, voltage, current
- *   - BYDAutoChargingDevice  — Charging status, current, voltage
- *   - BYDAutoMotorDevice     — Motor RPM, temperature, torque
- *   - BYDAutoSpeedDevice     — Vehicle speed
- *   - BYDAutoTyreDevice      — Tire pressure (TPMS)
- *   - BYDAutoDtcDevice       — Diagnostic Trouble Codes
- *   - BYDAutoAcDevice        — AC temperature, fan speed
- *   - BYDAutoDoorLockDevice  — Door lock/unlock status
- *
- * Permission bypass:
- *   BYD's BydPermissionContext (a ContextWrapper) auto-grants all
- *   BYDAUTO_* permissions when called from a third-party app. No
- *   special signing or root required.
  */
 
-import type { VehicleData, DTCEvent, ChargingData } from '../src/lib/types';
+import { Capacitor } from '@capacitor/core';
+import type { VehicleData, ChargingData } from '../src/lib/types';
+import type { BYDInfo } from './BYDDetector';
 
 export interface BYDPollingData {
   soc: number;
@@ -71,100 +51,138 @@ export class BYDService {
   private initialized = false;
   private pollingInterval: ReturnType<typeof setInterval> | null = null;
   private isPollingActive = false;
+  // The native BYDAuto Capacitor plugin (registered in MainActivity.java)
+  // Provides detect(), readVehicleData(), readDTCs(), clearDTCs(), readVIN()
+  private bydPlugin: any = null;
+  private bydInfo: BYDInfo | null = null;
 
   /**
    * Initialize the BYD Auto API connection.
-   * Loads the BYDAutoManager via reflection and wraps it in
-   * BydPermissionContext for permission bypass.
+   * Uses the native BYDAutoPlugin (registered in MainActivity.java) to
+   * detect the BYD head unit and initialize BYDAutoManager via reflection.
    *
    * Returns false on non-BYD devices (fall back to BLE mode).
    */
   async initialize(): Promise<boolean> {
-    // Check if we're on a BYD head unit
-    const { detectBYDHeadUnit, shouldUseBYDNativeMode } = await import('./BYDDetector');
-    const bydInfo = await detectBYDHeadUnit();
-
-    if (!shouldUseBYDNativeMode(bydInfo)) {
-      console.log('[BYD] Not a BYD head unit — BYD native mode disabled');
+    if (!Capacitor.isNativePlatform()) {
+      console.log('[BYD] Not a native platform — BYD native mode disabled');
       return false;
     }
 
-    console.log('[BYD] BYD head unit detected:', bydInfo.model, bydInfo.firmware);
+    try {
+      // Register the BYDAuto plugin dynamically
+      const { registerPlugin } = await import('@capacitor/core');
+      const BYDAuto: any = registerPlugin('BYDAuto');
 
-    // On a real BYD head unit, we would initialize the BYDAutoManager here:
-    //   const manager = BYDAutoManager.getInstance(context);
-    //   manager.init(new BydPermissionContext(context));
-    //
-    // Since we're running inside a Capacitor WebView, we need a native
-    // plugin to bridge JS calls to the BYDAUTO Java API. This plugin
-    // would be implemented as a custom Capacitor plugin:
-    //   BYDAutoPlugin.java → calls BYDAutoManager methods → returns data to JS
-    //
-    // For now, we set up the polling infrastructure and the data mapping
-    // logic. The native plugin bridge is Phase 2 of the implementation.
+      // Call detect() — returns { isBYD, brand, model, firmware, androidVersion }
+      const result: any = await BYDAuto.detect();
 
-    this.initialized = true;
-    return true;
+      if (!result.isBYD) {
+        console.log('[BYD] Not a BYD head unit — BYD native mode disabled');
+        return false;
+      }
+
+      console.log('[BYD] BYD head unit detected:', result.brand, result.model, result.firmware);
+      this.bydInfo = {
+        isBYD: true,
+        model: `${result.brand} ${result.model}`,
+        firmware: result.firmware || 'Unknown',
+        androidVersion: result.androidVersion || 'Unknown',
+        soc: '',
+        hasDiLink: true,
+      };
+      this.bydPlugin = BYDAuto;
+      this.initialized = true;
+      return true;
+    } catch (error) {
+      console.warn('[BYD] BYDAuto plugin not available:', error);
+      return false;
+    }
   }
 
   /**
    * Read all vehicle data from BYD's internal CAN bus.
-   *
-   * On a real BYD head unit, this calls:
-   *   - BYDAutoEnergyDevice.getSoc()           → SOC
-   *   - BYDAutoEnergyDevice.getSoh()           → SOH
-   *   - BYDAutoEnergyDevice.getVoltage()       → Pack voltage
-   *   - BYDAutoEnergyDevice.getCurrent()       → Pack current
-   *   - BYDAutoSpeedDevice.getSpeed()          → Vehicle speed
-   *   - BYDAutoMotorDevice.getTemperature()    → Motor temp
-   *   - BYDAutoEnergyDevice.getTemperature()   → Battery temp
-   *   - BYDAutoTyreDevice.getPressure()        → Tire pressures
-   *   - BYDAutoAcDevice.getTemprature(zone)    → Cabin/ambient temp
-   *   - BYDAutoChargingDevice.getChargingStatus() → Charging
-   *
-   * Returns null if not on a BYD head unit or if the API is unavailable.
+   * Calls the native BYDAutoPlugin.readVehicleData() which uses
+   * reflection to access BYDAutoEnergyDevice, BYDAutoSpeedDevice,
+   * BYDAutoChargingDevice, BYDAutoTyreDevice, BYDAutoAcDevice.
    */
   async readVehicleData(): Promise<BYDPollingData | null> {
-    if (!this.initialized) return null;
+    if (!this.initialized || !this.bydPlugin) return null;
 
-    // In Phase 2, this will call the native BYDAutoPlugin:
-    //   const { BYDAutoPlugin } = await import('../../android/.../BYDAutoPlugin');
-    //   return await BYDAutoPlugin.readVehicleData();
-    //
-    // For now, return null — the app will fall back to BLE mode.
+    try {
+      const result = await this.bydPlugin.readVehicleData();
 
-    return null;
+      return {
+        soc: result.soc ?? 0,
+        soh: result.soh ?? 100,
+        voltage: result.voltage ?? 0,
+        current: result.current ?? 0,
+        power: result.power ?? 0,
+        speed: result.speed ?? 0,
+        motorTemp: result.motorTemp ?? 0,
+        batteryTemp: result.batteryTemp ?? 0,
+        ambientTemp: result.ambientTemp ?? 25,
+        cabinTemp: result.cabinTemp ?? 25,
+        odometer: result.odometer ?? 0,
+        range: result.range ?? 0,
+        chargingStatus: result.chargingStatus ?? false,
+        cellMaxV: result.cellMaxV ?? 3300,
+        cellMinV: result.cellMinV ?? 3280,
+        tirePressures: result.tirePressures ?
+          [result.tirePressures.fl, result.tirePressures.fr, result.tirePressures.rl, result.tirePressures.rr] :
+          [0, 0, 0, 0],
+        tireTemps: [0, 0, 0, 0],
+        acTemp: result.cabinTemp ?? 22,
+        acOn: result.acOn ?? false,
+        doorLocked: result.doorLocked ?? true,
+        vin: (this.bydInfo as any)?.vin || '',
+      };
+    } catch (error) {
+      console.warn('[BYD] readVehicleData failed:', error);
+      return null;
+    }
   }
 
   /**
-   * Read Diagnostic Trouble Codes from BYD's native DTC system.
-   *
-   * Uses BYDAutoDtcDevice.getDtcList() — which accesses the vehicle's
-   * DTC memory directly via CAN bus, without the ELM327 Mode 03 query.
-   * This is faster and more reliable than OBD-II.
+   * Read DTCs via BYD's native DTC system.
    */
   async readDTCs(): Promise<string[]> {
-    if (!this.initialized) return [];
-    // Phase 2: BYDAutoDtcDevice.getDtcList()
-    return [];
+    if (!this.initialized || !this.bydPlugin) return [];
+    try {
+      const result = await this.bydPlugin.readDTCs();
+      return result.dtcs || [];
+    } catch (error) {
+      console.warn('[BYD] readDTCs failed:', error);
+      return [];
+    }
   }
 
   /**
    * Clear DTCs via BYD's native API.
    */
   async clearDTCs(): Promise<boolean> {
-    if (!this.initialized) return false;
-    // Phase 2: BYDAutoDtcDevice.clearDtcList()
-    return false;
+    if (!this.initialized || !this.bydPlugin) return false;
+    try {
+      await this.bydPlugin.clearDTCs();
+      return true;
+    } catch (error) {
+      console.warn('[BYD] clearDTCs failed:', error);
+      return false;
+    }
   }
 
   /**
-   * Read VIN from BYD's vehicle data (no OBD-II Mode 09 needed).
+   * Read VIN from BYD's vehicle data.
    */
   async readVIN(): Promise<string> {
-    if (!this.initialized) return '';
-    // Phase 2: BYDAutoVehicleDataDevice.getVin()
-    return '';
+    if (!this.initialized || !this.bydPlugin) return '';
+    try {
+      const result = await this.bydPlugin.readVIN();
+      return result.vin || '';
+    } catch (error) {
+      console.warn('[BYD] readVIN failed:', error);
+      return '';
+    }
   }
 
   /**
