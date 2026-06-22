@@ -5,6 +5,12 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { useAppStore } from '@/lib/store';
 import { simulator } from '@/lib/simulator';
+// BYD head-unit integration — landscape layout + native vehicle data.
+// On non-BYD devices both are no-ops (BYDService.initialize() returns false,
+// BYDLayoutManager only activates when window is wider than 800px AND in
+// landscape orientation, which never happens on a phone).
+import { bydLayoutManager } from '../byd/BYDLayoutManager';
+import { bydService } from '../byd/BYDService';
 import I18nProvider from '@/components/I18nProvider';
 import BottomNav from '@/components/navigation/BottomNav';
 import OnboardingFlow from '@/components/onboarding/OnboardingFlow';
@@ -138,6 +144,27 @@ export default function HomePage() {
     document.documentElement.dir = isRTL ? 'rtl' : 'ltr';
     document.documentElement.lang = settings.language;
   }, [settings.language, isRTL]);
+
+  // ─── BYD head-unit integration ──────────────────────────────────────────────
+  // 1) Start the landscape layout manager — it adds the `byd-landscape` class
+  //    to <html> when window.innerWidth > 800 && landscape. On a phone this
+  //    never fires; on a BYD head unit (1920x720) it activates the two-column
+  //    layout defined in globals.css.
+  // 2) Try to initialize the native BYD data bridge. On non-BYD devices
+  //    BYDAutoPlugin.detect() returns isBYD=false and initialize() resolves
+  //    false, so the app silently continues in BLE OBD-II mode. On a BYD head
+  //    unit, bydService takes over live-data polling (see BYDService.ts).
+  // Both calls are wrapped in try/catch — a failure here MUST NOT break the
+  // phone experience.
+  useEffect(() => {
+    try { bydLayoutManager.startMonitoring(); } catch (e) { console.warn('[BYD] layout manager failed', e); }
+    bydService.initialize().then((ok) => {
+      console.log('[BYD] native mode ' + (ok ? 'ACTIVE' : 'inactive (non-BYD or unavailable)'));
+    }).catch((e) => console.warn('[BYD] initialize failed', e));
+    return () => {
+      try { bydService.stopPolling(); } catch (e) { /* ignore */ }
+    };
+  }, []);
 
   // Start/stop simulator based on demo mode
   useEffect(() => {
