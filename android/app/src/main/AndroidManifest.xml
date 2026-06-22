@@ -95,7 +95,7 @@
 
           configChanges must include orientation|screenSize|smallestScreenSize
           |screenLayout so that Activity recreation is suppressed when the
-          BYD head unit rotates or resizes the window -- otherwise the
+          BYD head unit rotates or resizes the window . otherwise the
           Capacitor WebView is destroyed and recreated, which on DiLink 3.0
           can hang indefinitely.
         -->
