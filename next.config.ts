@@ -9,7 +9,10 @@ const nextConfig: NextConfig = {
   images: {
     unoptimized: true,
   },
-  trailingSlash: true,
+  // Remove trailingSlash — it causes issues on BYD head unit's WebView
+  // (Android 10 / Chromium 83) where redirects from /index.html/ to
+  // /index.html can fail silently, resulting in a black screen.
+  // trailingSlash: true,
 };
 
 export default nextConfig;
