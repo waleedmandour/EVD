@@ -25,6 +25,7 @@ export interface BYDInfo {
   androidVersion: string; // e.g. "10"
   soc: string;            // e.g. "Qualcomm QCM6125"
   hasDiLink: boolean;     // true if DiLink 3.0+ detected
+  vin?: string;           // populated lazily by BYDService after plugin detect()
 }
 
 /**
