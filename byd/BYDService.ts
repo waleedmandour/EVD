@@ -93,6 +93,17 @@ export class BYDService {
       };
       this.bydPlugin = BYDAuto;
       this.initialized = true;
+
+      // Eagerly fetch the VIN in the background so that readVehicleData()
+      // doesn't have to make an extra round-trip on the first poll. This
+      // also tolerates a missing VIN property on the BYD head unit — the
+      // empty string falls through gracefully.
+      this.bydPlugin.readVIN?.()
+        .then((r: any) => {
+          if (this.bydInfo && r?.vin) this.bydInfo.vin = r.vin;
+        })
+        .catch((e: any) => console.warn('[BYD] eager VIN read failed', e));
+
       return true;
     } catch (error) {
       console.warn('[BYD] BYDAuto plugin not available:', error);
@@ -135,7 +146,7 @@ export class BYDService {
         acTemp: result.cabinTemp ?? 22,
         acOn: result.acOn ?? false,
         doorLocked: result.doorLocked ?? true,
-        vin: (this.bydInfo as any)?.vin || '',
+        vin: this.bydInfo?.vin || result.vin || '',
       };
     } catch (error) {
       console.warn('[BYD] readVehicleData failed:', error);
