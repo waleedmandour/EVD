@@ -43,6 +43,31 @@
     <uses-feature
         android:name="android.hardware.microphone"
         android:required="false" />
+    <!-- Touchscreen is optional so the APK can install on BYD head units
+         that report as non-touch (some DiLink 3.0 builds do). -->
+    <uses-feature
+        android:name="android.hardware.touchscreen"
+        android:required="false" />
+
+    <!--
+      Package visibility for BYD DiLink system apps (Android 11+).
+      Without this <queries> block, PackageManager.getPackageInfo() throws
+      NameNotFoundException for these packages even on a real BYD head unit,
+      which prevents BYDAutoPlugin from detecting the vehicle.
+      Reference: binti2 repo (waleedmandour/binti2) — same package list.
+    -->
+    <queries>
+        <package android:name="com.byd.auto.ac" />
+        <package android:name="com.byd.auto.navigation" />
+        <package android:name="com.byd.auto.media" />
+        <package android:name="com.byd.auto.settings" />
+        <package android:name="com.byd.auto.phone" />
+        <package android:name="com.byd.auto.launcher" />
+        <package android:name="com.byd.auto.climate" />
+        <package android:name="com.byd.auto.vehicleinfo" />
+        <package android:name="com.byd.auto.energy" />
+        <package android:name="com.byd.auto.camera" />
+    </queries>
 
     <application
         android:allowBackup="true"
@@ -57,6 +82,23 @@
         android:networkSecurityConfig="@xml/network_security_config"
         tools:targetApi="36">
 
+        <!--
+          MainActivity configuration.
+
+          screenOrientation="portrait" is the default for the phone build.
+          The BYD build script (build-apk-byd.sh) patches this attribute to
+          "sensorLandscape" during the BYD APK build, because BYD DiLink 3.0
+          head units are landscape-only (1920x720 or 2152x1032). Forcing
+          portrait on a landscape-only display causes Android to render the
+          WebView into an off-screen buffer -> BLACK SCREEN. This was the
+          root cause of the Yuan Plus 2023 black-screen bug.
+
+          configChanges must include orientation|screenSize|smallestScreenSize
+          |screenLayout so that Activity recreation is suppressed when the
+          BYD head unit rotates or resizes the window -- otherwise the
+          Capacitor WebView is destroyed and recreated, which on DiLink 3.0
+          can hang indefinitely.
+        -->
         <activity
             android:name=".MainActivity"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation|density"
