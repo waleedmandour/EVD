@@ -8,7 +8,7 @@
 // ─── Connection ───────────────────────────────────────────────────────────────
 
 export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
-export type ConnectionMode = 'bluetooth' | 'wifi' | 'demo' | null;
+export type ConnectionMode = 'bluetooth' | 'wifi' | 'demo' | 'byd' | null;
 
 // ─── Vehicle Data ─────────────────────────────────────────────────────────────
 
