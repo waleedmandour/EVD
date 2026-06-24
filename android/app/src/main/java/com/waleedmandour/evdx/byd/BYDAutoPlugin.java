@@ -68,6 +68,8 @@ public class BYDAutoPlugin extends Plugin {
     private static final String BYD_TYRE_DEVICE_CLASS      = "com.byd.auto.manager.BYDAutoTyreDevice";
     private static final String BYD_DTC_DEVICE_CLASS       = "com.byd.auto.manager.BYDAutoDtcDevice";
     private static final String BYD_AC_DEVICE_CLASS        = "com.byd.auto.manager.BYDAutoAcDevice";
+    // Vehicle information device — provides odometer, VIN, range
+    private static final String BYD_VEHICLE_DEVICE_CLASS   = "com.byd.auto.manager.BYDAutoVehicleDevice";
 
     private boolean isBYD = false;
     private Object autoManager = null;
@@ -234,16 +236,23 @@ public class BYDAutoPlugin extends Plugin {
             tryReflectFloat (energyClass, energyDevice, "getVoltage",          data, "voltage");
             tryReflectFloat (energyClass, energyDevice, "getCurrent",          data, "current");
             tryReflectFloat (energyClass, energyDevice, "getBatteryTemperature", data, "batteryTemp");
+            // Cell voltages for battery balancing view
+            tryReflectInt   (energyClass, energyDevice, "getMaxCellVoltage",   data, "cellMaxV");
+            tryReflectInt   (energyClass, energyDevice, "getMinCellVoltage",   data, "cellMinV");
         } catch (Throwable t) {
             Log.w(TAG, "EnergyDevice access failed: " + t.getMessage());
         }
 
-        // ─── Speed device ───────────────────────────────────────────────────────
+        // ─── Speed device (vehicle speed + motor RPM + motor temperature) ────────
         try {
             Class<?> speedClass = Class.forName(BYD_SPEED_DEVICE_CLASS);
             Method getInstance = speedClass.getMethod("getInstance", Context.class);
             Object speedDevice = getInstance.invoke(null, getContext());
             tryReflectInt(speedClass, speedDevice, "getSpeed", data, "speed");
+            // Motor RPM (some firmware versions expose this on SpeedDevice)
+            tryReflectInt(speedClass, speedDevice, "getMotorSpeed", data, "motorRPM");
+            // Motor temperature
+            tryReflectFloat(speedClass, speedDevice, "getMotorTemperature", data, "motorTemp");
         } catch (Throwable t) {
             Log.w(TAG, "Speed read failed: " + t.getMessage());
         }
@@ -290,22 +299,61 @@ public class BYDAutoPlugin extends Plugin {
         }
 
         // ─── AC device (cabin + ambient temperature) ────────────────────────────
+        // BYD firmware versions disagree on the method name:
+        //   - Older DiLink 3.0:  getTemprature(int zone)  (BYD's typo)
+        //   - Newer DiLink 3.0:  getTemperature(int zone) (corrected spelling)
+        // We try both, with the typo first since older firmware is more common
+        // in the wild. Zone 1 = driver, zone 4 = ambient.
         try {
             Class<?> acClass = Class.forName(BYD_AC_DEVICE_CLASS);
             Method getInstance = acClass.getMethod("getInstance", Context.class);
             Object acDevice = getInstance.invoke(null, getContext());
+
+            boolean acRead = false;
+            // Attempt 1: getTemprature (BYD legacy typo)
             try {
-                // BYD uses "getTemprature" (their typo) — zone 1=driver, 4=ambient
                 Method m = acClass.getMethod("getTemprature", int.class);
                 Object cabin = m.invoke(acDevice, 1);
                 Object ambient = m.invoke(acDevice, 4);
                 if (cabin instanceof Float) data.put("cabinTemp", (Float) cabin);
                 if (ambient instanceof Float) data.put("ambientTemp", (Float) ambient);
+                acRead = true;
+            } catch (NoSuchMethodException nsme) {
+                // Fall through to attempt 2
             } catch (Throwable t) {
                 Log.w(TAG, "getTemprature failed: " + t.getMessage());
             }
+            // Attempt 2: getTemperature (corrected spelling on newer firmware)
+            if (!acRead) {
+                try {
+                    Method m = acClass.getMethod("getTemperature", int.class);
+                    Object cabin = m.invoke(acDevice, 1);
+                    Object ambient = m.invoke(acDevice, 4);
+                    if (cabin instanceof Float) data.put("cabinTemp", (Float) cabin);
+                    if (ambient instanceof Float) data.put("ambientTemp", (Float) ambient);
+                } catch (Throwable t) {
+                    Log.w(TAG, "getTemperature fallback failed: " + t.getMessage());
+                }
+            }
         } catch (Throwable t) {
             Log.w(TAG, "AcDevice access failed: " + t.getMessage());
+        }
+
+        // ─── Vehicle device (odometer + remaining range) ──────────────────────────
+        // BYDAutoVehicleDevice exposes total odometer and the BMS-estimated
+        // remaining range. We try this BEFORE the derived range calculation
+        // below so a real reading from the car takes precedence over the
+        // SOC * 4.2 fallback.
+        try {
+            Class<?> vehicleClass = Class.forName(BYD_VEHICLE_DEVICE_CLASS);
+            Method getInstance = vehicleClass.getMethod("getInstance", Context.class);
+            Object vehicleDevice = getInstance.invoke(null, getContext());
+            // Odometer in km (int)
+            tryReflectInt(vehicleClass, vehicleDevice, "getOdometer", data, "odometer");
+            // Remaining range in km (int)
+            tryReflectInt(vehicleClass, vehicleDevice, "getRemainingRange", data, "range");
+        } catch (Throwable t) {
+            Log.w(TAG, "VehicleDevice access failed: " + t.getMessage());
         }
 
         // ─── Derived: power (kW) ─────────────────────────────────────────────────
@@ -319,9 +367,11 @@ public class BYDAutoPlugin extends Plugin {
             Log.w(TAG, "Power calc failed: " + t.getMessage());
         }
 
-        // ─── Derived: range (km) — BYD Yuan Plus ~420 km WLTP at 100% SOC ────────
+        // ─── Derived: range (km) — only as a fallback when BYDAutoVehicleDevice
+        // didn't already provide a real getRemainingRange() value. BYD Yuan Plus
+        // ~420 km WLTP at 100% SOC.
         try {
-            if (data.has("soc")) {
+            if (!data.has("range") && data.has("soc")) {
                 int soc = data.getInt("soc");
                 data.put("range", Math.round(soc * 4.2f));
             }
