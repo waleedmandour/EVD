@@ -132,6 +132,7 @@ export default function HomePage() {
     connectionMode,
     activeTab,
     connectDemo,
+    connectBYD,
     disconnect,
     setActiveTab,
   } = useAppStore();
@@ -154,16 +155,30 @@ export default function HomePage() {
   //    BYDAutoPlugin.detect() returns isBYD=false and initialize() resolves
   //    false, so the app silently continues in BLE OBD-II mode. On a BYD head
   //    unit, bydService takes over live-data polling (see BYDService.ts).
-  // Both calls are wrapped in try/catch — a failure here MUST NOT break the
+  // 3) If initialization succeeds, AUTO-CONNECT in BYD mode and start polling
+  //    so the dashboard, battery charts, and device info populate immediately
+  //    without the user tapping "Connect". This is the right UX on a car head
+  //    unit where there's no OBD-II adapter to pick from.
+  // All calls are wrapped in try/catch — a failure here MUST NOT break the
   // phone experience.
   useEffect(() => {
     try { bydLayoutManager.startMonitoring(); } catch (e) { console.warn('[BYD] layout manager failed', e); }
-    bydService.initialize().then((ok) => {
+    bydService.initialize().then(async (ok) => {
       console.log('[BYD] native mode ' + (ok ? 'ACTIVE' : 'inactive (non-BYD or unavailable)'));
+      if (ok) {
+        // Auto-connect in BYD mode — no user interaction required on a car head unit.
+        try {
+          await connectBYD();
+          console.log('[BYD] auto-connected, polling started');
+        } catch (e) {
+          console.warn('[BYD] auto-connect failed', e);
+        }
+      }
     }).catch((e) => console.warn('[BYD] initialize failed', e));
     return () => {
       try { bydService.stopPolling(); } catch (e) { /* ignore */ }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Start/stop simulator based on demo mode
