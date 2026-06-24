@@ -1,5 +1,5 @@
 #!/bin/bash
-# EVDx BYD Head Unit Build Script (portable: macOS + Linux)
+# EVDx BYD Head Unit Build Script (portable: macOS + Linux, no sed)
 #
 # Builds a BYD-compatible APK with:
 #   - targetSdk 33 (BYD DiLink 3.0 requires <= 33)
@@ -13,8 +13,11 @@
 # the WebView into an off-screen buffer -> BLACK SCREEN. This script patches
 # the manifest to sensorLandscape during build, then restores it afterwards.
 #
-# This script is portable across macOS (BSD sed) and Linux (GNU sed).
-# It detects the platform and uses the correct in-place edit syntax.
+# PORTABILITY: This script uses Python 3 (not sed) for all in-place file edits.
+# Python 3 is pre-installed on macOS (via Xcode command-line tools) and on
+# virtually every Linux distribution, and behaves identically on both.
+# This avoids the BSD sed vs GNU sed incompatibility that previously blocked
+# the build on macOS.
 #
 # Installation on BYD:
 #   1. Create folder "Third Party Apps 55" on a USB drive
@@ -33,24 +36,53 @@ GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
 NC='\033[0m'
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Portable in-place sed edit. macOS BSD sed requires `-i ''` (empty backup
-# suffix); Linux GNU sed takes `-i` with no suffix argument. We auto-detect.
-# Usage: sed_inplace '<sed expression>' <file>
-# ─────────────────────────────────────────────────────────────────────────────
-sed_inplace() {
-    local expr="$1"
-    local file="$2"
-    if [[ "$OSTYPE" == "darwin"* ]]; then
-        # macOS BSD sed: -i requires a backup suffix argument; '' means no backup
-        sed -i '' "$expr" "$file"
-    else
-        # Linux GNU sed: -i with no argument means no backup
-        sed -i "$expr" "$file"
-    fi
-}
-
 echo -e "\n${YELLOW}Platform: ${OSTYPE:-unknown}${NC}"
+
+# Verify Python 3 is available (required for portable file patching)
+if ! command -v python3 >/dev/null 2>&1; then
+    echo -e "${RED}FATAL: python3 is required but not found on PATH.${NC}"
+    echo "  On macOS: install Xcode command-line tools with:  xcode-select --install"
+    echo "  On Linux: install with:  sudo apt install python3   (or your distro's equivalent)"
+    exit 1
+fi
+PYVER=$(python3 -c 'import sys; print("%d.%d.%d" % sys.version_info[:3])')
+echo "Using Python: $PYVER  ($(command -v python3))"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Portable in-place text replacement using Python.
+# Usage: patch_file <file> <old_string> <new_string>
+#
+# Replaces the first occurrence of <old_string> in <file> with <new_string>.
+# If <old_string> appears multiple times, set PATCH_ALL=1 in the environment
+# to replace every occurrence.
+# Aborts the script (exit 1) if <old_string> is not found.
+# ─────────────────────────────────────────────────────────────────────────────
+patch_file() {
+    local file="$1"
+    local old="$2"
+    local new="$3"
+    local mode="${PATCH_ALL:-first}"
+
+    python3 - "$file" "$old" "$new" "$mode" <<'PYEOF'
+import sys, os
+path, old, new, mode = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
+with open(path, 'r', encoding='utf-8') as f:
+    content = f.read()
+if old not in content:
+    print(f"  ERROR: pattern not found in {path}", file=sys.stderr)
+    print(f"    pattern: {old[:80]!r}", file=sys.stderr)
+    sys.exit(2)
+if mode == 'all':
+    new_content = content.replace(old, new)
+    count = content.count(old)
+else:
+    new_content = content.replace(old, new, 1)
+    count = 1
+with open(path, 'w', encoding='utf-8') as f:
+    f.write(new_content)
+print(f"  patched {path}: {count} replacement(s)")
+PYEOF
+}
 
 # Step 1: Install dependencies
 echo -e "\n${YELLOW}[1/9] Installing dependencies...${NC}"
@@ -68,22 +100,18 @@ bun x cap sync android
 echo -e "\n${YELLOW}[4/9] Adjusting targetSdk to 33 for BYD DiLink 3.0...${NC}"
 BUILD_GRADLE="android/app/build.gradle"
 cp "$BUILD_GRADLE" "$BUILD_GRADLE.bak"
-sed_inplace 's/targetSdkVersion rootProject.ext.targetSdkVersion/targetSdkVersion 33/' "$BUILD_GRADLE"
+patch_file "$BUILD_GRADLE" \
+    "targetSdkVersion rootProject.ext.targetSdkVersion" \
+    "targetSdkVersion 33"
 echo "  targetSdk temporarily set to 33 (was 36)"
-
-# Verify the patch actually applied
-if ! grep -q "targetSdkVersion 33" "$BUILD_GRADLE"; then
-    echo -e "${RED}FAIL: targetSdk patch did not apply. Aborting.${NC}"
-    mv "$BUILD_GRADLE.bak" "$BUILD_GRADLE"
-    exit 1
-fi
 
 # Step 5: Patch AndroidManifest.xml — portrait -> sensorLandscape (THE BLACK-SCREEN FIX)
 echo -e "\n${YELLOW}[5/9] Patching AndroidManifest for BYD landscape screen...${NC}"
 MANIFEST="android/app/src/main/AndroidManifest.xml"
 cp "$MANIFEST" "$MANIFEST.bak"
-# Replace ONLY the MainActivity's screenOrientation attribute.
-sed_inplace 's|android:screenOrientation="portrait"|android:screenOrientation="sensorLandscape"|g' "$MANIFEST"
+PATCH_ALL=1 patch_file "$MANIFEST" \
+    'android:screenOrientation="portrait"' \
+    'android:screenOrientation="sensorLandscape"'
 echo "  screenOrientation: portrait -> sensorLandscape"
 echo "  (BYD head units are 1920x720 / 2152x1032 landscape-only)"
 
