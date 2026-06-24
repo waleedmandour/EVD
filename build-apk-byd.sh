@@ -1,5 +1,6 @@
 #!/bin/bash
-# EVDx BYD Head Unit Build Script
+# EVDx BYD Head Unit Build Script (portable: macOS + Linux)
+#
 # Builds a BYD-compatible APK with:
 #   - targetSdk 33 (BYD DiLink 3.0 requires <= 33)
 #   - screenOrientation = sensorLandscape (BYD screens are 1920x720 / 2152x1032)
@@ -11,6 +12,9 @@
 # for phones). On a BYD head unit, forcing portrait causes Android to render
 # the WebView into an off-screen buffer -> BLACK SCREEN. This script patches
 # the manifest to sensorLandscape during build, then restores it afterwards.
+#
+# This script is portable across macOS (BSD sed) and Linux (GNU sed).
+# It detects the platform and uses the correct in-place edit syntax.
 #
 # Installation on BYD:
 #   1. Create folder "Third Party Apps 55" on a USB drive
@@ -29,6 +33,25 @@ GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
 NC='\033[0m'
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Portable in-place sed edit. macOS BSD sed requires `-i ''` (empty backup
+# suffix); Linux GNU sed takes `-i` with no suffix argument. We auto-detect.
+# Usage: sed_inplace '<sed expression>' <file>
+# ─────────────────────────────────────────────────────────────────────────────
+sed_inplace() {
+    local expr="$1"
+    local file="$2"
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        # macOS BSD sed: -i requires a backup suffix argument; '' means no backup
+        sed -i '' "$expr" "$file"
+    else
+        # Linux GNU sed: -i with no argument means no backup
+        sed -i "$expr" "$file"
+    fi
+}
+
+echo -e "\n${YELLOW}Platform: ${OSTYPE:-unknown}${NC}"
+
 # Step 1: Install dependencies
 echo -e "\n${YELLOW}[1/9] Installing dependencies...${NC}"
 bun install
@@ -45,18 +68,33 @@ bun x cap sync android
 echo -e "\n${YELLOW}[4/9] Adjusting targetSdk to 33 for BYD DiLink 3.0...${NC}"
 BUILD_GRADLE="android/app/build.gradle"
 cp "$BUILD_GRADLE" "$BUILD_GRADLE.bak"
-sed -i 's/targetSdkVersion rootProject.ext.targetSdkVersion/targetSdkVersion 33/' "$BUILD_GRADLE"
+sed_inplace 's/targetSdkVersion rootProject.ext.targetSdkVersion/targetSdkVersion 33/' "$BUILD_GRADLE"
 echo "  targetSdk temporarily set to 33 (was 36)"
+
+# Verify the patch actually applied
+if ! grep -q "targetSdkVersion 33" "$BUILD_GRADLE"; then
+    echo -e "${RED}FAIL: targetSdk patch did not apply. Aborting.${NC}"
+    mv "$BUILD_GRADLE.bak" "$BUILD_GRADLE"
+    exit 1
+fi
 
 # Step 5: Patch AndroidManifest.xml — portrait -> sensorLandscape (THE BLACK-SCREEN FIX)
 echo -e "\n${YELLOW}[5/9] Patching AndroidManifest for BYD landscape screen...${NC}"
 MANIFEST="android/app/src/main/AndroidManifest.xml"
 cp "$MANIFEST" "$MANIFEST.bak"
 # Replace ONLY the MainActivity's screenOrientation attribute.
-# Other activities (none currently) are left untouched.
-sed -i 's|android:screenOrientation="portrait"|android:screenOrientation="sensorLandscape"|g' "$MANIFEST"
+sed_inplace 's|android:screenOrientation="portrait"|android:screenOrientation="sensorLandscape"|g' "$MANIFEST"
 echo "  screenOrientation: portrait -> sensorLandscape"
 echo "  (BYD head units are 1920x720 / 2152x1032 landscape-only)"
+
+# Verify the patch actually applied
+if ! grep -q 'android:screenOrientation="sensorLandscape"' "$MANIFEST"; then
+    echo -e "${RED}FAIL: screenOrientation patch did not apply. Aborting.${NC}"
+    mv "$MANIFEST.bak" "$MANIFEST"
+    mv "$BUILD_GRADLE.bak" "$BUILD_GRADLE"
+    exit 1
+fi
+echo "  Verified: sensorLandscape is now in the manifest."
 
 # Step 6: Generate keystore (if not exists)
 echo -e "\n${YELLOW}[6/9] Checking signing keystore...${NC}"
