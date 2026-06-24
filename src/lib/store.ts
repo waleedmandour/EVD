@@ -83,6 +83,7 @@ interface AppState {
   connectBluetooth: () => Promise<void>;
   connectWifi: (ip: string, port: number) => Promise<void>;
   connectDemo: () => void;
+  connectBYD: () => Promise<void>;
   disconnect: () => void;
 
   // Vehicle
@@ -402,6 +403,42 @@ export const useAppStore = create<AppState>()(
         set({ connectionStatus: 'connected', connectionMode: 'demo' });
       },
 
+      connectBYD: async () => {
+        // BYD native mode — activates the BYDAutoPlugin data bridge on BYD head units.
+        // On non-BYD devices this is a no-op (bydService.initialize() returns false).
+        set({ connectionStatus: 'connecting', connectionMode: 'byd' });
+        try {
+          const { bydService } = await import('../../byd/BYDService');
+          const ok = await bydService.initialize();
+          if (!ok) {
+            set({ connectionStatus: 'error' });
+            return;
+          }
+          // Start the polling loop — push each sample into the store so the
+          // dashboard, battery charts, and device info update in real time.
+          bydService.startPolling((byd) => {
+            const vehicleData = bydService.toVehicleData(byd);
+            const chargingData = bydService.toChargingData(byd);
+            set({
+              vehicleData: { ...get().vehicleData, ...vehicleData } as any,
+              chargingData: { ...get().chargingData, ...chargingData } as any,
+            });
+          }, 1000);
+          set({
+            connectionStatus: 'connected',
+            deviceInfo: {
+              ...get().deviceInfo,
+              name: 'BYD Head Unit (Native)',
+              type: 'byd-native',
+              firmware: bydService.isInitialized() ? 'BYDAUTO' : 'unknown',
+            } as any,
+          });
+        } catch (e) {
+          console.warn('[BYD] connectBYD failed', e);
+          set({ connectionStatus: 'error' });
+        }
+      },
+
       disconnect: async () => {
         // Disconnect BLE if connected
         try {
@@ -410,6 +447,11 @@ export const useAppStore = create<AppState>()(
             bleService.stopPolling();
             await bleService.disconnect();
           }
+        } catch {}
+        // Stop BYD native polling if active
+        try {
+          const { bydService } = await import('../../byd/BYDService');
+          bydService.stopPolling();
         } catch {}
         set({
           connectionStatus: 'disconnected',
