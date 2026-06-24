@@ -23,6 +23,7 @@ export interface BYDPollingData {
   current: number;       // Pack current (A, negative = charging)
   power: number;         // Power (kW)
   speed: number;         // Vehicle speed (km/h)
+  motorRPM: number;      // Motor RPM (from BYDAutoSpeedDevice.getMotorSpeed)
   motorTemp: number;     // Motor temperature (°C)
   batteryTemp: number;   // Battery temperature (°C)
   ambientTemp: number;   // Ambient temperature (°C)
@@ -130,6 +131,7 @@ export class BYDService {
         current: result.current ?? 0,
         power: result.power ?? 0,
         speed: result.speed ?? 0,
+        motorRPM: result.motorRPM ?? 0,
         motorTemp: result.motorTemp ?? 0,
         batteryTemp: result.batteryTemp ?? 0,
         ambientTemp: result.ambientTemp ?? 25,
