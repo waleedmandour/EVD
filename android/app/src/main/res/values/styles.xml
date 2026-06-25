@@ -1,38 +1,43 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!--
+      Fix #1 (Critical): windowBackground must NOT be @null/transparent.
+
+      PREVIOUS BUG: AppTheme.NoActionBar set android:background=@null, making
+      the window transparent during the transition from the launch theme
+      (splash drawable) to the live WebView. On BYD DiLink 3.0 (Android 10),
+      the compositor renders pure black behind transparent windows, so the
+      user saw a black screen between the splash and the first React paint.
+
+      FIX: Set android:windowBackground=@color/colorPrimaryDark on BOTH
+      AppTheme and AppTheme.NoActionBar. This ensures the window always has
+      a solid dark background, so even if the WebView takes a few seconds
+      to paint, the user sees the app's dark brand color instead of black.
+    -->
     <style name="AppTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
         <item name="colorPrimary">@color/colorPrimary</item>
         <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
         <item name="colorAccent">@color/colorAccent</item>
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
+        <item name="android:windowBackground">@color/colorPrimaryDark</item>
     </style>
 
     <style name="AppTheme.NoActionBar" parent="Theme.AppCompat.DayNight.NoActionBar">
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
-        <item name="android:background">@null</item>
+        <!-- Fix #1: was android:background=@null (transparent) -> black screen.
+             Now uses the same dark brand color so the window is never transparent. -->
+        <item name="android:windowBackground">@color/colorPrimaryDark</item>
     </style>
 
     <!--
-      Splash screen launch theme (Fix A: black splash screen).
+      Splash screen launch theme.
 
-      Previously this theme used @drawable/splash_screen, which layered a
-      @color/colorPrimaryDark (#0D1117, near-black) background behind the
-      launcher icon. On BYD DiLink 3.0 (forced dark mode, Android 10) the
-      system compositor rendered this as a fully black window with no
-      visible logo, which users perceived as a "black screen" / "crash".
-
-      The new theme:
-        - Uses a BRIGHT WHITE windowBackground so the splash is visible
-          immediately, before any Java code or WebView loads.
-        - Sets windowContentOverlay to @null to remove the default shadow
-          that some OEMs draw on top of the window.
-        - Disables fullscreen so the status bar stays visible (avoids the
-          CutoutMode edge cases that can leave the layout empty on rotation).
-        - parent="Theme.AppCompat.NoActionBar" (NOT DayNight) so the splash
-          is always light even when the system is in dark mode. The
-          values-night/styles.xml override also enforces this.
+      Uses @drawable/splash_screen (bright white background + dark vector logo)
+      so the splash is visible immediately on app launch, before any Java code
+      or WebView loads. parent=Theme.AppCompat.NoActionBar (NOT DayNight) so
+      the splash is always light even when the system is in dark mode.
     -->
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.AppCompat.NoActionBar">
         <item name="android:windowBackground">@drawable/splash_screen</item>
