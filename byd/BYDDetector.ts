@@ -6,11 +6,18 @@
  * OBD-II adapter polling to direct BYDAUTO API calls for vehicle data.
  *
  * Detection methods (checked in order):
- *   1. System property `ro.build.byd.project` — set on all BYD head units
- *   2. Package `com.byd.carsettings` — BYD system settings app
- *   3. Service `byd_auto` — the DiCarServer Binder service
- *   4. System property `ro.product.brand` === "BYD"
- *   5. Content provider `com.byd.carstatus.provider` — CarStatusProvider
+ *   1. System property `ro.byd.model` — set on all BYD head units (canonical)
+ *   2. System property `ro.build.byd.project` — alternate BYD indicator
+ *   3. System property `ro.product.brand` === "BYD"
+ *   4. Any of the 10 com.byd.auto.* system packages installed
+ *      (ac, navigation, media, settings, phone, launcher, climate,
+ *       vehicleinfo, energy, camera) — confirmed package list from the
+ *       binti2 reference repo (waleedmandour/binti2).
+ *
+ * NOTE: Previous versions referenced com.byd.carsettings, com.byd.carstatus,
+ * and com.byd.carstatus.provider — these do NOT exist on real BYD head units.
+ * The actual packages use the com.byd.auto.* namespace. This TS detector is
+ * a JS-side fallback; the authoritative detection is in BYDAutoPlugin.java.
  *
  * On non-BYD devices, all checks fail and the app uses the normal
  * BLE/WiFi OBD-II adapter flow.
@@ -63,12 +70,20 @@ export async function detectBYDHeadUnit(): Promise<BYDInfo> {
 
     // Method 2: Check for BYD system packages
     // The following packages exist on all DiLink 3.0 head units:
+    // Fix #10: Correct BYD DiLink 3.0 package names (from binti2 reference repo).
+    // Previous versions listed com.byd.carsettings, com.byd.carstatus, and
+    // com.byd.diagnostictool — none of these exist on real BYD head units.
     const bydPackages = [
-      'com.byd.carsettings',       // BYD car settings
-      'com.byd.carstatus',         // CarStatusProvider
-      'com.byd.diagnostictool',    // BYD diagnostic tool
-      'com.byd.auto',              // BYDAUTO framework
-      'com.byd.launcher',          // BYD launcher
+      'com.byd.auto.ac',            // AC & Climate control
+      'com.byd.auto.navigation',    // GPS navigation
+      'com.byd.auto.media',         // Music and media playback
+      'com.byd.auto.settings',      // System settings
+      'com.byd.auto.phone',         // Phone calls and contacts
+      'com.byd.auto.launcher',      // BYD launcher
+      'com.byd.auto.climate',       // Advanced climate (some models)
+      'com.byd.auto.vehicleinfo',   // Vehicle status and battery
+      'com.byd.auto.energy',        // Energy management
+      'com.byd.auto.camera',        // 360 camera view
     ];
 
     // Check if any BYD package is installed
@@ -76,7 +91,7 @@ export async function detectBYDHeadUnit(): Promise<BYDInfo> {
     // but we can try to access BYD content providers via content:// URIs
     // (which only work if the provider exists).
 
-    // Method 3: Try to access BYD CarStatusProvider content provider
+    // Method 3: Try to access BYD CarStatusProvider content provider (legacy — may not exist on all firmware)
     // This is the most reliable detection method — the content provider
     // only exists on BYD head units.
     try {
