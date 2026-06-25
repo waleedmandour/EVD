@@ -34,6 +34,36 @@
     <!-- Wake lock for background diagnostics -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
+    <!-- ============================================================
+         Fix B: Automotive permissions (BYD DiLink / Android Auto).
+         These let the app query the CarPropertyManager for vehicle
+         speed, powertrain, and energy data on cars that expose the
+         Car SDK. On BYD DiLink 3.0 they are not strictly required
+         (BYD exposes data via com.byd.auto.* instead), but declaring
+         them lets the same APK run on AAOS / Android Auto head units.
+         ============================================================ -->
+    <uses-permission android:name="android.car.permission.CAR_SPEED" />
+    <uses-permission android:name="android.car.permission.CAR_POWERTRAIN" />
+    <uses-permission android:name="android.car.permission.CAR_ENERGY" />
+    <!-- Overlay permission is needed on some automotive builds for the
+         floating voice-assistant button. Even if not actively used,
+         keeping it in the manifest avoids runtime SecurityException
+         on AAOS builds that enforce the permission at install time. -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+
+    <!-- ============================================================
+         Fix C: Mark the app as automotive-compatible.
+         - android.hardware.type.automotive (required=false) lets the
+           APK install on car head units that report this feature,
+           without preventing installation on phones.
+         - The <meta-data> tag below tells the BYD system / AAOS that
+           the app is designed for automotive use and should not be
+           killed immediately after the splash.
+         ============================================================ -->
+    <uses-feature
+        android:name="android.hardware.type.automotive"
+        android:required="false" />
+
     <uses-feature
         android:name="android.hardware.bluetooth_le"
         android:required="false" />
@@ -82,22 +112,57 @@
         android:networkSecurityConfig="@xml/network_security_config"
         tools:targetApi="36">
 
+        <!-- Fix C: Tell the BYD system / AAOS that this app is automotive-aware
+             and should not be killed immediately after the splash. -->
+        <meta-data
+            android:name="com.android.automotive"
+            android:value="true" />
+
         <!--
-          MainActivity configuration.
+          SplashActivity — the new launcher activity (Fix A).
 
-          screenOrientation="portrait" is the default for the phone build.
-          The BYD build script (build-apk-byd.sh) patches this attribute to
-          "sensorLandscape" during the BYD APK build, because BYD DiLink 3.0
-          head units are landscape-only (1920x720 or 2152x1032). Forcing
-          portrait on a landscape-only display causes Android to render the
-          WebView into an off-screen buffer -> BLACK SCREEN. This was the
-          root cause of the Yuan Plus 2023 black-screen bug.
+          Shows a bright white splash with the EVDx logo for at least
+          1500 ms, then launches MainActivity. This replaces the previous
+          approach where MainActivity was the launcher and the splash was
+          only the launcher theme's windowBackground (which was dark and
+          appeared as a black screen on BYD).
 
-          configChanges must include orientation|screenSize|smallestScreenSize
-          |screenLayout so that Activity recreation is suppressed when the
-          BYD head unit rotates or resizes the window . otherwise the
-          Capacitor WebView is destroyed and recreated, which on DiLink 3.0
-          can hang indefinitely.
+          Fix D: fullSensor orientation + configChanges covering all
+          orientation/size changes so the activity is NOT recreated on
+          rotation. BYD head units can rotate the screen at any time, and
+          Activity recreation would destroy the WebView state.
+
+          Fix E: android:exported="true" is REQUIRED for the launcher
+          activity on Android 12+ (API 31+).
+        -->
+        <activity
+            android:name=".SplashActivity"
+            android:exported="true"
+            android:theme="@style/SplashTheme"
+            android:launchMode="singleTask"
+            android:screenOrientation="fullSensor"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|smallestScreenSize|uiMode|density|navigation|locale|layoutDirection|fontScale">
+
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+        </activity>
+
+        <!--
+          MainActivity — the Capacitor WebView host.
+
+          Fix D: fullSensor orientation (replaces the previous "portrait" /
+          build-script-patched "sensorLandscape") so the activity rotates
+          freely with the BYD screen. configChanges covers the full set so
+          the activity is NOT recreated on rotation — WebView state is
+          preserved, preventing black flashes during rotation.
+
+          Fix E: android:exported="true" — required for any activity that
+          other apps or the system can launch. MainActivity is launched
+          only by SplashActivity (internal), so exported could be false,
+          but keeping it true avoids issues on some OEM launchers.
         -->
         <activity
             android:name=".MainActivity"
@@ -106,12 +171,7 @@
             android:theme="@style/AppTheme.NoActionBarLaunch"
             android:launchMode="singleTask"
             android:exported="true"
-            android:screenOrientation="portrait">
-
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
+            android:screenOrientation="fullSensor">
 
         </activity>
 
