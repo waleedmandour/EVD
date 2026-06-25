@@ -66,7 +66,19 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boole
           <h2 className="text-lg font-bold text-evdx-text mb-2">Something went wrong</h2>
           <p className="text-sm text-evdx-text-secondary mb-4">{this.state.error?.message || 'An unexpected error occurred'}</p>
           <Button
-            onClick={() => { this.setState({ hasError: false, error: null }); window.location.reload(); }}
+            onClick={() => {
+                this.setState({ hasError: false, error: null });
+                // Fix #8: window.location.reload() can fail on BYD DiLink's
+                // Chromium 83 WebView, leaving a black screen. Use href
+                // assignment instead which is more reliable.
+                try {
+                  window.location.href = window.location.pathname;
+                } catch (e) {
+                  console.error('Reload failed:', e);
+                  // Last resort: force a full page load
+                  window.location.reload();
+                }
+              }}
             className="bg-evdx-primary hover:bg-evdx-primary/90 text-[#0D1117]"
           >
             Reload App
