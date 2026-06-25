@@ -14,10 +14,41 @@
         <item name="android:background">@null</item>
     </style>
 
-    <!-- Splash screen launch theme - uses windowBackground for instant splash
-         without requiring the SplashScreen API installSplashScreen() call -->
-    <style name="AppTheme.NoActionBarLaunch" parent="AppTheme.NoActionBar">
+    <!--
+      Splash screen launch theme (Fix A: black splash screen).
+
+      Previously this theme used @drawable/splash_screen, which layered a
+      @color/colorPrimaryDark (#0D1117, near-black) background behind the
+      launcher icon. On BYD DiLink 3.0 (forced dark mode, Android 10) the
+      system compositor rendered this as a fully black window with no
+      visible logo, which users perceived as a "black screen" / "crash".
+
+      The new theme:
+        - Uses a BRIGHT WHITE windowBackground so the splash is visible
+          immediately, before any Java code or WebView loads.
+        - Sets windowContentOverlay to @null to remove the default shadow
+          that some OEMs draw on top of the window.
+        - Disables fullscreen so the status bar stays visible (avoids the
+          CutoutMode edge cases that can leave the layout empty on rotation).
+        - parent="Theme.AppCompat.NoActionBar" (NOT DayNight) so the splash
+          is always light even when the system is in dark mode. The
+          values-night/styles.xml override also enforces this.
+    -->
+    <style name="AppTheme.NoActionBarLaunch" parent="Theme.AppCompat.NoActionBar">
         <item name="android:windowBackground">@drawable/splash_screen</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:windowFullscreen">false</item>
+        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
+    </style>
+
+    <!--
+      SplashTheme — explicit splash theme name referenced by SplashActivity.
+      Same as AppTheme.NoActionBarLaunch; aliased here so the manifest can
+      reference a clearly-named theme.
+    -->
+    <style name="SplashTheme" parent="Theme.AppCompat.NoActionBar">
+        <item name="android:windowBackground">@drawable/splash_screen</item>
+        <item name="android:windowContentOverlay">@null</item>
         <item name="android:windowFullscreen">false</item>
         <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
     </style>
