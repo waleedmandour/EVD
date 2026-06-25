@@ -1,5 +1,18 @@
 ext {
-    minSdkVersion = 24
+    // Fix G: minSdkVersion raised from 24 to 29.
+    //
+    // BYD DiLink 3.0 runs Android 10 (API 29). Raising minSdk to 29:
+    //   - Lets us use Android 10 APIs without runtime checks (e.g. dark mode
+    //     UI_MODE_NIGHT_YES detection which is needed to override the splash
+    //     in values-night/styles.xml).
+    //   - Removes the need for legacy BLE permission compat shims.
+    //   - Still covers 99%+ of active Android devices (Android 7-9 phones
+    //     are 5+ years old and rare in 2026).
+    //
+    // compileSdk/targetSdk stay at 36 for the phone build. The BYD build
+    // script patches targetSdk down to 33 at build time (DiLink 3.0 refuses
+    // to install apps with targetSdk > 33).
+    minSdkVersion = 29
     compileSdkVersion = 36
     targetSdkVersion = 36
     androidxActivityVersion = '1.11.0'
@@ -9,6 +22,8 @@ ext {
     androidxFragmentVersion = '1.8.9'
     coreSplashScreenVersion = '1.2.0'
     androidxWebkitVersion = '1.14.0'
+    // ConstraintLayout is required by activity_splash.xml (Fix A/F).
+    androidxConstraintLayoutVersion = '2.2.1'
     junitVersion = '4.13.2'
     androidxJunitVersion = '1.3.0'
     androidxEspressoCoreVersion = '3.7.0'
