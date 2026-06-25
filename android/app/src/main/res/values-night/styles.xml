@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      Night-mode override (Fix A: black splash screen).
+
+      BYD DiLink 3.0 forces the system into dark mode (UI_MODE_NIGHT_YES).
+      Theme.AppCompat.DayNight would swap AppTheme to its dark variant, but
+      we don't want the SPLASH to follow dark mode — we want it always bright
+      white so the logo is visible immediately on the car screen.
+
+      This file overrides the splash-related themes for night mode to use the
+      same light Theme.AppCompat.NoActionBar parent and the same bright
+      @drawable/splash_screen background (which itself uses @color/splash_background
+      = #FFFFFF, NOT @color/colorPrimaryDark).
+    -->
+    <style name="AppTheme.NoActionBarLaunch" parent="Theme.AppCompat.NoActionBar">
+        <item name="android:windowBackground">@drawable/splash_screen</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:windowFullscreen">false</item>
+        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
+    </style>
+
+    <style name="SplashTheme" parent="Theme.AppCompat.NoActionBar">
+        <item name="android:windowBackground">@drawable/splash_screen</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:windowFullscreen">false</item>
+        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
+    </style>
+</resources>
