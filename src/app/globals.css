@@ -273,7 +273,7 @@
 /* ===== BYD HEAD UNIT LANDSCAPE LAYOUT ===== */
 /* When running on a BYD car head unit (landscape screen), switch from
    the narrow phone layout to a wider two-column layout. */
-@media (min-width: 800px) and (orientation: landscape) {
+@media (min-width: 800px) {
   .byd-landscape main,
   .byd-landscape .max-w-md {
     max-width: 100% !important;
