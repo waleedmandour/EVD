@@ -1,11 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  Splash screen drawable (Fix A: black splash screen).
+
+  PREVIOUS version used @color/colorPrimaryDark (#0D1117, near-black) as the
+  background with a mipmap bitmap logo. On BYD DiLink 3.0 (Android 10,
+  forced dark mode) this produced a fully black splash window, perceived by
+  the user as a "crash" / "black screen" before the WebView had even started.
+
+  NEW version:
+    - Background: @color/splash_background (#FFFFFF bright white) so the
+      splash is visible instantly, regardless of system dark mode.
+    - Logo: @drawable/ic_splash_logo — a dark-on-white vector that replaces
+      the previous mipmap bitmap (which was nearly invisible on the dark
+      background). Vector drawables scale crisply to the 1920x720 BYD screen.
+    - The logo item uses an explicit 200x200dp size and gravity=center so
+      it stays centered and reasonably sized on both phone and car displays.
+-->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Dark background -->
-    <item android:drawable="@color/colorPrimaryDark" />
-    <!-- Centered logo -->
-    <item>
-        <bitmap
-            android:gravity="center"
-            android:src="@mipmap/ic_launcher_foreground" />
-    </item>
+    <!-- Bright white background -->
+    <item android:drawable="@color/splash_background" />
+    <!-- Centered vector logo with fixed size -->
+    <item
+        android:gravity="center"
+        android:width="200dp"
+        android:height="200dp"
+        android:drawable="@drawable/ic_splash_logo" />
 </layer-list>
