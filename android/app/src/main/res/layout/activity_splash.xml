@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Splash activity layout (Fix A: black splash screen).
+
+  This layout is used by SplashActivity. The root ConstraintLayout has a
+  bright white background (overriding any system dark-mode background) and
+  centers the splash logo at 200dp x 200dp — large enough to be clearly
+  visible on a 1920x720 BYD car screen without being huge on a phone.
+
+  The ImageView is explicitly set to visibility="visible" so any code that
+  might hide it accidentally can't cause a black screen.
+-->
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/splash_background"
+    tools:context=".SplashActivity">
+
+    <ImageView
+        android:id="@+id/splash_logo"
+        android:layout_width="200dp"
+        android:layout_height="200dp"
+        android:src="@drawable/ic_splash_logo"
+        android:contentDescription="@string/app_name"
+        android:visibility="visible"
+        android:scaleType="fitCenter"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>
