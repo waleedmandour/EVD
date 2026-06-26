@@ -2,34 +2,113 @@
 
 ## How to Report a Black Screen or Other Issue
 
-If EVDx shows a black screen, crashes, or doesn't display correctly on your BYD head unit, you can help the developer diagnose the problem by capturing diagnostic logs. This guide walks you through the process step by step.
+If EVDx shows a black screen, crashes, or doesn't display correctly on your BYD head unit, this guide walks you through capturing diagnostic logs using two methods.
 
 ---
 
 ## Overview
 
-There are two ways to capture logs from your BYD head unit:
-
 | Method | Difficulty | Requirements | Best for |
 |--------|-----------|--------------|----------|
-| **ADB over WiFi** | Medium | A laptop with USB (one-time setup) | Detailed WebView and app logs |
-| **In-app screenshot** | Easy | Just the car screen | Visual bugs and error messages |
+| **AppManager (on the car)** | Easy | Just a USB drive | Most users — no laptop needed |
+| **ADB over WiFi** | Medium | A laptop with USB (one-time setup) | Advanced users — more control |
 
-If the black screen persists, the **ADB method** is the only way to see what's happening inside the WebView.
+**Start with Method 1 (AppManager).** It runs directly on the BYD head unit and can capture EVDx's logs without any external equipment.
 
 ---
 
-## Method 1: ADB over WiFi (Recommended for Black Screen Issues)
+## Method 1: AppManager (Recommended — No Laptop Needed)
+
+[AppManager](https://github.com/MuntashirAkon/AppManager) is a free, open-source Android utility with a built-in **Logcat viewer, manager, and exporter**. It can run directly on the BYD head unit and filter logs by app package name — perfect for capturing EVDx's diagnostic output.
+
+### What you need
+
+- A USB flash drive (any size, formatted as FAT32 or exFAT)
+- 2 minutes
+
+### Step 1: Download AppManager
+
+On your phone or computer, download the AppManager APK from the official releases page:
+
+> https://github.com/MuntashirAkon/AppManager/releases/latest
+
+Direct download (v4.0.5, ~25 MB):
+> https://github.com/MuntashirAkon/AppManager/releases/download/v4.0.5/AppManager_v4.0.5.apk
+
+### Step 2: Install AppManager on the BYD head unit
+
+1. On a USB drive, create a folder named exactly (with spaces and capitalization):
+   ```
+   Third Party Apps 55
+   ```
+2. Copy the `AppManager_v4.0.5.apk` file into that folder
+3. Plug the USB into the car's USB port
+4. Wait a few seconds — a password prompt appears
+5. Enter the password: **`BYD6125F`**
+6. Tap the APK file to install
+
+### Step 3: Capture EVDx logs
+
+1. **Open AppManager** on the car screen (it appears in the app launcher)
+2. Grant the **"Display over other apps"** permission if prompted
+3. From the AppManager home screen, tap the **three-line menu** (≡) in the top-left
+4. Select **"Log viewer"** (also called "Logcat")
+5. Grant the **"Read logs"** permission if prompted (this is required on Android 10+)
+6. In the Logcat view, tap the **filter icon** (🔍 or a funnel shape)
+7. In the **"Filter by package"** or **"Search"** field, type:
+   ```
+   com.waleedmandour.evdx
+   ```
+8. Now launch EVDx from the app launcher (or use AppManager's "Launch" button if you see EVDx in its app list)
+9. Wait 30 seconds for EVDx to load (or fail to load)
+10. Return to AppManager's Logcat view — you should see filtered logs from EVDx
+
+### Step 4: Save the filtered logs
+
+1. In AppManager's Logcat view, tap the **three-dot menu** (⋮) in the top-right
+2. Select **"Save log"** or **"Export"**
+3. Choose a save location (e.g., the USB drive or internal storage)
+4. Name the file: `evdx-byd-filtered.txt`
+
+### Step 5: Share the logs
+
+Transfer the `evdx-byd-filtered.txt` file to your phone or computer via:
+- USB drive (plug back into your computer)
+- Email (if the car has internet connectivity)
+- Bluetooth
+
+Email the file to: **waleedmandour@gmail.com**
+
+Include in your email:
+- Your BYD model and year (e.g., "Yuan Plus 2023")
+- The EVDx version (shown in Settings tab, or check the APK filename)
+- What you see on screen (black screen, crash, blank white, etc.)
+- Whether the white splash screen with the EVDx logo appeared at all
+
+### AppManager advantages
+
+- ✅ Runs entirely on the car — no laptop or ADB setup needed
+- ✅ Can filter logs by app package name (no manual grep needed)
+- ✅ Visual log viewer with color-coded log levels
+- ✅ Can record logs in the background while you launch EVDx
+- ✅ Also includes a **Crash Monitor** feature for detecting app crashes
+- ✅ Free and open source (GPLv3+)
+
+---
+
+## Method 2: ADB over WiFi (Advanced — For Persistent Issues)
+
+Use this method if AppManager can't capture the logs you need, or if you need more detailed system-level logs.
 
 ### What you need
 
 - A laptop or desktop computer (Windows, Mac, or Linux)
-- A USB flash drive (any size, formatted as FAT32 or exFAT)
-- Your BYD head unit's IMEI number (find it in Settings → System → About)
+- A USB flash drive
+- Your BYD head unit's IMEI number (Settings → System → About)
 
 ### Step 1: Enable Wireless ADB on the BYD Head Unit
 
-1. On the car's screen, go to **Settings → System → About**
+1. On the car screen, go to **Settings → System → About**
 2. Note the **IMEI** number (write down the last 6 digits)
 3. On a phone or laptop browser, go to: `https://electro.app.br/usb`
 4. Enter the **last 6 digits of your IMEI** to generate the debug password
@@ -38,17 +117,14 @@ If the black screen persists, the **ADB method** is the only way to see what's h
 7. Tap **TestTools**
 8. Enable **Wireless adb debug switch**
 
-The head unit is now listening for ADB connections on `192.168.10.10:5555`.
+The head unit is now listening on `192.168.10.10:5555`.
 
 ### Step 2: Install ADB on your computer
 
 **Windows:**
 1. Download Platform Tools from https://developer.android.com/tools/releases/platform-tools
-2. Extract the ZIP to `C:\platform-tools`
-3. Open Command Prompt and run:
-   ```
-   C:\platform-tools\adb.exe version
-   ```
+2. Extract to `C:\platform-tools`
+3. Open Command Prompt, run: `C:\platform-tools\adb.exe version`
 
 **Mac:**
 ```bash
@@ -62,98 +138,57 @@ sudo apt install adb
 adb version
 ```
 
-### Step 3: Connect to the BYD head unit
+### Step 3: Connect and capture logs
 
-Make sure your laptop is connected to the same WiFi network as the car (or connect to the car's hotspot if it has one).
-
-Open a terminal/command prompt and run:
 ```bash
+# Connect to the car (same WiFi network)
 adb connect 192.168.10.10:5555
-```
 
-You should see:
-```
-connected to 192.168.10.10:5555
-```
-
-If you see `failed to connect`, verify:
-- The head unit's ADB switch is still enabled (it can turn off after a reboot)
-- Your laptop and the car are on the same network
-- No firewall is blocking port 5555
-
-### Step 4: Capture the logs
-
-Run these commands in order:
-
-```bash
-# 1. Clear any old logs
+# Clear old logs
 adb logcat -c
 
-# 2. Launch EVDx
+# Launch EVDx
 adb shell am start -n com.waleedmandour.evdx/.SplashActivity
 
-# 3. Wait 30 seconds for the app to load (or fail to load)
-#    (Just count to 30 in your head)
-
-# 4. Capture all logs to a file
+# Wait 30 seconds for the app to load (or fail)
+# Then capture all logs to a file
 adb logcat -d > evdx-byd-logs.txt
+
+# Filter to just the relevant lines
+grep -iE "chromium|webview|capacitor|EVDx|BYDAuto|SplashActivity|FATAL|AndroidRuntime|console|SyntaxError" evdx-byd-logs.txt > evdx-byd-filtered.txt
 ```
 
-### Step 5: Filter the logs
-
-The raw log file is very large. Filter it to just the relevant lines:
-
-**Windows (Command Prompt):**
+On Windows, replace the last command with:
 ```cmd
 findstr /i "chromium webview capacitor EVDx BYDAuto SplashActivity FATAL AndroidRuntime console SyntaxError" evdx-byd-logs.txt > evdx-byd-filtered.txt
 ```
 
-**Mac/Linux:**
-```bash
-grep -iE "chromium|webview|capacitor|EVDx|BYDAuto|SplashActivity|FATAL|AndroidRuntime|console|SyntaxError" evdx-byd-logs.txt > evdx-byd-filtered.txt
-```
+### Step 4: Share the logs
 
-### Step 6: Share the filtered logs
+Email `evdx-byd-filtered.txt` to **waleedmandour@gmail.com** with:
+- BYD model and year
+- EVDx version
+- What you see on screen
 
-Email the file `evdx-byd-filtered.txt` to: **waleedmandour@gmail.com**
+### Step 5: Disconnect
 
-Include in your email:
-- Your BYD model and year (e.g., "Yuan Plus 2023")
-- The EVDx version (shown in Settings tab, or check the APK filename)
-- What you see on screen (black screen, crash, blank white, etc.)
-- Whether the splash logo (the dark EVDx square) appeared at all
-
-### Step 7: Disconnect
-
-When done:
 ```bash
 adb disconnect 192.168.10.10:5555
 ```
 
-You can also disable the ADB switch on the head unit for security.
-
 ---
 
-## Method 2: Visual Screenshot (Quick and Easy)
+## Method 3: Visual Screenshot (Quick and Easy)
 
-If you can't set up ADB, a screenshot can still help.
+If you can't set up AppManager or ADB, a screenshot can still help.
 
 ### Take a screenshot on BYD DiLink 3.0
 
-1. On the car screen, open the app that shows the issue
+1. Open the app that shows the issue
 2. Press and hold the **power button** on the steering wheel for 2 seconds
 3. Or use the screenshot button in the DiLink notification panel (swipe down from the top)
 
-The screenshot is saved to the car's internal storage. You can find it in the **File Manager** app under **Pictures/Screenshots**.
-
-### Share the screenshot
-
-Transfer the screenshot to your phone via:
-- Bluetooth
-- USB drive
-- Email (if the car has internet connectivity)
-
-Email it to: **waleedmandour@gmail.com**
+The screenshot is saved to the car's internal storage under **File Manager → Pictures → Screenshots**. Transfer it to your phone via Bluetooth, USB, or email, then send it to **waleedmandour@gmail.com**.
 
 ---
 
@@ -163,8 +198,8 @@ The filtered logs help identify the exact cause of the black screen:
 
 | Log keyword | What it means | Likely fix |
 |-------------|--------------|------------|
-| `FATAL EXCEPTION` | A Java crash in the native code | Check which plugin/method crashed |
-| `SyntaxError` | JavaScript error in the WebView | Fix the JS code that Chromium 83 can't parse |
+| `FATAL EXCEPTION` | A Java crash in native code | Check which plugin/method crashed |
+| `SyntaxError` | JavaScript error in the WebView | Fix JS code that Chromium 83 can't parse |
 | `chromium: ERROR` | WebView rendering error | Check WebView/CSS compatibility |
 | `console.error` | JavaScript console error | Fix the React/JS error |
 | `BYDAuto detected: false` | BYD detection failed | Check package visibility / queries block |
@@ -177,23 +212,13 @@ The filtered logs help identify the exact cause of the black screen:
 
 ### Issue: App installs but shows only a black screen
 
-**Possible causes:**
-1. WebView compatibility issue with Chromium 83 (BYD DiLink 3.0)
-2. JavaScript error preventing React from rendering
-3. CSS/media query issue causing invisible layout
-
 **Quick checks:**
-- Did the white splash screen with the EVDx logo appear? If yes, the splash works — the issue is in the WebView.
-- If no splash appeared, the issue is in the native layer (AndroidManifest, theme, or SplashActivity).
+- Did the white splash screen with the dark EVDx logo appear? If yes → splash works, issue is in the WebView
+- If no splash appeared → issue is in the native layer (AndroidManifest, theme, or SplashActivity)
 
-**Action:** Capture ADB logs (Method 1 above) and share with the developer.
+**Action:** Capture logs using Method 1 (AppManager) or Method 2 (ADB).
 
 ### Issue: App crashes immediately after splash
-
-**Possible causes:**
-1. BYDAutoPlugin native bridge crash
-2. Capacitor plugin version mismatch
-3. Missing permission
 
 **Action:** Look for `FATAL EXCEPTION` in the filtered logs.
 
@@ -204,7 +229,7 @@ The filtered logs help identify the exact cause of the black screen:
 2. BYDAutoManager not available on this firmware
 3. BLE OBD-II adapter not connected
 
-**Action:** Check the Device tab in the app — it should show whether BYD native mode or BLE mode is active.
+**Action:** Check the Device tab in EVDx — it shows whether BYD native mode or BLE mode is active.
 
 ---
 
@@ -212,6 +237,8 @@ The filtered logs help identify the exact cause of the black screen:
 
 | Item | Value |
 |------|-------|
+| AppManager download | https://github.com/MuntashirAkon/AppManager/releases/latest |
+| AppManager direct APK | https://github.com/MuntashirAkon/AppManager/releases/download/v4.0.5/AppManager_v4.0.5.apk |
 | BYD ADB address | `192.168.10.10:5555` |
 | ADB password generator | `https://electro.app.br/usb` |
 | EVDx package name | `com.waleedmandour.evdx` |
@@ -223,11 +250,31 @@ The filtered logs help identify the exact cause of the black screen:
 
 ## Developer Notes
 
-The binti2 reference repo (waleedmandour/binti2) was reviewed for an automated log collection mechanism. It does not have one — its CONTRIBUTING.md simply requests "Logs (if available)" when reporting bugs, without providing a method to collect them. The ADB method described above is the standard Android approach and the only reliable way to capture WebView logs on BYD DiLink 3.0.
+**Reviewed repository:** https://github.com/MuntashirAkon/AppManager
 
-A future enhancement could add an in-app "Diagnostics" screen that:
+AppManager is a free, open-source Android utility (GPLv3+) by Muntashir Al-Islam that provides:
+- **Logcat viewer, manager, and exporter** — captures and saves logcat output without needing ADB
+- **Crash monitor** — detects and records app crashes
+- **Filter by package name** — can isolate logs from a specific app (like `com.waleedmandour.evdx`)
+- **Background recording** — `LogcatRecordingService` can record logs while other apps run
+- Supports multiple log buffers: main, radio, events, system, crash
+
+AppManager runs on Android 5.0+ and does NOT require root for log viewing (it uses the standard `android.permission.READ_LOGS` permission which is granted via ADB on Android 10+, or works directly on rooted devices). On BYD DiLink 3.0, the user may need to grant the READ_LOGS permission via ADB one-time:
+
+```bash
+adb shell pm grant com.waleedmandour.evdx android.permission.READ_LOGS
+```
+
+Wait — that's for EVDx itself. For AppManager:
+```bash
+adb shell pm grant io.github.muntashirakon.AppManager android.permission.READ_LOGS
+```
+
+This one-time grant lets AppManager read system logs. After that, AppManager can be used entirely on the car without a laptop.
+
+**Future enhancement for EVDx:** Add an in-app "Diagnostics" screen that:
 1. Displays app version, BYD detection status, and WebView version
 2. Has a "Save Diagnostic Report" button that writes a text file with all relevant info
 3. Saves to the Downloads folder for easy sharing via USB or email
 
-This would eliminate the need for ADB for most users.
+This would eliminate the need for AppManager or ADB for most users.
