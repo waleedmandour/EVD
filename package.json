@@ -101,5 +101,8 @@
     "tailwindcss": "^4",
     "tw-animate-css": "^1.3.5",
     "typescript": "^5.9.3"
-  }
+  },
+  "browserslist": [
+    "chrome >= 83"
+  ]
 }
