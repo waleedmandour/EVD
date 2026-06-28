@@ -11,6 +11,9 @@ import { simulator } from '@/lib/simulator';
 // landscape orientation, which never happens on a phone).
 import { bydLayoutManager } from '../../byd/BYDLayoutManager';
 import { bydService } from '../../byd/BYDService';
+// SplashScreen plugin — used to dismiss the native splash after React renders.
+// On web (non-native), this is a no-op.
+import { SplashScreen } from '@capacitor/splash-screen';
 import I18nProvider from '@/components/I18nProvider';
 import BottomNav from '@/components/navigation/BottomNav';
 import OnboardingFlow from '@/components/onboarding/OnboardingFlow';
@@ -157,6 +160,28 @@ export default function HomePage() {
     document.documentElement.dir = isRTL ? 'rtl' : 'ltr';
     document.documentElement.lang = settings.language;
   }, [settings.language, isRTL]);
+
+  // ─── Splash screen dismissal (Phase 1.1) ────────────────────────────────────
+  // Hide the native Capacitor splash screen and remove the pre-hydration HTML
+  // splash now that React has rendered. This closes the gap between the native
+  // splash and the first React paint — the user never sees a black screen.
+  //
+  // The pre-hydration div is removed with a 300ms fade-out for a smooth
+  // transition. SplashScreen.hide() dismisses the Capacitor native splash
+  // (which has a 10s safety timeout in capacitor.config.ts in case this
+  // code never runs due to a JS parse error on Chromium 83).
+  useEffect(() => {
+    // Fade out and remove the pre-hydration splash
+    const preSplash = document.getElementById('pre-hydration-splash');
+    if (preSplash) {
+      preSplash.style.opacity = '0';
+      setTimeout(() => preSplash.remove(), 300);
+    }
+    // Hide the Capacitor native splash screen
+    SplashScreen.hide().catch(() => {
+      // Ignore errors — plugin may not be available on web
+    });
+  }, []);
 
   // ─── BYD head-unit integration ──────────────────────────────────────────────
   // 1) Start the landscape layout manager — it adds the `byd-landscape` class
