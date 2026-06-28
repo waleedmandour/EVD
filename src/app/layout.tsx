@@ -43,6 +43,52 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
       >
+        {/*
+          Pre-hydration splash (Phase 1.2):
+          This div is in the static HTML export, so the WebView renders it
+          INSTANTLY — before any JavaScript loads. It shows the EVDx logo on
+          the app's dark background (#0D1117) so the user sees a branded
+          screen immediately instead of black.
+
+          React removes this div in page.tsx's first useEffect (after mount).
+          If JavaScript fails to load entirely (e.g., ES2022+ syntax that
+          Chromium 83 can't parse), this div stays visible permanently —
+          which is far better than a permanent black screen.
+
+          The logo image is bundled in the APK at /icons/evd-icon-1024.png
+          and loads from the local WebViewAssetLoader, not from network.
+        */}
+        <div
+          id="pre-hydration-splash"
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "#0D1117",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 99999,
+            transition: "opacity 300ms ease-out",
+          }}
+        >
+          <img
+            src="/icons/evd-icon-1024.png"
+            alt="EVDx"
+            style={{ width: 200, height: 200 }}
+          />
+          <p
+            style={{
+              color: "#78909C",
+              marginTop: 24,
+              fontFamily: "system-ui, sans-serif",
+              fontSize: 16,
+            }}
+          >
+            Loading EVDx…
+          </p>
+        </div>
+
         {children}
         <Toaster />
       </body>
