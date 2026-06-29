@@ -4,73 +4,79 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Log;
 import android.view.View;
 import android.view.WindowManager;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.waleedmandour.evdx.byd.BYDNativeReader;
+
 /**
- * SplashActivity (Fix A: black splash screen).
+ * SplashActivity — the launcher activity.
  *
- * Previously, the app used the launcher theme's windowBackground as the only
- * splash. That windowBackground was @drawable/splash_screen, which used
- * @color/colorPrimaryDark (#0D1117, near-black). On BYD DiLink 3.0 (forced
- * dark mode, Android 10) the user saw a fully black window for the ~5-10
- * seconds it takes Capacitor to hydrate the WebView, leading to "black
- * screen" / "crash" reports.
+ * Shows a bright white splash with the EVDx logo for at least 1500ms,
+ * then routes to the appropriate next activity:
  *
- * This activity:
- *   1. Sets the content view to R.layout.activity_splash, which has a
- *      bright WHITE background and a centered dark logo. This guarantees
- *      the splash is visible regardless of system dark mode.
- *   2. Explicitly clears FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS issues by
- *      setting the window background to white (defense in depth — even if
- *      the theme is somehow overridden, the window is still bright).
- *   3. Holds the splash visible for at least 1500 ms (per the spec) so the
- *      user actually sees it instead of a sub-100ms flash.
- *   4. Then launches MainActivity and calls finish() so the splash is
- *      removed from the back stack.
+ *   - On BYD head units: → NativeDashboardActivity (native dashboard with
+ *     instant vehicle data, no WebView needed). The WebView loads in the
+ *     background and is available via the "Full App" button.
  *
- * No logic hides the content view or sets a dark background — that was a
- * bug in some implementations and is explicitly avoided here.
+ *   - On non-BYD devices: → MainActivity (Capacitor WebView) directly.
+ *     The native dashboard adds no value without BYD native data.
+ *
+ * This routing is the core of the Hybrid Architecture:
+ *   BYD:     Splash → NativeDashboard → (background WebView) → Full App
+ *   Phone:   Splash → MainActivity (WebView)
  */
 public class SplashActivity extends AppCompatActivity {
 
     private static final long MIN_SPLASH_DURATION_MS = 1500L;
+    private static final String TAG = "EVDx/Splash";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // Force the window background to bright white. Even though the theme
-        // already sets windowBackground=@drawable/splash_screen, some OEMs
-        // (notably BYD DiLink 3.0) override the window background in dark
-        // mode. Setting it programmatically here is a reliable defense.
+        // Force the window background to bright white.
         getWindow().setBackgroundDrawableResource(R.color.splash_background);
-        // Keep the screen on while the splash is visible so it doesn't dim.
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
         setContentView(R.layout.activity_splash);
 
-        // Ensure the logo is visible (defense in depth against any global
-        // theme override that might set visibility=gone).
+        // Ensure the logo is visible
         View logo = findViewById(R.id.splash_logo);
         if (logo != null) {
             logo.setVisibility(View.VISIBLE);
         }
 
-        // Navigate to MainActivity after at least MIN_SPLASH_DURATION_MS.
-        new Handler(Looper.getMainLooper()).postDelayed(this::launchMainActivity,
+        // Navigate after at least MIN_SPLASH_DURATION_MS
+        new Handler(Looper.getMainLooper()).postDelayed(this::launchNextActivity,
                 MIN_SPLASH_DURATION_MS);
     }
 
-    private void launchMainActivity() {
-        Intent intent = new Intent(this, MainActivity.class);
-        // CLEAR_TOP | SINGLE_TOP so we don't stack multiple MainActivity instances
-        // if the user re-opens the app from the launcher while the splash is showing.
+    /**
+     * Route to the appropriate activity based on BYD detection.
+     * On BYD: go to NativeDashboardActivity (hybrid native shell).
+     * On non-BYD: go to MainActivity (WebView) directly.
+     */
+    private void launchNextActivity() {
+        boolean isBYD = false;
+        try {
+            BYDNativeReader reader = new BYDNativeReader(this);
+            isBYD = reader.isBYD();
+        } catch (Throwable t) {
+            Log.w(TAG, "BYD detection failed, defaulting to WebView mode", t);
+            isBYD = false;
+        }
+
+        Log.i(TAG, "BYD detected: " + isBYD + " — routing to " +
+              (isBYD ? "NativeDashboardActivity" : "MainActivity (WebView)"));
+
+        Class<?> nextActivity = isBYD ? NativeDashboardActivity.class : MainActivity.class;
+        Intent intent = new Intent(this, nextActivity);
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
         startActivity(intent);
-        // Don't animate the transition — a fade would briefly show black.
         overridePendingTransition(0, 0);
         finish();
     }
