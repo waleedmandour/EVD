@@ -151,6 +151,30 @@
         </activity>
 
         <!--
+          NativeDashboardActivity — native dashboard for BYD head units.
+
+          Part of the Hybrid Architecture. On BYD head units, SplashActivity
+          routes here instead of MainActivity. This activity shows vehicle
+          data using native Android views (instant render, no WebView) and
+          has a "Full App" button that launches MainActivity (WebView) for
+          secondary features (diagnostics, AI, reports, settings).
+
+          On non-BYD devices, SplashActivity skips this activity and goes
+          directly to MainActivity — the native dashboard adds no value
+          without BYD native data.
+
+          exported="false" because this activity is only launched internally
+          by SplashActivity, never from outside the app.
+        -->
+        <activity
+            android:name=".NativeDashboardActivity"
+            android:exported="false"
+            android:launchMode="singleTask"
+            android:screenOrientation="fullSensor"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|smallestScreenSize|uiMode|density|navigation|locale|layoutDirection|fontScale"
+            android:theme="@style/AppTheme.NoActionBarLaunch" />
+
+        <!--
           MainActivity — the Capacitor WebView host.
 
           Fix D: fullSensor orientation (replaces the previous "portrait" /
