@@ -1,143 +1,83 @@
-# 🔒 EVDx Privacy Policy | سياسة الخصوصية
+# EVDx Privacy Policy
 
-**Last Updated:** June 2026  
-**Author:** Dr. Waleed Mandour  
-**Contact:** waleedmandour@gmail.com
+**Last updated: June 29, 2026**
+
+## Overview
+
+EVDx is a privacy-first electric vehicle diagnostics application. This privacy policy explains how EVDx handles your data.
+
+## Data Collection
+
+**EVDx does NOT collect, transmit, or store any personal data.**
+
+- **No cloud connectivity**: The app does not connect to any cloud service, analytics platform, or crash reporting service. The `INTERNET` permission in the AndroidManifest is used solely for local WiFi ELM327 OBD-II adapter connections (192.168.x.x private network only).
+
+- **No telemetry**: No usage statistics, crash reports, or performance metrics are sent to the developer or any third party.
+
+- **No accounts**: There is no login, registration, or user account system.
+
+- **No advertising**: The app contains no advertisements or ad SDKs.
+
+## Data Storage
+
+All vehicle data, session logs, maintenance records, and app settings are stored **locally on your device** using:
+- **Zustand persist middleware** (backed by localStorage in the WebView)
+- **Android internal storage** (for native BYD data bridge)
+
+Data never leaves your device. You can export all data via **Settings → Export Data** (saves a JSON file to your device), and you can delete all data via **Settings → Delete All Data**.
+
+## Permissions Explained
+
+| Permission | Purpose | Data Sent |
+|-----------|---------|-----------|
+| `BLUETOOTH` / `BLUETOOTH_CONNECT` / `BLUETOOTH_SCAN` | Connect to OBD-II BLE adapters | None — BLE is peer-to-peer with the adapter |
+| `ACCESS_FINE_LOCATION` | Required for BLE scanning on Android ≤ 11 | None — location is not used by the app |
+| `ACCESS_WIFI_STATE` / `CHANGE_WIFI_STATE` | Connect to WiFi ELM327 adapters | None — local network only |
+| `INTERNET` | WiFi ELM327 adapter communication | None — local network only (192.168.x.x) |
+| `RECORD_AUDIO` | Voice assistant (Arabic/English) | Audio is processed on-device, never transmitted |
+| `WAKE_LOCK` | Keep screen on during diagnostics | None |
+| `VIBRATE` | Haptic feedback | None |
+| `CAR_SPEED` / `CAR_POWERTRAIN` / `CAR_ENERGY` | Android Automotive vehicle data | None — read locally from car's CAN bus |
+| `SYSTEM_ALERT_WINDOW` | Floating voice assistant button | None |
+
+## BYD Head Unit Integration
+
+On BYD DiLink 3.0 head units, EVDx reads vehicle data directly from the car's internal CAN bus via the `BYDAutoManager` framework. This data includes:
+- State of Charge (SOC), State of Health (SOH)
+- Pack voltage, current, power
+- Vehicle speed, motor RPM, motor temperature
+- Battery temperature, cell voltages
+- Odometer, remaining range
+- Tire pressures
+- Diagnostic Trouble Codes (DTCs)
+
+**This data is read locally from the vehicle and is never transmitted anywhere.** The BYD integration uses Android's reflection API to access the car's internal framework — no data leaves the head unit.
+
+## Huawei HMS Core
+
+EVDx may optionally use Huawei HMS Core for:
+- **ML Kit ASR** (speech recognition fallback) — audio is processed on-device
+- **ML Kit TTS** (text-to-speech fallback) — text is synthesized on-device
+
+HMS Core does not transmit any personal data to Huawei servers in this app. All voice processing is offline and on-device.
+
+## Open Source
+
+EVDx is open source. The complete source code is available at:
+https://github.com/waleedmandour/EVD
+
+You can verify all privacy claims by reviewing the source code.
+
+## Contact
+
+For privacy questions or concerns:
+- **Email**: waleedmandour@gmail.com
+- **GitHub**: https://github.com/waleedmandour/EVD
+
+## Changes to This Policy
+
+If we change this privacy policy, we will update this file and note the change date above. Since EVDx does not collect any data, policy changes only affect how we describe the app's behavior, not actual data practices.
 
 ---
 
-## English
-
-### Our Promise
-
-**EVDx does not connect to any server. Ever.** Your vehicle data never leaves your phone.
-
-### Data Collection
-
-EVDx collects **NO data** from you. Specifically:
-
-- ❌ No personal information collected
-- ❌ No vehicle data uploaded to any server
-- ❌ No analytics or tracking
-- ❌ No crash reporting to third parties
-- ❌ No account registration required
-- ❌ No internet connection needed for core features
-- ❌ No Firebase, Google Analytics, Sentry, or any telemetry SDK
-
-### Data Storage
-
-All data is stored **locally on your device only**:
-
-- **Vehicle profiles** — stored in local storage on your phone
-- **Diagnostic data** — stored in local storage, never transmitted
-- **Session logs** — stored locally, exportable as CSV/JSON
-- **Settings** — stored locally on your device
-- **Voice data** — processed entirely on-device using Android's built-in TTS/STT
-
-### Data Export
-
-You can export your data at any time:
-- **CSV**: Session telemetry, DTC history, charging history
-- **JSON**: Full vehicle profile + all history
-- **PDF**: Battery Health Report, Trip Summary Report
-
-All exports are saved locally. No data is sent anywhere.
-
-### Data Deletion
-
-You can delete all your data at any time:
-1. Open Settings → Privacy → Delete All Data
-2. Confirm the deletion
-3. All stored data will be permanently removed
-
-### Permissions
-
-EVDx requests only the permissions it needs:
-
-| Permission | Purpose | Required |
-|---|---|---|
-| Bluetooth | Connect to OBD-II adapters | Yes |
-| Bluetooth Connect | Pair with OBD adapters | Yes |
-| Bluetooth Scan | Discover nearby OBD adapters | Yes |
-| Fine Location | Required for BLE scan on Android 11- | Yes* |
-| Record Audio | Voice commands (on-device only) | No |
-| Vibrate | Haptic feedback for alerts | No |
-
-*\*Location permission is required by Android for BLE scanning on Android 11 and below. EVDx never uses your GPS location.*
-
-### Third-Party Services
-
-EVDx uses **no third-party services**. There are no ads, no tracking, no cloud services.
-
-### Children's Privacy
-
-EVDx does not knowingly collect information from anyone, including children under 13.
-
-### Changes to This Policy
-
-Any changes to this privacy policy will be reflected in this document and in the app's Privacy screen.
-
----
-
-## العربية
-
-### وعدنا
-
-**EVDx لا يتصل بأي خادم. أبداً.** بيانات مركبتك لا تغادر هاتفك أبداً.
-
-### جمع البيانات
-
-EVDx **لا يجمع أي بيانات** منك. تحديداً:
-
-- ❌ لا يتم جمع معلومات شخصية
-- ❌ لا يتم رفع بيانات المركبة إلى أي خادم
-- ❌ لا توجد تحليلات أو تتبع
-- ❌ لا توجد تقارير أعطال لأطراف ثالثة
-- ❌ لا يلزم تسجيل حساب
-- ❌ لا حاجة لاتصال بالإنترنت للميزات الأساسية
-- ❌ لا Firebase أو Google Analytics أو Sentry أو أي حزمة تتبع
-
-### تخزين البيانات
-
-جميع البيانات مخزنة **محلياً على جهازك فقط**:
-
-- **ملفات المركبة** — مخزنة في التخزين المحلي على هاتفك
-- **بيانات التشخيص** — مخزنة محلياً، لا تُنقل أبداً
-- **سجلات الجلسات** — مخزنة محلياً، قابلة للتصدير كـ CSV/JSON
-- **الإعدادات** — مخزنة محلياً على جهازك
-- **بيانات الصوت** — تُعالج بالكامل على الجهاز باستخدام TTS/STT المدمج في Android
-
-### تصدير البيانات
-
-يمكنك تصدير بياناتك في أي وقت:
-- **CSV**: بيانات الجلسات، سجل الأعطال، سجل الشحن
-- **JSON**: ملف المركبة الكامل + جميع السجلات
-- **PDF**: تقرير صحة البطارية، ملخص الرحلات
-
-جميع التصديرات تُحفظ محلياً. لا تُرسل البيانات إلى أي مكان.
-
-### حذف البيانات
-
-يمكنك حذف جميع بياناتك في أي وقت:
-1. افتح الإعدادات → الخصوصية → حذف جميع البيانات
-2. أكد الحذف
-3. سيتم حذف جميع البيانات المخزنة نهائياً
-
-### الصلاحيات
-
-EVDx يطلب فقط الصلاحيات التي يحتاجها:
-
-| الصلاحية | الغرض | مطلوبة |
-|---|---|---|
-| Bluetooth | الاتصال بمحولات OBD-II | نعم |
-| Bluetooth Connect | الاقتران بمحولات OBD | نعم |
-| Bluetooth Scan | اكتشاف محولات OBD القريبة | نعم |
-| الموقع الدقيق | مطلوب لمسح BLE على Android 11 وأقل | نعم* |
-| تسجيل الصوت | أوامر صوتية (على الجهاز فقط) | لا |
-| الاهتزاز | ردود فعل لمسية للتنبيهات | لا |
-
-*\*صلاحية الموقع مطلوبة من Android لمسح BLE على Android 11 وأقل. EVDx لا يستخدم موقع GPS الخاص بك أبداً.*
-
-### خدمات الطرف الثالث
-
-EVDx **لا يستخدم أي خدمات طرف ثالث**. لا توجد إعلانات، ولا تتبع، ولا خدمات سحابية.
+© 2026 Dr. Waleed Mandour. All rights reserved.
