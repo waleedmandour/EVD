@@ -5,14 +5,17 @@ buildscript {
     repositories {
         google()
         mavenCentral()
-        // HMS Core Maven repository (for Huawei AppGallery compatibility)
-        maven { url 'https://developer.huawei.com/repo/' }
     }
     dependencies {
         classpath 'com.android.tools.build:gradle:8.13.0'
         classpath 'com.google.gms:google-services:4.4.4'
-        // HMS AppGallery Connect plugin
-        classpath 'com.huawei.agconnect:agcp:1.9.1.301'
+
+        // HMS AppGallery Connect plugin — only needed when building with
+        // -PhmsEnabled=true. Not included by default to avoid Maven resolution
+        // failures on environments without access to the Huawei Maven repo.
+        // To enable: uncomment the line below and ensure the Huawei Maven repo
+        // (https://developer.huawei.com/repo/) is accessible.
+        // classpath 'com.huawei.agconnect:agcp:1.9.1.301'
 
         // NOTE: Do not place your application dependencies here; they belong
         // in the individual module build.gradle files
@@ -25,7 +28,8 @@ allprojects {
     repositories {
         google()
         mavenCentral()
-        // HMS Core Maven repository — available to all sub-projects
+        // HMS Core Maven repository — needed when building with -PhmsEnabled=true.
+        // Listed here so it's available to all sub-projects if HMS deps are enabled.
         maven { url 'https://developer.huawei.com/repo/' }
     }
 }
