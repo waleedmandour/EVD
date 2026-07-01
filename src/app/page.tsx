@@ -170,17 +170,33 @@ export default function HomePage() {
   // transition. SplashScreen.hide() dismisses the Capacitor native splash
   // (which has a 10s safety timeout in capacitor.config.ts in case this
   // code never runs due to a JS parse error on Chromium 83).
+  //
+  // Phase 2.3: A second-line defense. The safety-net script in layout.tsx
+  // already calls SplashScreen.hide() and removes the pre-hydration splash
+  // on a timer. React mounting successfully and running this useEffect is
+  // the FAST PATH — it dismisses both immediately. If React fails to mount,
+  // the safety-net script in <head> takes over.
   useEffect(() => {
-    // Fade out and remove the pre-hydration splash
-    const preSplash = document.getElementById('pre-hydration-splash');
-    if (preSplash) {
-      preSplash.style.opacity = '0';
-      setTimeout(() => preSplash.remove(), 300);
+    // Defensive: wrap each step in its own try/catch so a failure in one
+    // cannot prevent the others from running.
+    try {
+      const preSplash = document.getElementById('pre-hydration-splash');
+      if (preSplash) {
+        preSplash.style.opacity = '0';
+        setTimeout(() => {
+          try { preSplash.remove(); } catch (e) { /* ignore */ }
+        }, 300);
+      }
+    } catch (e) {
+      console.warn('[EVDx] pre-hydration splash removal failed', e);
     }
-    // Hide the Capacitor native splash screen
-    SplashScreen.hide().catch(() => {
-      // Ignore errors — plugin may not be available on web
-    });
+    try {
+      SplashScreen.hide().catch(() => {
+        // Ignore errors — plugin may not be available on web
+      });
+    } catch (e) {
+      console.warn('[EVDx] SplashScreen.hide failed', e);
+    }
   }, []);
 
   // ─── BYD head-unit integration ──────────────────────────────────────────────

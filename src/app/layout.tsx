@@ -40,6 +40,30 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" dir="ltr" className="dark" suppressHydrationWarning>
+      <head>
+        {/*
+          Safety-net script — MUST run before any other JS.
+
+          Loaded from /evdx-safety-net.js (a static asset in /public/) so
+          the WebView executes it synchronously before any Next.js chunk.
+          On BYD DiLink 3.0 (Chromium 83, June 2020), missing runtime APIs
+          like Array.prototype.at, Object.hasOwn, structuredClone, and
+          Promise.any cause React to throw a TypeError during mount and
+          tear down the entire tree — leaving the pre-hydration splash
+          visible forever ("logo shows but keeps loading forever").
+
+          This script polyfills those APIs AND adds two safety nets:
+            1. After 8s: swap "Loading EVDx…" → "App failed to load. Tap to retry."
+            2. After 15s: remove the splash entirely.
+          It also hides the native Capacitor SplashScreen ASAP via the
+          Capacitor bridge, decoupling native-splash dismissal from React
+          mounting.
+
+          The file is plain ES5 so it parses on every Chromium version
+          back to v40. See /public/evdx-safety-net.js for the full source.
+        */}
+        <script src="/evdx-safety-net.js" />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
       >
@@ -52,8 +76,10 @@ export default function RootLayout({
 
           React removes this div in page.tsx's first useEffect (after mount).
           If JavaScript fails to load entirely (e.g., ES2022+ syntax that
-          Chromium 83 can't parse), this div stays visible permanently —
-          which is far better than a permanent black screen.
+          Chromium 83 can't parse), the safety-net script in <head> will:
+            - After 8s: replace "Loading EVDx…" with a retry prompt
+            - After 15s: remove the splash entirely
+            - Capture window.onerror and surface the message in the splash
 
           The logo image is bundled in the APK at /icons/evd-icon-1024.png
           and loads from the local WebViewAssetLoader, not from network.
@@ -78,6 +104,7 @@ export default function RootLayout({
             style={{ width: 200, height: 200 }}
           />
           <p
+            className="evdx-loader-text"
             style={{
               color: "#78909C",
               marginTop: 24,
